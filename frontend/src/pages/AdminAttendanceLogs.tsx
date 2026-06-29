@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
+import GPSAddress from '../components/GPSAddress';
 import { Camera, MapPin, Smartphone, CheckCircle2, UserCheck, Calendar } from 'lucide-react';
 
 interface AdminAttendanceLogsProps {
@@ -105,10 +106,9 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                           href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center space-x-1 hover:text-secondary hover:underline"
+                          className="flex items-center space-x-1 hover:text-secondary"
                         >
-                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{log.location.lat.toFixed(5)}, {log.location.lng.toFixed(5)}</span>
+                          <GPSAddress lat={log.location.lat} lng={log.location.lng} />
                         </a>
                       ) : (
                         <span className="text-slate-400">No GPS Data</span>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import MapView from '../components/MapView';
+import GPSAddress from '../components/GPSAddress';
 import {
   Plus,
   Briefcase,
@@ -427,7 +428,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <div className="p-3 text-[10px] text-slate-400 space-y-0.5 border-t border-slate-100 dark:border-slate-800">
                       <div>🕒 Time: {new Date(selectedJobPhotos.beforePhotoTime).toLocaleString()}</div>
                       {selectedJobPhotos.beforePhotoGPS && (
-                        <div>📍 GPS: {selectedJobPhotos.beforePhotoGPS.lat.toFixed(6)}, {selectedJobPhotos.beforePhotoGPS.lng.toFixed(6)}</div>
+                        <div className="flex items-center space-x-1">
+                          <span>📍 Location: </span>
+                          <GPSAddress lat={selectedJobPhotos.beforePhotoGPS.lat} lng={selectedJobPhotos.beforePhotoGPS.lng} />
+                        </div>
                       )}
                     </div>
                   )}
@@ -447,7 +451,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <div className="p-3 text-[10px] text-slate-400 space-y-0.5 border-t border-slate-100 dark:border-slate-800">
                       <div>🕒 Time: {new Date(selectedJobPhotos.afterPhotoTime).toLocaleString()}</div>
                       {selectedJobPhotos.afterPhotoGPS && (
-                        <div>📍 GPS: {selectedJobPhotos.afterPhotoGPS.lat.toFixed(6)}, {selectedJobPhotos.afterPhotoGPS.lng.toFixed(6)}</div>
+                        <div className="flex items-center space-x-1">
+                          <span>📍 Location: </span>
+                          <GPSAddress lat={selectedJobPhotos.afterPhotoGPS.lat} lng={selectedJobPhotos.afterPhotoGPS.lng} />
+                        </div>
                       )}
                     </div>
                   )}
