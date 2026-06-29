@@ -62,7 +62,13 @@ export const login = async (req: Request, res: Response) => {
   const { phone, password, rememberMe } = req.body;
 
   try {
-    const user = await User.findOne({ phone });
+    const user = await User.findOne({
+      $or: [
+        { phone },
+        { phone: `+91${phone}` },
+        { phone: phone.replace(/^\+91/, '') }
+      ]
+    });
     if (!user) {
       return res.status(401).json({ message: 'Invalid mobile number or password' });
     }

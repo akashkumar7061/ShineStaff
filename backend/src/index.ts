@@ -109,7 +109,7 @@ const seedAdmin = async () => {
         password: hashedPassword,
         role: 'admin',
         company: 'Both',
-        phone: '+919876543210',
+        phone: '9876543210',
         joiningDate: new Date(),
         status: 'active'
       });
