@@ -28,7 +28,7 @@ const Login: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'admin' | 'worker'>('worker');
-  const [company, setCompany] = useState<'SofaShine' | 'CleanCruisers' | 'Both'>('SofaShine');
+  const [company, setCompany] = useState<'SofaShine' | 'CleanCruisers' | 'Both'>('Both');
 
   // Forgot password flow states
   const [forgotFlow, setForgotFlow] = useState(false);
@@ -355,30 +355,16 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Role Type</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as any)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
-                  >
-                    <option value="worker">Worker</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Company Branch</label>
-                  <select
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value as any)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
-                  >
-                    <option value="SofaShine">SofaShine</option>
-                    <option value="CleanCruisers">CleanCruisers</option>
-                    <option value="Both">Both (Shared)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Role Type</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as any)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
+                >
+                  <option value="worker">Worker</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
 
               <button
