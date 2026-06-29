@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
-import { Lock, Mail, Sparkles, Sun, Moon, ArrowRight, CheckCircle2, User, Phone } from 'lucide-react';
+import { Lock, Mail, Sparkles, Sun, Moon, ArrowRight, CheckCircle2, User, Phone, Eye, EyeOff } from 'lucide-react';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
@@ -17,6 +17,9 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -241,13 +244,20 @@ const Login: React.FC = () => {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3.5 pl-11 pr-4 text-sm outline-none focus:border-secondary transition-colors"
+                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3.5 pl-11 pr-12 text-sm outline-none focus:border-secondary transition-colors"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -309,17 +319,24 @@ const Login: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Password</label>
+                <label className="block text-[10px] font-bold text-slate-450 mb-1.5 uppercase">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    type="password"
+                    type={showSignUpPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3 pl-11 pr-4 text-xs outline-none focus:border-secondary transition-colors"
+                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3 pl-11 pr-12 text-xs outline-none focus:border-secondary transition-colors"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200"
+                  >
+                    {showSignUpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -441,13 +458,20 @@ const Login: React.FC = () => {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    type="password"
+                    type={showNewPassword ? 'text' : 'password'}
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3.5 pl-11 pr-4 text-sm outline-none focus:border-secondary transition-colors"
+                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3.5 pl-11 pr-12 text-sm outline-none focus:border-secondary transition-colors"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200"
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
