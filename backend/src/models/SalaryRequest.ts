@@ -8,6 +8,8 @@ export interface ISalaryRequest extends Document {
   type: 'advance' | 'regular_payout';
   month: string; // Format: YYYY-MM
   processedAt?: Date;
+  paymentMode?: 'Online' | 'Cash';
+  paymentTime?: string;
 }
 
 const SalaryRequestSchema = new Schema<ISalaryRequest>({
@@ -17,7 +19,9 @@ const SalaryRequestSchema = new Schema<ISalaryRequest>({
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   type: { type: String, enum: ['advance', 'regular_payout'], default: 'advance' },
   month: { type: String, required: true }, // E.g., "2026-06"
-  processedAt: { type: Date }
+  processedAt: { type: Date },
+  paymentMode: { type: String, enum: ['Online', 'Cash'], default: 'Online' },
+  paymentTime: { type: String, default: '' }
 }, {
   timestamps: true
 });

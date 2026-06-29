@@ -6,7 +6,8 @@ import {
   Download,
   CreditCard,
   X,
-  CheckCircle
+  CheckCircle,
+  Coins
 } from 'lucide-react';
 
 interface AdminSalaryProps {
@@ -28,6 +29,12 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
   const [payoutAmount, setPayoutAmount] = useState('');
   const [submittingPayout, setSubmittingPayout] = useState(false);
 
+  // Expanded payout fields
+  const [payoutType, setPayoutType] = useState<'regular_payout' | 'advance'>('regular_payout');
+  const [paymentMode, setPaymentMode] = useState<'Online' | 'Cash'>('Online');
+  const [paymentTime, setPaymentTime] = useState('');
+  const [payoutReason, setPayoutReason] = useState('');
+
   const fetchSalaryData = async () => {
     setLoading(true);
     try {
@@ -41,12 +48,12 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
           const dashRes = await api.get(`/salary/dashboard?workerId=${w._id}&month=${selectedMonth}`);
           payrolls.push(dashRes.data);
         } catch (err) {
-          console.error(`Failed to load payroll for worker ${w._id}`, err);
+          console.error(`Failed to fetch payroll for ${w.name}:`, err);
         }
       }
       setPayrollList(payrolls);
     } catch (err) {
-      console.error('Failed to load salary details:', err);
+      console.error('Failed to fetch salary database:', err);
     } finally {
       setLoading(false);
     }
@@ -58,13 +65,17 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
 
   const handleDownloadPayslip = (workerId: string) => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    window.open(`http://localhost:5000/api/salary/payslip?workerId=${workerId}&month=${selectedMonth}&token=${token}`);
+    window.open(`https://shinestaff-backend.onrender.com/api/salary/payslip?workerId=${workerId}&month=${selectedMonth}&token=${token}`);
   };
 
   const handleOpenPayoutModal = (workerId: string, name: string, calculatedNet: number) => {
     setPayoutWorkerId(workerId);
     setPayoutWorkerName(name);
     setPayoutAmount(calculatedNet.toString());
+    setPayoutType('regular_payout');
+    setPaymentMode('Online');
+    setPaymentTime(new Date().toISOString().substring(0, 16));
+    setPayoutReason('Monthly payroll payout');
     setPayoutModalOpen(true);
   };
 
@@ -75,13 +86,17 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
       await api.post('/salary/payouts', {
         workerId: payoutWorkerId,
         amount: Number(payoutAmount),
-        month: selectedMonth
+        month: selectedMonth,
+        type: payoutType,
+        paymentMode,
+        paymentTime: new Date(paymentTime).toISOString(),
+        reason: payoutReason
       });
-      alert(`Payout of ₹${payoutAmount} recorded successfully for ${payoutWorkerName}!`);
+      alert(`Payment of ₹${payoutAmount} logged successfully as ${payoutType.replace('_', ' ')} via ${paymentMode}!`);
       setPayoutModalOpen(false);
       fetchSalaryData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to record payout');
+      alert(err.response?.data?.message || 'Failed to record payment');
     } finally {
       setSubmittingPayout(false);
     }
@@ -94,11 +109,11 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Payroll & Salary Board</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Review auto-calculated salaries, manually decide payout amounts, and generate payslips</p>
+          <p className="text-xs text-slate-400 mt-0.5">Review auto-calculated salaries, record cash/online payouts or advances, and generate payslips</p>
         </div>
 
         {/* Month selector */}
-        <div className="flex items-center space-x-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-custom px-4 py-2">
+        <div className="flex items-center space-x-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-custom px-4 py-2 mt-1">
           <Calendar className="h-4.5 w-4.5 text-secondary" />
           <input
             type="month"
@@ -109,83 +124,80 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
         </div>
       </div>
 
-      {/* Auto-Calculated Payroll Summary List */}
-      <div className="glass-card p-6 shadow-xl border-t-4 border-t-secondary">
-        <div className="flex items-center space-x-2 mb-6">
-          <div className="rounded-xl bg-secondary/10 p-2.5 text-secondary">
-            <DollarSign className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-slate-800 dark:text-slate-100">Calculated Monthly Payouts Registry</h3>
-            <p className="text-[10px] text-slate-400">Live wages computed from daily attendance registers and fuel allowances</p>
-          </div>
-        </div>
-
+      {/* Grid table */}
+      <div className="glass-card p-6">
         {loading ? (
           <div className="space-y-3">
-            {[1, 2].map((n) => (
-              <div key={n} className="animate-shimmer h-14 w-full rounded-lg" />
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="animate-shimmer h-12 w-full rounded-lg" />
             ))}
           </div>
         ) : payrollList.length === 0 ? (
-          <div className="text-center py-6 text-slate-400 text-sm">
-            No payroll data available for this month.
+          <div className="text-center py-12 text-slate-400 text-sm">
+            No worker records found to generate payroll logs.
           </div>
         ) : (
-          <div className="overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto border border-slate-100 dark:border-slate-850 rounded-xl">
+            <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                 <tr>
-                  <th className="px-4 py-3.5">Worker Name</th>
-                  <th className="px-4 py-3.5">Presents / Half</th>
-                  <th className="px-4 py-3.5">Late / Absent</th>
-                  <th className="px-4 py-3.5">Base Wage</th>
-                  <th className="px-4 py-3.5">Fuel KM (Allowance)</th>
-                  <th className="px-4 py-3.5">Paid Payouts</th>
-                  <th className="px-4 py-3.5">Remaining Balance</th>
-                  <th className="px-4 py-3.5 text-center">Action</th>
+                  <th className="px-6 py-4">Worker Profile</th>
+                  <th className="px-6 py-4 text-center">Duty Days (P / L)</th>
+                  <th className="px-6 py-4">Daily Rate</th>
+                  <th className="px-6 py-4">Wage Earned</th>
+                  <th className="px-6 py-4">Fuel Commute</th>
+                  <th className="px-6 py-4">Gross Earned</th>
+                  <th className="px-6 py-4">Advance Paid</th>
+                  <th className="px-6 py-4">Regular Paid</th>
+                  <th className="px-6 py-4">Net Remaining</th>
+                  <th className="px-6 py-4 text-center">Payroll Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-855">
-                {payrollList.map((pay) => (
-                  <tr key={pay.worker.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/40">
-                    <td className="px-4 py-3.5">
-                      <span className="block font-bold text-slate-750 dark:text-slate-205">{pay.worker.name}</span>
-                      <span className="block text-[9px] text-slate-400 uppercase mt-0.5">Rate: ₹{pay.worker.dailySalary}/day</span>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                {payrollList.map((entry) => (
+                  <tr key={entry.worker.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
+                    <td className="px-6 py-3.5">
+                      <span className="block font-bold text-slate-805 dark:text-white">{entry.worker.name}</span>
+                      <span className="inline-block text-[9px] font-bold bg-secondary/10 text-secondary px-2.5 py-0.5 rounded mt-1 uppercase">
+                        {entry.worker.company}
+                      </span>
                     </td>
-                    <td className="px-4 py-3.5 font-medium text-slate-700 dark:text-slate-300">
-                      {pay.counters.present} Present | {pay.counters.halfDay} Half
+
+                    <td className="px-6 py-3.5 text-center font-semibold text-slate-500">
+                      {entry.counters.present} present / {entry.counters.late} late
                     </td>
-                    <td className="px-4 py-3.5 text-slate-455">
-                      {pay.counters.late} Late | {pay.counters.absent} Absent
+
+                    <td className="px-6 py-3.5 font-medium">₹{entry.worker.dailySalary || 0}</td>
+
+                    <td className="px-6 py-3.5 font-semibold text-slate-700 dark:text-slate-300">₹{entry.earnings.baseWage}</td>
+
+                    <td className="px-6 py-3.5 text-success font-semibold">
+                      ₹{entry.earnings.fuelAllowance} <span className="text-[10px] text-slate-400 block font-normal">({entry.earnings.fuelKms} KM)</span>
                     </td>
-                    <td className="px-4 py-3.5 font-semibold">₹{pay.earnings.baseWage}</td>
-                    <td className="px-4 py-3.5">
-                      <span className="block">{pay.earnings.fuelKms} KM</span>
-                      <span className="block text-[9px] text-success font-semibold mt-0.5">+₹{pay.earnings.fuelAllowance}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-success font-semibold">₹{pay.earnings.paidAmount}</td>
-                    <td className="px-4 py-3.5 font-bold text-secondary dark:text-secondary-light">
-                      ₹{pay.earnings.remainingSalary}
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <div className="flex justify-center items-center space-x-2">
-                        <button
-                          onClick={() => handleOpenPayoutModal(pay.worker.id, pay.worker.name, pay.earnings.remainingSalary)}
-                          disabled={pay.earnings.remainingSalary <= 0}
-                          className="rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-success p-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                          title="Decide & Record Salary Payout"
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDownloadPayslip(pay.worker.id)}
-                          className="rounded-lg bg-slate-100 dark:bg-slate-805 p-2 text-slate-550 hover:bg-secondary/10 hover:text-secondary transition-colors"
-                          title="Download Payslip"
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </div>
+
+                    <td className="px-6 py-3.5 font-bold text-slate-800 dark:text-slate-100">₹{entry.earnings.grossEarnings}</td>
+
+                    <td className="px-6 py-3.5 text-danger font-semibold">₹{entry.earnings.advanceDeducted}</td>
+
+                    <td className="px-6 py-3.5 text-success font-semibold">₹{entry.earnings.paidAmount}</td>
+
+                    <td className="px-6 py-3.5 font-extrabold text-secondary text-sm">₹{entry.earnings.remainingSalary}</td>
+
+                    <td className="px-6 py-3.5 text-center flex items-center justify-center space-x-2.5">
+                      <button
+                        onClick={() => handleOpenPayoutModal(entry.worker.id, entry.worker.name, entry.earnings.remainingSalary)}
+                        className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3.5 py-1.5 uppercase transition-colors"
+                      >
+                        Pay / Record
+                      </button>
+
+                      <button
+                        onClick={() => handleDownloadPayslip(entry.worker.id)}
+                        className="rounded-lg border border-slate-200 dark:border-slate-800 p-2 text-slate-500 hover:text-slate-850 dark:hover:text-slate-205"
+                        title="Download PDF Payslip"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -203,12 +215,12 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
               <div>
-                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Decide & Pay Salary</span>
+                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Decide & Log Salary payment</span>
                 <h3 className="font-bold text-sm text-slate-800 dark:text-white mt-0.5">{payoutWorkerName}</h3>
               </div>
               <button
                 onClick={() => setPayoutModalOpen(false)}
-                className="text-slate-400 hover:text-slate-650 rounded-full p-1.5 hover:bg-slate-105 dark:hover:bg-slate-800"
+                className="text-slate-400 hover:text-slate-650 rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -223,30 +235,78 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-450">Calculated Net Remaining:</span>
-                  <span className="font-bold text-secondary">₹{payoutAmount}</span>
+                  <span className="font-bold text-secondary text-sm">₹{payoutAmount}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Payment Type</label>
+                  <select
+                    value={payoutType}
+                    onChange={(e) => setPayoutType(e.target.value as any)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
+                  >
+                    <option value="regular_payout">Regular Payout</option>
+                    <option value="advance">Advance Payment</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Payment Mode</label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => setPaymentMode(e.target.value as any)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
+                  >
+                    <option value="Online">Online Transfer</option>
+                    <option value="Cash">Cash Handout</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Amount Paid (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={payoutAmount}
+                    onChange={(e) => setPayoutAmount(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Date & Timing</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={paymentTime}
+                    onChange={(e) => setPaymentTime(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Override Payout Amount (₹)</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Payment Reason / Remarks</label>
                 <input
-                  type="number"
+                  type="text"
                   required
-                  min={1}
-                  value={payoutAmount}
-                  onChange={(e) => setPayoutAmount(e.target.value)}
-                  placeholder="Enter payout amount"
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary transition-colors"
+                  value={payoutReason}
+                  onChange={(e) => setPayoutReason(e.target.value)}
+                  placeholder="Reason for payment/advance"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submittingPayout}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white flex items-center justify-center space-x-2 rounded-custom py-3.5 text-xs font-bold shadow-md shadow-emerald-500/10 transition-transform active:scale-95 disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white flex items-center justify-center space-x-2 rounded-custom py-3.5 text-xs font-bold shadow-md shadow-emerald-500/10 transition-transform active:scale-95 disabled:opacity-50 mt-2"
               >
                 <CheckCircle className="h-4 w-4" />
-                <span>{submittingPayout ? 'Recording Payout...' : 'Confirm & Mark Paid'}</span>
+                <span>{submittingPayout ? 'Recording...' : 'Confirm & Log Payment'}</span>
               </button>
             </form>
 

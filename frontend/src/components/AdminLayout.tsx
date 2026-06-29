@@ -7,7 +7,6 @@ import {
   Users,
   Briefcase,
   DollarSign,
-  Calendar,
   FileSpreadsheet,
   Settings as SettingsIcon,
   LogOut,
@@ -17,9 +16,9 @@ import {
   X,
   Sparkles,
   Map,
-  Activity,
-  Trophy,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
+  MapPin
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -44,12 +43,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, color: 'text-blue-500' },
     { name: "Today's Attendance", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
-    { name: 'Leaderboard', path: '/admin/leaderboard', icon: Trophy, color: 'text-amber-500' },
-    { name: 'Recent Activities', path: '/admin/activities', icon: Activity, color: 'text-rose-500' },
     { name: 'Worker Management', path: '/admin/workers', icon: Users, color: 'text-indigo-500' },
     { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
     { name: 'Payroll & Salary', path: '/admin/salary', icon: DollarSign, color: 'text-teal-500' },
-    { name: 'Leave Approvals', path: '/admin/leaves', icon: Calendar, color: 'text-pink-500' },
+    { name: 'Overtime Charges', path: '/admin/overtime', icon: Clock, color: 'text-amber-500' },
+    { name: 'Fuel & Travel Logs', path: '/admin/fuel', icon: MapPin, color: 'text-rose-500' },
     { name: 'Export Reports', path: '/admin/reports', icon: FileSpreadsheet, color: 'text-cyan-500' },
     { name: 'Company Settings', path: '/admin/settings', icon: SettingsIcon, color: 'text-slate-500' }
   ];

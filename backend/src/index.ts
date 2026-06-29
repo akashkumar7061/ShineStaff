@@ -22,6 +22,8 @@ import salaryRoutes from './routes/salaryRoutes';
 import leaveRoutes from './routes/leaveRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import reportRoutes from './routes/reportRoutes';
+import overtimeRoutes from './routes/overtimeRoutes';
+import travelRoutes from './routes/travelRoutes';
 
 dotenv.config();
 
@@ -88,6 +90,8 @@ app.use('/api/salary', salaryRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/overtime', overtimeRoutes);
+app.use('/api/travel', travelRoutes);
 
 // Base route
 app.get('/', (req, res) => {

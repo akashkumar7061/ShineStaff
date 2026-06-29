@@ -200,7 +200,7 @@ export const createSalaryRequest = async (req: AuthRequest, res: Response) => {
 };
 
 export const recordPayout = async (req: AuthRequest, res: Response) => {
-  const { workerId, amount, month } = req.body;
+  const { workerId, amount, month, type, paymentMode, paymentTime, reason } = req.body;
 
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Only admins can record payouts' });
@@ -220,9 +220,12 @@ export const recordPayout = async (req: AuthRequest, res: Response) => {
       workerId,
       amount: Number(amount),
       status: 'approved',
-      type: 'regular_payout',
+      type: type || 'regular_payout',
       month,
-      processedAt: new Date()
+      processedAt: new Date(),
+      paymentMode: paymentMode || 'Online',
+      paymentTime: paymentTime || new Date().toISOString(),
+      reason: reason || ''
     });
 
     await payout.save();

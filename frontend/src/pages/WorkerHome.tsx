@@ -38,6 +38,7 @@ const WorkerHome: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [homeKms, setHomeKms] = useState('');
 
   const fetchData = async () => {
     if (!user) return;
@@ -104,6 +105,23 @@ const WorkerHome: React.FC = () => {
       fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Verification capture failed');
+    }
+  };
+
+  const handleReportHomeTravel = async () => {
+    if (!homeKms || Number(homeKms) <= 0) {
+      alert('Please enter a valid commute distance.');
+      return;
+    }
+    try {
+      await api.post('/travel/submit', {
+        type: 'home',
+        kms: Number(homeKms)
+      });
+      alert('Commute distance logged successfully! Admin will assign traveling allowance.');
+      setHomeKms('');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to log commute.');
     }
   };
 
@@ -298,7 +316,7 @@ const WorkerHome: React.FC = () => {
               {attendanceToday ? (
                 <div className="flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-500/10">
                   <div>
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-450 block">Checked In Today</span>
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-450 block">Attendance Recorded</span>
                     <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
                       <Clock className="h-3 w-3" />
                       <span>Clocked: {new Date(attendanceToday.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -310,19 +328,43 @@ const WorkerHome: React.FC = () => {
                   </span>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <p className="text-xs text-slate-455 leading-relaxed">
-                    Verify device location and snap a live camera selfie to clock-in for daily wage logs.
-                  </p>
-                  <button
-                    onClick={triggerAttendanceCamera}
-                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white flex items-center justify-center space-x-2 rounded-custom py-3.5 text-xs font-bold shadow-md shadow-emerald-500/10 transition-transform active:scale-95"
-                  >
-                    <Camera className="h-4 w-4" />
-                    <span>Check In Now</span>
-                  </button>
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl text-center">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Attendance not marked yet. Admin will log it manually.
+                  </span>
                 </div>
               )}
+            </div>
+
+            {/* Home Travel Commute Logging Card */}
+            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-indigo-500 shadow-xl">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-indigo-500/10 blur-xl" />
+              <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
+                <MapPin className="h-4 w-4 text-indigo-500" />
+                <span>Report Home Travel</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-4">
+                Log your commute distance (KM) from your last clean job site back to your home. Admin will assign traveling allowance.
+              </p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-400 mb-1 uppercase">Commute Distance (KM)</label>
+                  <input
+                    type="number"
+                    value={homeKms}
+                    onChange={(e) => setHomeKms(e.target.value)}
+                    placeholder="E.g., 12"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                  />
+                </div>
+                <button
+                  onClick={handleReportHomeTravel}
+                  className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white py-2.5 rounded-custom text-xs font-bold shadow-md shadow-indigo-500/10 transition-transform active:scale-95"
+                >
+                  Submit Commute Log
+                </button>
+              </div>
             </div>
 
             {/* Earnings stats widget */}

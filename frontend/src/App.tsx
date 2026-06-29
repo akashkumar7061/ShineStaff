@@ -17,16 +17,15 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminWorkers from './pages/AdminWorkers';
 import AdminJobs from './pages/AdminJobs';
 import AdminSalary from './pages/AdminSalary';
-import AdminLeaves from './pages/AdminLeaves';
 import AdminReports from './pages/AdminReports';
 import AdminSettings from './pages/AdminSettings';
 
 // New sidebar standalone pages
 import AdminAttendanceLogs from './pages/AdminAttendanceLogs';
 import AdminMapTracking from './pages/AdminMapTracking';
-import AdminLeaderboard from './pages/AdminLeaderboard';
-import AdminActivities from './pages/AdminActivities';
 import AdminProfile from './pages/AdminProfile';
+import AdminOvertime from './pages/AdminOvertime';
+import AdminFuel from './pages/AdminFuel';
 
 const queryClient = new QueryClient();
 
@@ -178,21 +177,21 @@ const App: React.FC = () => {
                 }
               />
               <Route
-                path="/admin/leaderboard"
+                path="/admin/overtime"
                 element={
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
-                      <AdminLeaderboard companyFilter="All" />
+                      <AdminOvertime companyFilter="All" />
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/admin/activities"
+                path="/admin/fuel"
                 element={
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
-                      <AdminActivities companyFilter="All" />
+                      <AdminFuel companyFilter="All" />
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }
@@ -227,16 +226,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/leaves"
-                element={
-                  <ProtectedRoute allowedRole="admin">
-                    <AdminRouteWrapper>
-                      <AdminLeaves companyFilter="All" />
-                    </AdminRouteWrapper>
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/admin/reports"
                 element={

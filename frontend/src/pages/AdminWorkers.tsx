@@ -17,7 +17,9 @@ import {
   UserCheck,
   Star,
   CheckCircle,
-  Briefcase
+  Briefcase,
+  Coins,
+  Clock
 } from 'lucide-react';
 
 interface AdminWorkersProps {
@@ -33,6 +35,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<'overview' | 'jobs' | 'attendance' | 'finances'>('overview');
 
   // Form states
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null);
@@ -137,6 +140,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     try {
       const res = await api.get(`/workers/${id}`);
       setSelectedWorkerDetails(res.data);
+      setDetailTab('overview');
       setDetailsModalOpen(true);
     } catch (err) {
       alert('Failed to fetch worker details');
@@ -319,15 +323,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
             </div>
             
             <form onSubmit={handleAddWorker} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Full Name</label>
-                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Email Address</label>
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Full Name</label>
+                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -397,15 +395,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
             </div>
             
             <form onSubmit={handleEditWorker} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Full Name</label>
-                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Email Address</label>
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary" />
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Full Name</label>
+                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -513,84 +505,197 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-4 w-4 text-slate-400" />
                     <span>Address: {selectedWorkerDetails.worker.address || 'N/A'}</span>
-                  </div>
                 </div>
               </div>
 
               {/* Right Column (Colspan 2) */}
-              <div className="md:col-span-2 space-y-6">
+              <div className="md:col-span-2 space-y-6 flex flex-col">
                 
-                {/* Statistics counts grid */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="glass-card p-4 text-center">
-                    <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Jobs</span>
-                    <span className="block text-xl font-extrabold text-slate-800 dark:text-white mt-1">{selectedWorkerDetails.stats.totalJobs}</span>
-                  </div>
-                  <div className="glass-card p-4 text-center">
-                    <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Job Completion</span>
-                    <span className="block text-xl font-extrabold text-success mt-1">{selectedWorkerDetails.stats.completionRate}%</span>
-                  </div>
-                  <div className="glass-card p-4 text-center">
-                    <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Attendance Rate</span>
-                    <span className="block text-xl font-extrabold text-secondary mt-1">{selectedWorkerDetails.stats.attendanceRate}%</span>
-                  </div>
+                {/* Tabs bar */}
+                <div className="flex space-x-1 border-b border-slate-200 dark:border-slate-800 pb-px">
+                  {(['overview', 'jobs', 'attendance', 'finances'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setDetailTab(tab)}
+                      className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 -mb-px ${
+                        detailTab === tab
+                          ? 'border-secondary text-secondary'
+                          : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
                 </div>
 
-                {/* GPS Live Position view */}
-                {selectedWorkerDetails.worker.currentLocation?.lat && (
-                  <div className="glass-card p-4 space-y-2">
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Latest GPS Tracked Coordinates</span>
-                    <div className="h-48">
-                      <MapView
-                        pins={[{
-                          id: selectedWorkerDetails.worker._id,
-                          name: selectedWorkerDetails.worker.name,
-                          lat: selectedWorkerDetails.worker.currentLocation.lat,
-                          lng: selectedWorkerDetails.worker.currentLocation.lng,
-                          type: 'worker'
-                        }]}
-                        center={{
-                          lat: selectedWorkerDetails.worker.currentLocation.lat,
-                          lng: selectedWorkerDetails.worker.currentLocation.lng
-                        }}
-                        zoom={14}
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* Tab content conditional rendering */}
+                <div className="flex-1 overflow-y-auto pt-2 space-y-4">
+                  {detailTab === 'overview' && (
+                    <div className="space-y-6">
+                      {/* Statistics counts grid */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="glass-card p-4 text-center">
+                          <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Jobs</span>
+                          <span className="block text-xl font-extrabold text-slate-800 dark:text-white mt-1">{selectedWorkerDetails.stats.totalJobs}</span>
+                        </div>
+                        <div className="glass-card p-4 text-center">
+                          <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Job Completion</span>
+                          <span className="block text-xl font-extrabold text-success mt-1">{selectedWorkerDetails.stats.completionRate}%</span>
+                        </div>
+                        <div className="glass-card p-4 text-center">
+                          <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Attendance Rate</span>
+                          <span className="block text-xl font-extrabold text-secondary mt-1">{selectedWorkerDetails.stats.attendanceRate}%</span>
+                        </div>
+                      </div>
 
-                {/* Historical attendance logs list */}
-                <div className="glass-card p-5">
-                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Attendance History (Last 30 entries)</span>
-                  <div className="max-h-40 overflow-y-auto space-y-2.5">
-                    {selectedWorkerDetails.attendance.length === 0 ? (
-                      <p className="text-center text-xs text-slate-400 py-4">No attendance logs available.</p>
-                    ) : (
-                      selectedWorkerDetails.attendance.map((att: any) => (
-                        <div key={att._id} className="flex justify-between items-center text-xs p-2 rounded-lg bg-slate-50/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-                          <div>
-                            <span className="font-semibold">{att.date}</span>
-                            <span className="text-[10px] text-slate-400 ml-2">Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {att.selfie && (
-                              <a href={att.selfie} target="_blank" rel="noreferrer" className="text-[10px] text-secondary hover:underline">Selfie Photo</a>
-                            )}
-                            <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
-                              att.status === 'present' ? 'bg-success/15 text-success' :
-                              att.status === 'late' ? 'bg-warning/15 text-warning' :
-                              'bg-slate-200 text-slate-500'
-                            }`}>
-                              {att.status}
-                            </span>
+                      {/* GPS Live Position view */}
+                      {selectedWorkerDetails.worker.currentLocation?.lat && (
+                        <div className="glass-card p-4 space-y-2">
+                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Latest GPS Tracked Coordinates</span>
+                          <div className="h-48">
+                            <MapView
+                              pins={[{
+                                id: selectedWorkerDetails.worker._id,
+                                name: selectedWorkerDetails.worker.name,
+                                lat: selectedWorkerDetails.worker.currentLocation.lat,
+                                lng: selectedWorkerDetails.worker.currentLocation.lng,
+                                type: 'worker'
+                              }]}
+                              center={{
+                                lat: selectedWorkerDetails.worker.currentLocation.lat,
+                                lng: selectedWorkerDetails.worker.currentLocation.lng
+                              }}
+                              zoom={14}
+                            />
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
+
+                  {detailTab === 'jobs' && (
+                    <div className="space-y-3">
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Job Commits History</span>
+                      <div className="max-h-[45vh] overflow-y-auto space-y-3">
+                        {(!selectedWorkerDetails.jobs || selectedWorkerDetails.jobs.length === 0) ? (
+                          <p className="text-center text-xs text-slate-400 py-6">No cleanup jobs assigned to this worker.</p>
+                        ) : (
+                          selectedWorkerDetails.jobs.map((job: any) => (
+                            <div key={job._id} className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h5 className="font-bold text-slate-805 dark:text-slate-100">{job.title}</h5>
+                                  <p className="text-[10px] text-slate-400 mt-0.5">Client: {job.clientName} ({job.clientPhone})</p>
+                                </div>
+                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                                  job.status === 'completed' ? 'bg-success/15 text-success' :
+                                  job.status === 'started' ? 'bg-secondary/15 text-secondary' :
+                                  'bg-warning/15 text-warning'
+                                }`}>
+                                  {job.status}
+                                </span>
+                              </div>
+                              
+                              <div className="text-[11px] text-slate-500 space-y-1">
+                                <div>📍 Address: <span className="font-medium text-slate-705 dark:text-slate-300">{job.address}</span></div>
+                                <div className="grid grid-cols-2 gap-2 pt-1.5 mt-1.5 border-t border-slate-100 dark:border-slate-800/60 text-[10px] text-slate-400">
+                                  <div>💵 Charged Price: <span className="font-bold text-slate-700 dark:text-slate-200">₹{job.price || 0}</span></div>
+                                  <div>⏰ Scheduled: <span className="font-semibold text-secondary">{job.date || 'N/A'} ({job.timeSlot || 'N/A'})</span></div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailTab === 'attendance' && (
+                    <div className="space-y-3">
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Register</span>
+                      <div className="max-h-[45vh] overflow-y-auto space-y-2.5">
+                        {(!selectedWorkerDetails.attendance || selectedWorkerDetails.attendance.length === 0) ? (
+                          <p className="text-center text-xs text-slate-400 py-6">No attendance records found.</p>
+                        ) : (
+                          selectedWorkerDetails.attendance.map((att: any) => (
+                            <div key={att._id} className="flex justify-between items-center text-xs p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-slate-150">{att.date}</span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                {att.selfie && att.selfie.startsWith('http') && (
+                                  <a href={att.selfie} target="_blank" rel="noreferrer" className="text-[10px] font-semibold text-secondary hover:underline">Selfie</a>
+                                )}
+                                <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
+                                  att.status === 'present' ? 'bg-success/15 text-success' :
+                                  att.status === 'late' ? 'bg-warning/15 text-warning' :
+                                  'bg-slate-200 text-slate-500'
+                                }`}>
+                                  {att.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailTab === 'finances' && (
+                    <div className="space-y-4">
+                      {/* Financial Salary Dossier Cards */}
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Salary Ledger & Advance Payouts</span>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="glass-card p-4">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Regular Daily Rate</span>
+                          <span className="block text-xl font-extrabold text-slate-850 dark:text-white mt-1">₹{selectedWorkerDetails.worker.dailySalary || 0}</span>
+                        </div>
+                        <div className="glass-card p-4">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Calculated Monthly Rate</span>
+                          <span className="block text-xl font-extrabold text-slate-855 dark:text-white mt-1">₹{selectedWorkerDetails.worker.monthlySalary || 0}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Advances & Payout Logs</span>
+                        <div className="max-h-[30vh] overflow-y-auto space-y-2">
+                          {(!selectedWorkerDetails.payouts || selectedWorkerDetails.payouts.length === 0) ? (
+                            <p className="text-center text-xs text-slate-400 py-4">No logged advances or payouts.</p>
+                          ) : (
+                            selectedWorkerDetails.payouts.map((pay: any) => (
+                              <div key={pay._id} className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                                      pay.type === 'advance' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+                                    }`}>
+                                      {pay.type.replace('_', ' ')}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">{pay.paymentMode || 'Online'}</span>
+                                  </div>
+                                  <span className="block text-[10px] text-slate-450 mt-1">
+                                    Date: {pay.paymentTime ? new Date(pay.paymentTime).toLocaleString() : new Date(pay.createdAt).toLocaleString()}
+                                  </span>
+                                  {pay.reason && (
+                                    <span className="block text-[10px] text-slate-400 font-medium mt-0.5">Reason: {pay.reason}</span>
+                                  )}
+                                </div>
+                                <span className="text-sm font-extrabold text-slate-850 dark:text-white">₹{pay.amount}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-              </div>
+              </div>            </div>
 
             </div>
           </div>

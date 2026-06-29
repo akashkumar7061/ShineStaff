@@ -69,7 +69,7 @@ const Login: React.FC = () => {
     try {
       const res = await api.post('/auth/register', {
         name,
-        email,
+        email: `${phone}@shinestaff.com`,
         password,
         phone,
         role,
@@ -303,20 +303,6 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="john@company.com"
-                    className="w-full rounded-custom border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 py-3 pl-11 pr-4 text-xs outline-none focus:border-secondary transition-colors"
-                  />
-                </div>
-              </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 mb-1.5 uppercase">Password</label>

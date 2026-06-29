@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import Attendance from '../models/Attendance';
 import Job from '../models/Job';
+import Overtime from '../models/Overtime';
+import TravelLog from '../models/TravelLog';
+import SalaryRequest from '../models/SalaryRequest';
 import { uploadToCloudinary } from '../config/cloudinary';
 
 export const getWorkers = async (req: Request, res: Response) => {
@@ -38,6 +41,15 @@ export const getWorkerDetails = async (req: Request, res: Response) => {
     // Get jobs assigned
     const jobs = await Job.find({ workerId: id }).sort({ createdAt: -1 }).limit(30);
 
+    // Get overtime logged
+    const overtimes = await Overtime.find({ workerId: id }).sort({ date: -1 }).limit(30);
+
+    // Get travel logs logged
+    const travelLogs = await TravelLog.find({ workerId: id }).populate('jobId').sort({ date: -1 }).limit(30);
+
+    // Get payout logs logged
+    const payouts = await SalaryRequest.find({ workerId: id }).sort({ createdAt: -1 }).limit(30);
+
     // Calculate performance score
     // Completed jobs vs Total assigned jobs
     const totalJobs = await Job.countDocuments({ workerId: id });
@@ -60,6 +72,9 @@ export const getWorkerDetails = async (req: Request, res: Response) => {
       worker,
       attendance,
       jobs,
+      overtimes,
+      travelLogs,
+      payouts,
       stats: {
         totalJobs,
         completedJobs,
@@ -88,7 +103,8 @@ export const addWorker = async (req: Request, res: Response) => {
   } = req.body;
 
   try {
-    const existing = await User.findOne({ email });
+    const targetEmail = email || `${phone}@shinestaff.com`;
+    const existing = await User.findOne({ email: targetEmail });
     if (existing) {
       return res.status(400).json({ message: 'Email already in use' });
     }
@@ -103,7 +119,7 @@ export const addWorker = async (req: Request, res: Response) => {
 
     const worker = new User({
       name,
-      email,
+      email: targetEmail,
       password: hashedPassword,
       role: 'worker',
       company,
