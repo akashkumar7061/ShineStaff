@@ -39,7 +39,7 @@ export const register = async (req: Request, res: Response) => {
     await user.save();
 
     const secret = process.env.JWT_SECRET || 'supersecretshinestaffkey12345!';
-    const token = jwt.sign({ id: user._id }, secret, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user._id }, secret, { expiresIn: '365d' });
 
     res.status(201).json({
       message: 'Account registered successfully',
@@ -83,8 +83,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const secret = process.env.JWT_SECRET || 'supersecretshinestaffkey12345!';
-    const expiresIn = rememberMe ? '30d' : '1d';
-    const token = jwt.sign({ id: user._id }, secret, { expiresIn });
+    const token = jwt.sign({ id: user._id }, secret, { expiresIn: '365d' });
 
     res.status(200).json({
       token,
