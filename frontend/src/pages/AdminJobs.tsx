@@ -14,12 +14,29 @@ import {
   Compass,
   CheckCircle,
   FileCheck2,
-  Clock
+  Clock,
+  DollarSign
 } from 'lucide-react';
 
 interface AdminJobsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
 }
+
+const timeSlotsList = [
+  '07:00 AM - 08:00 AM',
+  '08:00 AM - 09:00 AM',
+  '09:00 AM - 10:00 AM',
+  '10:00 AM - 11:00 AM',
+  '11:00 AM - 12:00 PM',
+  '12:00 PM - 01:00 PM',
+  '01:00 PM - 02:00 PM',
+  '02:00 PM - 03:00 PM',
+  '03:00 PM - 04:00 PM',
+  '04:00 PM - 05:00 PM',
+  '05:00 PM - 06:00 PM',
+  '06:00 PM - 07:00 PM',
+  '07:00 PM - 08:00 PM'
+];
 
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -40,9 +57,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [address, setAddress] = useState('');
-  // Coordinates (Optional, but can mock or retrieve from browser geolocation)
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
+  const [locationName, setLocationName] = useState('');
+  const [price, setPrice] = useState('');
+  const [date, setDate] = useState('');
+  const [timeSlot, setTimeSlot] = useState(timeSlotsList[0]);
 
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
@@ -66,7 +84,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const location = lat && lng ? { lat: Number(lat), lng: Number(lng) } : undefined;
       await api.post('/jobs', {
         title,
         description,
@@ -75,7 +92,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         clientName,
         clientPhone,
         address,
-        location
+        locationName,
+        price: Number(price) || 0,
+        date,
+        timeSlot
       });
       alert('Cleanup job created and worker notified!');
       setCreateModalOpen(false);
@@ -116,8 +136,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setClientName('');
     setClientPhone('');
     setAddress('');
-    setLat('');
-    setLng('');
+    setLocationName('');
+    setPrice('');
+    setDate('');
+    setTimeSlot(timeSlotsList[0]);
   };
 
   const handleOpenPhotoComparison = (job: any) => {
@@ -198,8 +220,28 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
 
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">{job.title}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">📍 {job.address}</p>
-                <div className="text-[10px] text-slate-400 mt-2">
+                
+                <p className="text-xs text-slate-550 dark:text-slate-350 mt-1.5">
+                  📍 {job.address} 
+                  {job.locationName && (
+                    <span className="text-[10px] font-bold text-violet-500 block mt-0.5">GPS Area: {job.locationName}</span>
+                  )}
+                </p>
+
+                {/* Price & Schedule details inside card */}
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-450">
+                  <div>
+                    <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400">Price Payout</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">₹{job.price || 0}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400">Schedule Time</span>
+                    <span className="font-semibold text-secondary block">{job.date || 'N/A'}</span>
+                    <span className="text-[9px] text-slate-400">{job.timeSlot || 'N/A'}</span>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
                   👤 Assigned: <span className="font-semibold text-slate-700 dark:text-slate-350">{job.workerId?.name || 'Unassigned'}</span>
                 </div>
               </div>
@@ -264,7 +306,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-slate-850 dark:text-white text-base">Assign New Cleaning Job</h3>
-              <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-650">✕</button>
             </div>
             
             <form onSubmit={handleCreateJob} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
@@ -282,14 +324,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Assign Worker</label>
-                <select required value={workerId} onChange={(e) => setWorkerId(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary">
-                  <option value="">-- Choose Worker --</option>
-                  {workers.map((w) => (
-                    <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Assign Worker</label>
+                  <select required value={workerId} onChange={(e) => setWorkerId(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary">
+                    <option value="">-- Choose Worker --</option>
+                    {workers.map((w) => (
+                      <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Price (₹)</label>
+                  <input type="number" required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Enter job price" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -308,15 +356,27 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <textarea required rows={2} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full street location details..." className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
               </div>
 
-              {/* Optional GPS markers */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Latitude (GPS)</label>
-                  <input type="text" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="E.g., 19.0760" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Longitude (GPS)</label>
-                  <input type="text" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="E.g., 72.8777" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+              <div>
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">GPS Location Name (Area / Landmark)</label>
+                <input type="text" required value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="E.g., Connaught Place, Mumbai Airport" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+              </div>
+
+              {/* Schedule and Worker Slot */}
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 p-4 space-y-3.5">
+                <span className="block text-[9px] font-bold text-secondary uppercase tracking-widest">Schedule & Time Slots</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Date</label>
+                    <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">1-Hour Time Slot (7 AM - 8 PM)</label>
+                    <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary">
+                      {timeSlotsList.map((slot) => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -339,8 +399,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-bold text-slate-850 dark:text-white text-base">Photo Compliance Audit</h3>
-              <button onClick={() => setPhotoModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <h3 className="font-bold text-slate-855 dark:text-white text-base">Photo Compliance Audit</h3>
+              <button onClick={() => setPhotoModalOpen(false)} className="text-slate-400 hover:text-slate-650">✕</button>
             </div>
             
             <div className="p-6 md:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
@@ -356,11 +416,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 {/* Before Photo */}
                 <div className="glass-card overflow-hidden">
                   <span className="block bg-warning/10 text-warning text-[10px] font-bold text-center py-2 uppercase tracking-wider">Before Cleaning</span>
-                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-955 flex items-center justify-center">
                     {selectedJobPhotos.beforePhoto ? (
                       <img src={selectedJobPhotos.beforePhoto} alt="Before" className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-xs text-slate-400">No photo logged</span>
+                      <span className="text-xs text-slate-405">No photo logged</span>
                     )}
                   </div>
                   {selectedJobPhotos.beforePhotoTime && (
@@ -376,11 +436,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 {/* After Photo */}
                 <div className="glass-card overflow-hidden">
                   <span className="block bg-success/10 text-success text-[10px] font-bold text-center py-2 uppercase tracking-wider">After Cleaning</span>
-                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-955 flex items-center justify-center">
                     {selectedJobPhotos.afterPhoto ? (
                       <img src={selectedJobPhotos.afterPhoto} alt="After" className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-xs text-slate-400">No photo logged</span>
+                      <span className="text-xs text-slate-405">No photo logged</span>
                     )}
                   </div>
                   {selectedJobPhotos.afterPhotoTime && (
@@ -435,7 +495,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               {/* Distance / fuel details */}
               {selectedJobPhotos.fuelKmsTravelled > 0 && (
                 <div className="p-4 rounded-custom bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-550/20 text-xs font-semibold text-center">
-                  ⛽ Job completed successfully. Verified fuel distance: {selectedJobPhotos.fuelKmsTravelled} KM (+₹{selectedJobPhotos.fuelAllowance} allowance added to wage balance)
+                  Establishment completed successfully. Verified fuel distance: {selectedJobPhotos.fuelKmsTravelled} KM (+₹{selectedJobPhotos.fuelAllowance} allowance added to wage balance)
                 </div>
               )}
             </div>

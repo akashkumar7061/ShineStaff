@@ -8,6 +8,10 @@ export interface IJob extends Document {
   clientName: string;
   clientPhone: string;
   address: string;
+  locationName?: string;
+  price?: number;
+  date?: string;
+  timeSlot?: string;
   location?: {
     lat: number;
     lng: number;
@@ -40,6 +44,10 @@ const JobSchema = new Schema<IJob>({
   clientName: { type: String, required: true },
   clientPhone: { type: String, required: true },
   address: { type: String, required: true },
+  locationName: { type: String, default: '' },
+  price: { type: Number, default: 0 },
+  date: { type: String, default: '' },
+  timeSlot: { type: String, default: '' },
   location: {
     lat: { type: Number },
     lng: { type: Number }

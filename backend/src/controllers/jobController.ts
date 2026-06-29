@@ -77,7 +77,20 @@ export const getJobById = async (req: AuthRequest, res: Response) => {
 };
 
 export const createJob = async (req: AuthRequest, res: Response) => {
-  const { title, description, company, workerId, clientName, clientPhone, address, location } = req.body;
+  const {
+    title,
+    description,
+    company,
+    workerId,
+    clientName,
+    clientPhone,
+    address,
+    locationName,
+    price,
+    date,
+    timeSlot,
+    location
+  } = req.body;
 
   try {
     const worker = await User.findById(workerId);
@@ -93,6 +106,10 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       clientName,
       clientPhone,
       address,
+      locationName,
+      price: Number(price) || 0,
+      date,
+      timeSlot,
       location,
       status: 'pending'
     });
