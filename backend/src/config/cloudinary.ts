@@ -41,8 +41,8 @@ export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, f
     }
 
     // Return mock url (which will serve static files from /uploads)
-    const port = process.env.PORT || 5000;
-    return `http://localhost:${port}/uploads/${filename}`;
+    const baseUrl = process.env.BACKEND_URL || 'https://shinestaff-backend.onrender.com';
+    return `${baseUrl}/uploads/${filename}`;
   } else {
     // Actual Cloudinary upload
     try {
