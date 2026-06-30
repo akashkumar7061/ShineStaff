@@ -8,6 +8,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Eye,
+  EyeOff,
   X,
   Phone,
   Mail,
@@ -42,6 +43,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [aadhaarNumber, setAadhaarNumber] = useState('');
@@ -345,7 +347,22 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Password</label>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Default: worker123" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary" />
+                  <div className="relative">
+                    <input
+                      type={showRegisterPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Default: worker123"
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 pr-10 outline-none focus:border-secondary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Phone Number</label>
