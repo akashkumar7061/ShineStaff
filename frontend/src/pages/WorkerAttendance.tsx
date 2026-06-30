@@ -57,7 +57,7 @@ const WorkerAttendance: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="relative h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300 overflow-hidden max-w-full">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 text-slate-800 dark:text-slate-100 transition-colors duration-300 max-w-full">
       
       {/* Background blobs */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none select-none z-0">
@@ -65,7 +65,7 @@ const WorkerAttendance: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[250px] w-[250px] rounded-full bg-teal-400/10 dark:bg-teal-600/5 blur-[80px]" />
       </div>
 
-      <div className={`h-screen overflow-y-auto pb-20 transition-transform duration-300 ${sidebarOpen ? 'translate-x-64' : 'translate-x-0'}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
         {/* Header */}
         <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-805 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
           <div className="flex items-center space-x-3">
