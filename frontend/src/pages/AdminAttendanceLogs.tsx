@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import GPSAddress from '../components/GPSAddress';
-import { Camera, Smartphone, Calendar, Plus } from 'lucide-react';
+import { Camera, Smartphone, Calendar, Plus, Edit } from 'lucide-react';
 
 interface AdminAttendanceLogsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
@@ -17,7 +17,14 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
   const [markModalOpen, setMarkModalOpen] = useState(false);
   const [workerId, setWorkerId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [status, setStatus] = useState<'present' | 'late'>('present');
+  const [status, setStatus] = useState<'present' | 'late' | 'absent' | 'half-day'>('present');
+
+  // Edit attendance modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedLogId, setSelectedLogId] = useState('');
+  const [editStatus, setEditStatus] = useState<'present' | 'late' | 'absent' | 'half-day'>('present');
+  const [editDate, setEditDate] = useState('');
+  const [editCheckInTime, setEditCheckInTime] = useState('');
 
   const fetchLogsAndWorkers = async () => {
     setLoading(true);
@@ -56,6 +63,23 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
       fetchLogsAndWorkers();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to record attendance');
+    }
+  };
+
+  const handleEditAttendance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLogId) return;
+    try {
+      await api.put(`/attendance/${selectedLogId}`, {
+        status: editStatus,
+        date: editDate,
+        checkInTime: editCheckInTime
+      });
+      alert('Attendance record updated successfully!');
+      setEditModalOpen(false);
+      fetchLogsAndWorkers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update attendance');
     }
   };
 
@@ -172,22 +196,38 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                         <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                           log?.status === 'present' ? 'bg-success/15 text-success' :
                           log?.status === 'late' ? 'bg-warning/15 text-warning' :
+                          log?.status === 'half-day' ? 'bg-indigo-500/15 text-indigo-500' :
                           'bg-danger/15 text-danger'
                         }`}>
-                          {log ? log.status : 'Absent'}
+                          {log ? (log.status === 'half-day' ? 'Half-Day' : log.status) : 'Absent'}
                         </span>
                       </td>
 
                       <td className="px-6 py-3.5 text-center flex items-center justify-center space-x-3.5">
                         {log ? (
-                          <button
-                            onClick={() => setSelectedSelfieUrl(log.selfie)}
-                            className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 text-slate-550 hover:bg-secondary/15 hover:text-secondary transition-colors"
-                            title="Review Selfie Photo"
-                            disabled={!log.selfie}
-                          >
-                            <Camera className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setSelectedSelfieUrl(log.selfie)}
+                              className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 text-slate-550 hover:bg-secondary/15 hover:text-secondary transition-colors"
+                              title="Review Selfie Photo"
+                              disabled={!log.selfie}
+                            >
+                              <Camera className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedLogId(log._id);
+                                setEditStatus(log.status);
+                                setEditDate(log.date);
+                                setEditCheckInTime(log.checkInTime ? new Date(log.checkInTime).toISOString().slice(0, 16) : '');
+                                setEditModalOpen(true);
+                              }}
+                              className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 text-slate-550 hover:bg-amber-500/15 hover:text-amber-500 transition-colors"
+                              title="Edit Attendance Record"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          </div>
                         ) : (
                           <button
                             onClick={() => { setWorkerId(worker._id); setStatus('present'); setMarkModalOpen(true); }}
@@ -251,12 +291,68 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                 >
                   <option value="present">Present (On Time)</option>
                   <option value="late">Late</option>
+                  <option value="half-day">Half-Day (Half Time)</option>
+                  <option value="absent">Absent</option>
                 </select>
               </div>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
                 <button type="button" onClick={() => setMarkModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2.5 text-xs font-semibold">Cancel</button>
                 <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2.5 text-xs font-bold">Mark Status</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit attendance modal */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-855 dark:text-white text-base">Edit Attendance Record</h3>
+              <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            
+            <form onSubmit={handleEditAttendance} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                >
+                  <option value="present">Present (On Time)</option>
+                  <option value="late">Late</option>
+                  <option value="half-day">Half-Day (Half Time)</option>
+                  <option value="absent">Absent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Check-In Time</label>
+                <input
+                  type="datetime-local"
+                  value={editCheckInTime}
+                  onChange={(e) => setEditCheckInTime(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
+                <button type="button" onClick={() => setEditModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2.5 text-xs font-semibold">Cancel</button>
+                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2.5 text-xs font-bold">Save Changes</button>
               </div>
             </form>
           </div>
