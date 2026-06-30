@@ -236,7 +236,14 @@ const WorkerHome: React.FC = () => {
                 <DollarSign className="h-5 w-5 text-emerald-500" />
                 <span>Salary & Payouts</span>
               </Link>
-              {/* Leaves tracker removed from worker panel */}
+              <Link
+                to="/worker/attendance"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center space-x-3 rounded-custom hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
+              >
+                <Calendar className="h-5 w-5 text-emerald-500" />
+                <span>My Attendance</span>
+              </Link>
               
               <Link
                 to="/worker/profile"
@@ -300,36 +307,7 @@ const WorkerHome: React.FC = () => {
           {/* LEFT COLUMN: Clock-in widget, Today's Earnings card */}
           <div className="space-y-6 md:col-span-1">
             
-            {/* Daily checkin card */}
-            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-emerald-500 shadow-emerald-500/5 shadow-xl">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-emerald-500/10 dark:bg-emerald-500/5 blur-xl" />
-              <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
-                <UserCheck className="h-4 w-4 text-emerald-500" />
-                <span>Attendance verification</span>
-              </h3>
-              
-              {attendanceToday ? (
-                <div className="flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-500/10">
-                  <div>
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-450 block">Attendance Recorded</span>
-                    <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
-                      <Clock className="h-3 w-3" />
-                      <span>Clocked: {new Date(attendanceToday.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                  
-                  <span className="rounded-full bg-success/15 px-3 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-success">
-                    {attendanceToday.status}
-                  </span>
-                </div>
-              ) : (
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl text-center">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Attendance not marked yet. Admin will log it manually.
-                  </span>
-                </div>
-              )}
-            </div>
+            {/* Daily checkin card removed from dashboard (available in Dedicated Attendance sidebar section) */}
 
             {/* Home Travel Commute Logging Card */}
             <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-indigo-500 shadow-xl">
@@ -362,36 +340,7 @@ const WorkerHome: React.FC = () => {
               </div>
             </div>
 
-            {/* My Attendance Register List */}
-            <div className="glass-card p-6 border-t-4 border-t-emerald-500 shadow-xl">
-              <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
-                <Calendar className="h-4 w-4 text-emerald-500" />
-                <span>My Attendance Register</span>
-              </h3>
-              <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-                {attendanceHistory.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-4">No attendance logs registered.</p>
-                ) : (
-                  attendanceHistory.slice(0, 15).map((att: any) => (
-                    <div key={att._id} className="flex justify-between items-center text-xs p-2.5 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                      <div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{att.date}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                          Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
-                        att.status === 'present' ? 'bg-success/15 text-success' :
-                        att.status === 'late' ? 'bg-warning/15 text-warning' :
-                        'bg-slate-200 text-slate-500'
-                      }`}>
-                        {att.status}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            {/* My Attendance Register List removed from dashboard (available in Dedicated Attendance sidebar section) */}
 
             {/* Earnings stats widget */}
             <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-teal-500 shadow-xl">

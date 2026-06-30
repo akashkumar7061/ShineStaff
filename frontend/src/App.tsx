@@ -8,7 +8,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Login from './pages/Login';
 import WorkerHome from './pages/WorkerHome';
 import WorkerJobs from './pages/WorkerJobs';
-import WorkerLeaves from './pages/WorkerLeaves';
+import WorkerAttendance from './pages/WorkerAttendance';
 import WorkerSalary from './pages/WorkerSalary';
 import WorkerProfile from './pages/WorkerProfile';
 
@@ -121,10 +121,10 @@ const App: React.FC = () => {
                 }
               />
               <Route
-                path="/worker/leaves"
+                path="/worker/attendance"
                 element={
                   <ProtectedRoute allowedRole="worker">
-                    <WorkerLeaves />
+                    <WorkerAttendance />
                   </ProtectedRoute>
                 }
               />
