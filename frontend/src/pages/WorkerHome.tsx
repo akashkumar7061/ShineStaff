@@ -152,11 +152,11 @@ const WorkerHome: React.FC = () => {
       </div>
 
       {/* Sticky Header */}
-      <header className={`sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-full p-1.5 text-slate-550 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors"
+            className="rounded-full p-1.5 text-slate-555 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors"
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -179,7 +179,7 @@ const WorkerHome: React.FC = () => {
       {/* Main Content Shift Wrapper */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
         {/* Main Container */}
-        <main className="relative p-6 max-w-7xl mx-auto space-y-6 z-10">
+        <main className="relative p-6 pt-24 max-w-7xl mx-auto space-y-6 z-10">
         
         {/* Welcome Banner */}
         <div className="flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-white/20 dark:border-white/5 shadow-sm">
