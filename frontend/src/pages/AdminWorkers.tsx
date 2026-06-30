@@ -340,16 +340,17 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
             
             <form onSubmit={handleAddWorker} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div>
-                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Full Name</label>
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Full Name <span className="text-red-500">*</span></label>
                 <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Password</label>
+                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Password <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <input
                       type={showRegisterPassword ? 'text' : 'password'}
+                      required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Default: worker123"
@@ -365,29 +366,18 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Phone Number</label>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Phone Number <span className="text-red-500">*</span></label>
                   <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Daily Salary (₹)</label>
-                  <input type="number" required value={dailySalary} onChange={(e) => setDailySalary(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
-                </div>
-                <div>
                   <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Monthly Salary (₹)</label>
-                  <input type="number" required value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Aadhaar Card Number</label>
-                  <input type="text" value={aadhaarNumber} onChange={(e) => setAadhaarNumber(e.target.value)} placeholder="12-digit number" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary" />
+                  <input type="number" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Assigned Company</label>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Assigned Company <span className="text-red-500">*</span></label>
                   <select value={company} onChange={(e) => setCompany(e.target.value as any)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary">
                     <option value="SofaShine">SofaShine</option>
                     <option value="CleanCruisers">CleanCruisers</option>
