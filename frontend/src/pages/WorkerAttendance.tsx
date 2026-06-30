@@ -178,7 +178,7 @@ const WorkerAttendance: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-lg mx-auto px-6 py-8 space-y-6">
+      <main className="relative z-10 max-w-full px-6 py-8 space-y-6">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">My Attendance Register</h2>
           <p className="text-xs text-slate-400 mt-1">Verify your daily present and late wage logs approved by admin</p>
