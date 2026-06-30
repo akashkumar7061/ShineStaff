@@ -151,128 +151,34 @@ const WorkerHome: React.FC = () => {
         <div className="absolute top-1/2 left-1/3 h-[200px] w-[200px] rounded-full bg-pink-400/15 dark:bg-pink-600/5 blur-[70px]" />
       </div>
 
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="rounded-full p-1.5 text-slate-550 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="font-extrabold text-slate-900 dark:text-slate-100 text-lg tracking-tight">ShineStaff</span>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={toggleTheme}
-            className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-          >
-            {theme === 'dark' ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
-          </button>
-          <div className="rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
-            {user.company}
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Drawer Sidebar */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex animate-fade-in">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <div className="relative flex w-80 max-w-xs flex-col bg-white dark:bg-slate-900 h-screen fixed inset-y-0 left-0 p-6 shadow-2xl overflow-y-auto">
+      <div className={`transition-transform duration-300 ${sidebarOpen ? 'translate-x-64' : 'translate-x-0'}`}>
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
+          <div className="flex items-center space-x-3">
             <button
-              onClick={() => setSidebarOpen(false)}
-              className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-full p-1.5 text-slate-550 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors"
             >
-              <X className="h-6 w-6" />
+              <Menu className="h-6 w-6" />
             </button>
+            <span className="font-extrabold text-slate-900 dark:text-slate-100 text-lg tracking-tight">ShineStaff</span>
+          </div>
 
-            {/* Clickable Profile Section inside Sidebar Drawer resolved to URL path */}
-            <div
-              onClick={() => {
-                navigate('/worker/profile');
-                setSidebarOpen(false);
-              }}
-              className="flex items-center space-x-3 mt-8 pb-6 border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 p-2 rounded-xl transition-colors"
-              title="Click to view full profile details"
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={toggleTheme}
+              className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
             >
-              <img
-                src={user.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`}
-                alt={user.name}
-                className="h-12 w-12 rounded-full object-cover border-2 border-violet-500 shadow-md"
-              />
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-1">
-                  <span>{user.name}</span>
-                  <Sparkles className="h-3 w-3 text-violet-500" />
-                </h3>
-                <span className="text-[10px] text-slate-405 block">ID: {user.id.substring(0, 8)}</span>
-              </div>
-            </div>
-
-            <nav className="flex-1 space-y-2 mt-6">
-              <Link
-                to="/worker"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center space-x-3 rounded-custom bg-secondary/10 dark:bg-secondary/20 px-4 py-3 text-sm font-semibold text-secondary"
-              >
-                <Clock className="h-5 w-5 text-secondary" />
-                <span>Home Dashboard</span>
-              </Link>
-              <Link
-                to="/worker/jobs"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
-              >
-                <Compass className="h-5 w-5 text-amber-500" />
-                <span>Job Assignments</span>
-              </Link>
-              <Link
-                to="/worker/salary"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
-              >
-                <DollarSign className="h-5 w-5 text-emerald-500" />
-                <span>Salary & Payouts</span>
-              </Link>
-              <Link
-                to="/worker/attendance"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center space-x-3 rounded-custom hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
-              >
-                <Calendar className="h-5 w-5 text-emerald-500" />
-                <span>My Attendance</span>
-              </Link>
-              
-              <Link
-                to="/worker/profile"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
-              >
-                <UserIcon className="h-5 w-5 text-violet-500" />
-                <span>My Profile</span>
-              </Link>
-            </nav>
-
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }}
-                className="flex w-full items-center space-x-3 rounded-custom bg-danger/10 text-danger px-4 py-3 text-sm font-bold hover:bg-danger/15 transition-colors"
-              >
-                <LogOut className="h-5 w-5" />
-                <span>Log Out</span>
-              </button>
+              {theme === 'dark' ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+            </button>
+            <div className="rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
+              {user.company}
             </div>
           </div>
-        </div>
-      )}
+        </header>
 
-      {/* Main Container */}
-      <main className="relative p-6 max-w-7xl mx-auto space-y-6 z-10">
+        {/* Main Container */}
+        <main className="relative p-6 max-w-7xl mx-auto space-y-6 z-10">
         
         {/* Welcome Banner */}
         <div className="flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-white/20 dark:border-white/5 shadow-sm">
@@ -480,6 +386,100 @@ const WorkerHome: React.FC = () => {
         </div>
 
       </main>
+      </div>
+
+      {/* Navigation Drawer Sidebar (slide-shift style) */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850"
+        >
+          <X className="h-6 w-6" />
+        </button>
+
+        {/* Profile Section inside Sidebar Drawer */}
+        <div
+          onClick={() => {
+            navigate('/worker/profile');
+            setSidebarOpen(false);
+          }}
+          className="flex items-center space-x-3 mt-8 pb-6 border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 p-2 rounded-xl transition-colors"
+          title="Click to view full profile details"
+        >
+          <img
+            src={user.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`}
+            alt={user.name}
+            className="h-12 w-12 rounded-full object-cover border-2 border-violet-500 shadow-md"
+          />
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-1">
+              <span>{user.name}</span>
+              <Sparkles className="h-3 w-3 text-violet-500" />
+            </h3>
+            <span className="text-[10px] text-slate-405 block">ID: {user.id.substring(0, 8)}</span>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-2 mt-6 overflow-y-auto">
+          <Link
+            to="/worker"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center space-x-3 rounded-custom bg-secondary/10 dark:bg-secondary/20 px-4 py-3 text-sm font-semibold text-secondary"
+          >
+            <Clock className="h-5 w-5 text-secondary" />
+            <span>Home Dashboard</span>
+          </Link>
+          <Link
+            to="/worker/jobs"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
+          >
+            <Compass className="h-5 w-5 text-amber-500" />
+            <span>Job Assignments</span>
+          </Link>
+          <Link
+            to="/worker/salary"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
+          >
+            <DollarSign className="h-5 w-5 text-emerald-500" />
+            <span>Salary & Payouts</span>
+          </Link>
+          <Link
+            to="/worker/attendance"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center space-x-3 rounded-custom hover:bg-slate-100/60 dark:hover:bg-slate-800/30 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
+          >
+            <Calendar className="h-5 w-5 text-emerald-500" />
+            <span>My Attendance</span>
+          </Link>
+          <Link
+            to="/worker/profile"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
+          >
+            <UserIcon className="h-5 w-5 text-violet-500" />
+            <span>My Profile</span>
+          </Link>
+        </nav>
+
+        <div className="border-t border-slate-100 dark:border-slate-805 pt-6">
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="flex w-full items-center space-x-3 rounded-custom bg-danger/10 text-danger px-4 py-3 text-sm font-bold hover:bg-danger/15 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setSidebarOpen(false)} />
+      )}
 
       {/* Verification Overlay Camera */}
       {cameraActive && (

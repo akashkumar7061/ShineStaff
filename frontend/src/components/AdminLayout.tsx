@@ -116,64 +116,63 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </nav>
       </aside>
 
-      {/* 2. Mobile sidebar drawer overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setSidebarOpen(false)} />
-          <div className="relative flex w-64 flex-col bg-white dark:bg-slate-900 h-screen fixed inset-y-0 left-0 p-6 shadow-2xl overflow-y-auto">
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-105 dark:hover:bg-slate-800"
-            >
-              <X className="h-5 w-5" />
-            </button>
+      {/* 2. Mobile sidebar drawer (slide-shift style) */}
+      <aside className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-205 dark:border-slate-800 p-6 flex flex-col space-y-6 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="absolute top-4 right-4 rounded-full p-1.5 text-slate-405 hover:bg-slate-105 dark:hover:bg-slate-800"
+        >
+          <X className="h-5 w-5" />
+        </button>
 
-            <div className="flex items-center space-x-2.5 mb-8">
-              <div className="rounded-xl bg-gradient-to-tr from-secondary to-blue-500 p-2 text-white shadow-md">
-                <Sparkles className="h-4.5 w-4.5" />
-              </div>
-              <span className="font-extrabold text-slate-855 dark:text-white tracking-tight">ShineStaff</span>
-            </div>
-
-            <nav className="space-y-1.5">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const active = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center space-x-3 rounded-custom px-4 py-3 text-xs font-bold transition-all ${
-                      active
-                        ? 'bg-gradient-to-r from-secondary to-blue-600 text-white shadow-sm shadow-blue-500/10'
-                        : `text-slate-550 hover:text-slate-700 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-slate-800/40`
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 ${active ? 'text-white' : item.color}`} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-
-              {/* Mobile Logout option inside list */}
-              <button
-                onClick={() => {
-                  setSidebarOpen(false);
-                  handleLogout();
-                }}
-                className="flex w-full items-center space-x-3 rounded-custom bg-danger/10 text-danger px-4 py-3 text-xs font-bold mt-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
-              </button>
-            </nav>
+        <div className="flex items-center space-x-2.5 mb-2">
+          <div className="rounded-xl bg-gradient-to-tr from-secondary to-blue-500 p-2 text-white shadow-md">
+            <Sparkles className="h-4.5 w-4.5" />
           </div>
+          <span className="font-extrabold text-slate-855 dark:text-white tracking-tight">ShineStaff</span>
         </div>
+
+        <nav className="space-y-1.5 overflow-y-auto flex-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const active = location.pathname === item.path;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center space-x-3 rounded-custom px-4 py-3 text-xs font-bold transition-all ${
+                  active
+                    ? 'bg-gradient-to-r from-secondary to-blue-600 text-white shadow-sm shadow-blue-500/10'
+                    : `text-slate-550 hover:text-slate-700 dark:text-slate-405 hover:bg-slate-55 dark:hover:bg-slate-800/40`
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${active ? 'text-white' : item.color}`} />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+
+          {/* Mobile Logout option inside list */}
+          <button
+            onClick={() => {
+              setSidebarOpen(false);
+              handleLogout();
+            }}
+            className="flex w-full items-center space-x-3 rounded-custom bg-danger/10 text-danger px-4 py-3 text-xs font-bold mt-2"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out</span>
+          </button>
+        </nav>
+      </aside>
+
+      {sidebarOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-transparent" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* 3. Main Workspace Container */}
-      <div className="flex-1 flex flex-col min-w-0 z-10 relative max-w-full">
+      <div className={`flex-1 flex flex-col min-w-0 z-10 relative max-w-full transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-64' : 'translate-x-0'}`}>
         
         {/* Top Navbar */}
         <header className="sticky top-0 z-35 w-full max-w-full flex items-center justify-between border-b border-slate-205/80 dark:border-slate-800/80 bg-white/75 dark:bg-slate-955/75 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
