@@ -19,7 +19,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>(facingMode);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: 0, lng: 0 });
+  const [gpsStatus, setGpsStatus] = useState<'resolving' | 'connected' | 'failed'>('resolving');
 
   // Retrieve GPS coordinates
   useEffect(() => {
@@ -30,15 +31,16 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
+          setGpsStatus('connected');
         },
         (err) => {
           console.error('GPS error:', err);
-          setError('GPS location permission is required for verification.');
+          setGpsStatus('failed');
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 8000 }
       );
     } else {
-      setError('GPS is not supported by your browser.');
+      setGpsStatus('failed');
     }
   }, []);
 
@@ -212,10 +214,22 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           <canvas ref={canvasRef} className="hidden" />
 
           {/* GPS Status HUD */}
-          {coords && !error && (
-            <div className="absolute top-4 left-4 flex items-center space-x-1.5 rounded-full bg-emerald-500/80 backdrop-blur px-3 py-1 text-xs font-medium text-emerald-950">
-              <MapPin className="h-3.5 w-3.5" />
+          {gpsStatus === 'connected' && (
+            <div className="absolute top-4 left-4 flex items-center space-x-1.5 rounded-full bg-emerald-500/85 backdrop-blur px-3 py-1 text-xs font-bold text-white shadow">
+              <MapPin className="h-3 w-3" />
               <span>GPS Connected</span>
+            </div>
+          )}
+          {gpsStatus === 'resolving' && (
+            <div className="absolute top-4 left-4 flex items-center space-x-1.5 rounded-full bg-amber-500/85 backdrop-blur px-3 py-1 text-xs font-bold text-white shadow">
+              <RefreshCw className="h-3 w-3 animate-spin" />
+              <span>Resolving GPS...</span>
+            </div>
+          )}
+          {gpsStatus === 'failed' && (
+            <div className="absolute top-4 left-4 flex items-center space-x-1.5 rounded-full bg-slate-500/85 backdrop-blur px-3 py-1 text-xs font-bold text-white shadow">
+              <AlertCircle className="h-3 w-3" />
+              <span>GPS Off (Proceeding)</span>
             </div>
           )}
         </div>
@@ -229,7 +243,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           <div className="flex items-center space-x-2">
             <MapPin className="h-3.5 w-3.5 text-secondary" />
             <span>
-              GPS: {coords ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : 'Resolving GPS...'}
+              GPS: {gpsStatus === 'connected' ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : gpsStatus === 'resolving' ? 'Locating...' : 'Not Available (Proceeding)'}
             </span>
           </div>
         </div>
@@ -247,9 +261,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
           <button
             onClick={handleCapture}
-            disabled={loading || !!error || !coords}
+            disabled={loading || !!error}
             className={`flex h-16 w-16 items-center justify-center rounded-full bg-white text-slate-950 shadow-lg hover:bg-slate-200 transition-transform active:scale-95 ${
-              (!coords || loading || !!error) ? 'opacity-50 cursor-not-allowed' : ''
+              (loading || !!error) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
             <Camera className="h-7 w-7" />
