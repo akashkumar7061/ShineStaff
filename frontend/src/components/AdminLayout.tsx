@@ -171,10 +171,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <div className="lg:hidden fixed inset-0 z-40 bg-transparent" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className={`flex-1 flex flex-col min-w-0 z-10 relative max-w-full transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-64' : 'translate-x-0'}`}>
+      <div className="flex-1 flex flex-col min-w-0 z-10 relative max-w-full">
         
         {/* Top Navbar */}
-        <header className="sticky top-0 z-35 w-full max-w-full flex items-center justify-between border-b border-slate-205/80 dark:border-slate-800/80 bg-white/75 dark:bg-slate-955/75 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
+        <header className={`sticky top-0 z-35 w-full max-w-full flex items-center justify-between border-b border-slate-205/80 dark:border-slate-800/80 bg-white/75 dark:bg-slate-955/75 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'pl-64 lg:pl-0' : 'pl-0'}`}>
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -227,7 +227,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </header>
 
         {/* Dynamic child content */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-50/50 dark:bg-slate-955/50 transition-colors duration-300">
+        <main className={`flex-1 p-6 md:p-8 overflow-y-auto bg-slate-50/50 dark:bg-slate-955/50 transition-all duration-300 ${sidebarOpen ? 'pl-64 lg:pl-0' : 'pl-0'}`}>
           {children}
         </main>
       </div>
