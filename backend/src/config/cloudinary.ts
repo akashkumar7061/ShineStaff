@@ -6,7 +6,9 @@ const isMock =
   !process.env.CLOUDINARY_CLOUD_NAME || 
   process.env.CLOUDINARY_CLOUD_NAME.startsWith('mock_') ||
   !process.env.CLOUDINARY_API_KEY ||
-  process.env.CLOUDINARY_API_KEY.startsWith('mock_');
+  process.env.CLOUDINARY_API_KEY.startsWith('mock_') ||
+  !process.env.CLOUDINARY_API_SECRET ||
+  process.env.CLOUDINARY_API_SECRET.startsWith('mock_');
 
 if (!isMock) {
   cloudinary.config({
