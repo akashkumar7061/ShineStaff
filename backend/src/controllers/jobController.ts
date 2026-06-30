@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Job from '../models/Job';
 import User from '../models/User';
 import Settings from '../models/Settings';
+import TravelLog from '../models/TravelLog';
 import { uploadToCloudinary } from '../config/cloudinary';
 import { sendWhatsAppAlert } from '../utils/whatsapp';
 import { sendMail } from '../config/mailer';
@@ -263,6 +264,22 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     job.workerNotes = workerNotes || '';
 
     await job.save();
+
+    // Create travel log for this completed cleanup job
+    try {
+      const travelLog = new TravelLog({
+        workerId: job.workerId,
+        date: new Date(job.completedAt).toISOString().split('T')[0],
+        type: 'job',
+        jobId: job._id,
+        kms: finalKms,
+        allowance: fuelAllowance,
+        status: 'approved'
+      });
+      await travelLog.save();
+    } catch (err) {
+      console.error('Failed to auto-create travel log:', err);
+    }
 
     // Get worker details
     const worker = await User.findById(req.user.id);

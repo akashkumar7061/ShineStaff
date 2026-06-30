@@ -73,3 +73,26 @@ export const approveTravelLog = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const updateTravelLog = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { date, type, kms, allowance, status } = req.body;
+
+  try {
+    const log = await TravelLog.findById(id);
+    if (!log) {
+      return res.status(404).json({ message: 'Travel log not found' });
+    }
+
+    if (date !== undefined) log.date = date;
+    if (type !== undefined) log.type = type;
+    if (kms !== undefined) log.kms = Number(kms);
+    if (allowance !== undefined) log.allowance = Number(allowance);
+    if (status !== undefined) log.status = status;
+
+    await log.save();
+    res.status(200).json({ message: 'Travel log updated successfully', log });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

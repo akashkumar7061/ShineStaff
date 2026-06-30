@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
-import { MapPin, Check, Plus, AlertCircle, Fuel, Compass, CheckCircle2 } from 'lucide-react';
+import { MapPin, Check, Plus, AlertCircle, Fuel, Compass, CheckCircle2, Edit } from 'lucide-react';
 
 interface AdminFuelProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
@@ -12,6 +12,15 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [allowance, setAllowance] = useState('100'); // default allowance
+
+  // Edit Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editLog, setEditLog] = useState<any>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editType, setEditType] = useState<'job' | 'home'>('job');
+  const [editKms, setEditKms] = useState('');
+  const [editAllowance, setEditAllowance] = useState('');
+  const [editStatus, setEditStatus] = useState<'pending' | 'approved'>('approved');
 
   const fetchTravelLogs = async () => {
     setLoading(true);
@@ -33,6 +42,35 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
     setSelectedLog(log);
     setAllowance((log.kms * 10).toString()); // default auto-calc: ₹10 per KM
     setApprovalModalOpen(true);
+  };
+
+  const handleOpenEditModal = (log: any) => {
+    setEditLog(log);
+    setEditDate(log.date);
+    setEditType(log.type);
+    setEditKms(log.kms.toString());
+    setEditAllowance(log.allowance.toString());
+    setEditStatus(log.status);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editLog) return;
+    try {
+      await api.put(`/travel/${editLog._id}`, {
+        date: editDate,
+        type: editType,
+        kms: Number(editKms),
+        allowance: Number(editAllowance),
+        status: editStatus
+      });
+      alert('Travel log updated successfully!');
+      setEditModalOpen(false);
+      fetchTravelLogs();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update travel log');
+    }
   };
 
   const handleApproveSubmit = async (e: React.FormEvent) => {
@@ -141,16 +179,24 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                     </td>
 
                     <td className="px-6 py-3.5 text-center">
-                      {log.status === 'pending' ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        {log.status === 'pending' && (
+                          <button
+                            onClick={() => handleOpenApproveModal(log)}
+                            className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3 py-1.5 uppercase transition-colors"
+                          >
+                            Approve
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleOpenApproveModal(log)}
-                          className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3.5 py-1.5 uppercase transition-colors"
+                          onClick={() => handleOpenEditModal(log)}
+                          className="rounded-lg bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 font-bold text-[10px] px-3 py-1.5 uppercase transition-colors flex items-center space-x-1"
+                          title="Edit Log"
                         >
-                          Approve allowance
+                          <Edit className="h-3 w-3" />
+                          <span>Edit</span>
                         </button>
-                      ) : (
-                        <span className="text-slate-400 font-semibold italic text-[10px]">Verified</span>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -191,6 +237,88 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
                 <button type="button" onClick={() => setApprovalModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2.5 text-xs font-semibold">Cancel</button>
                 <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2.5 text-xs font-bold">Approve Log</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Edit modal */}
+      {editModalOpen && editLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-205 dark:border-slate-800">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-855 dark:text-white text-base">Edit Travel Log</h3>
+              <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-955 p-4 rounded-2xl space-y-1.5 text-slate-550">
+                <div>Worker: <span className="font-bold text-slate-800 dark:text-slate-100">{editLog.workerId?.name}</span></div>
+                {editLog.jobId && <div>Job: <span className="font-bold text-slate-800 dark:text-slate-100">{editLog.jobId.title}</span></div>}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Commute Type</label>
+                <select
+                  value={editType}
+                  onChange={(e: any) => setEditType(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                >
+                  <option value="job">Cleanup site travel (job)</option>
+                  <option value="home">Last work to home (home)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Distance (KM)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  value={editKms}
+                  onChange={(e) => setEditKms(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Travel Allowance (₹)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  value={editAllowance}
+                  onChange={(e) => setEditAllowance(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e: any) => setEditStatus(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                </select>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
+                <button type="button" onClick={() => setEditModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2.5 text-xs font-semibold">Cancel</button>
+                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2.5 text-xs font-bold">Save Changes</button>
               </div>
             </form>
           </div>
