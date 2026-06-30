@@ -173,7 +173,7 @@ const WorkerAttendance: React.FC = () => {
       </div>
 
       {/* Sidebar Navigation (slide-shift style) */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-805 p-6 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-805 p-6 flex flex-col overflow-y-auto transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850"
@@ -202,7 +202,7 @@ const WorkerAttendance: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-2 mt-6 overflow-y-auto">
+        <nav className="space-y-2 mt-6">
           <Link
             to="/worker"
             onClick={() => setSidebarOpen(false)}

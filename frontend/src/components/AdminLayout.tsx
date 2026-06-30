@@ -81,7 +81,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </div>
 
         {/* Menu Navigation list */}
-        <nav className="space-y-1.5 pt-4">
+        <nav className="space-y-1.5 pt-4 overflow-y-auto flex-1 pr-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.path;
@@ -117,7 +117,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </aside>
 
       {/* 2. Mobile sidebar drawer (slide-shift style) */}
-      <aside className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-205 dark:border-slate-800 p-6 flex flex-col space-y-6 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-205 dark:border-slate-800 p-6 flex flex-col overflow-y-auto space-y-6 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 rounded-full p-1.5 text-slate-405 hover:bg-slate-105 dark:hover:bg-slate-800"
@@ -132,7 +132,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           <span className="font-extrabold text-slate-855 dark:text-white tracking-tight">ShineStaff</span>
         </div>
 
-        <nav className="space-y-1.5 overflow-y-auto flex-1">
+        <nav className="space-y-1.5 pt-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.path;
