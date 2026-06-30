@@ -65,7 +65,7 @@ const WorkerAttendance: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[250px] w-[250px] rounded-full bg-teal-400/10 dark:bg-teal-600/5 blur-[80px]" />
       </div>
 
-      <div className={`transition-transform duration-300 ${sidebarOpen ? 'translate-x-64' : 'translate-x-0'}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {/* Header */}
         <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-805 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
           <div className="flex items-center space-x-3">

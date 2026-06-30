@@ -151,7 +151,7 @@ const WorkerHome: React.FC = () => {
         <div className="absolute top-1/2 left-1/3 h-[200px] w-[200px] rounded-full bg-pink-400/15 dark:bg-pink-600/5 blur-[70px]" />
       </div>
 
-      <div className={`transition-transform duration-300 ${sidebarOpen ? 'translate-x-64' : 'translate-x-0'}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {/* Sticky Header */}
         <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
           <div className="flex items-center space-x-3">
