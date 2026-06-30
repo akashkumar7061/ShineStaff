@@ -21,6 +21,8 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
   const [editKms, setEditKms] = useState('');
   const [editAllowance, setEditAllowance] = useState('');
   const [editStatus, setEditStatus] = useState<'pending' | 'approved'>('approved');
+  const [editFromLocation, setEditFromLocation] = useState('');
+  const [editToLocation, setEditToLocation] = useState('');
 
   const fetchTravelLogs = async () => {
     setLoading(true);
@@ -51,6 +53,8 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
     setEditKms(log.kms.toString());
     setEditAllowance(log.allowance.toString());
     setEditStatus(log.status);
+    setEditFromLocation(log.fromLocation || '');
+    setEditToLocation(log.toLocation || '');
     setEditModalOpen(true);
   };
 
@@ -63,7 +67,9 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
         type: editType,
         kms: Number(editKms),
         allowance: Number(editAllowance),
-        status: editStatus
+        status: editStatus,
+        fromLocation: editFromLocation,
+        toLocation: editToLocation
       });
       alert('Travel log updated successfully!');
       setEditModalOpen(false);
@@ -156,12 +162,27 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                       </span>
                     </td>
 
-                    <td className="px-6 py-3.5 max-w-[200px] truncate text-slate-500">
-                      {log.type === 'home' ? (
-                        <span className="italic">Commute back home</span>
-                      ) : (
-                        <span>Clean job: {log.jobId?.title || 'Cleanup Site'} ({log.jobId?.address})</span>
-                      )}
+                    <td className="px-6 py-3.5 max-w-[220px]">
+                      <div className="space-y-1">
+                        {log.type === 'job' ? (
+                          <span className="block font-bold text-slate-700 dark:text-slate-300 truncate">
+                            Clean job: {log.jobId?.title || 'Cleanup Site'}
+                          </span>
+                        ) : (
+                          <span className="block italic text-[10px] text-slate-400">
+                            Commute back home
+                          </span>
+                        )}
+                        <div className="flex items-center space-x-1 text-[10px] text-slate-400">
+                          <span className="font-semibold text-slate-500 truncate max-w-[90px]" title={log.fromLocation || 'Home'}>
+                            {log.fromLocation || 'Home'}
+                          </span>
+                          <span className="text-secondary font-extrabold">➔</span>
+                          <span className="font-semibold text-slate-500 truncate max-w-[90px]" title={log.toLocation || 'Site'}>
+                            {log.toLocation || 'Site'}
+                          </span>
+                        </div>
+                      </div>
                     </td>
 
                     <td className="px-6 py-3.5 font-extrabold text-secondary text-center text-sm">{log.kms} KM</td>
@@ -278,6 +299,28 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                   <option value="job">Cleanup site travel (job)</option>
                   <option value="home">Last work to home (home)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Origin (From)</label>
+                <input
+                  type="text"
+                  value={editFromLocation}
+                  onChange={(e) => setEditFromLocation(e.target.value)}
+                  placeholder="e.g. Home, Previous Site Address"
+                  className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Destination (To)</label>
+                <input
+                  type="text"
+                  value={editToLocation}
+                  onChange={(e) => setEditToLocation(e.target.value)}
+                  placeholder="e.g. Site Address, Home"
+                  className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
               </div>
 
               <div>

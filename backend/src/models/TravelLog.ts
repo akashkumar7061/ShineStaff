@@ -8,6 +8,8 @@ export interface ITravelLog extends Document {
   kms: number;
   allowance: number; // Decided by admin
   status: 'pending' | 'approved';
+  fromLocation?: string;
+  toLocation?: string;
 }
 
 const TravelLogSchema = new Schema<ITravelLog>({
@@ -17,7 +19,9 @@ const TravelLogSchema = new Schema<ITravelLog>({
   jobId: { type: Schema.Types.ObjectId, ref: 'Job' },
   kms: { type: Number, required: true, default: 0 },
   allowance: { type: Number, default: 0 },
-  status: { type: String, enum: ['pending', 'approved'], default: 'pending' }
+  status: { type: String, enum: ['pending', 'approved'], default: 'pending' },
+  fromLocation: { type: String, default: '' },
+  toLocation: { type: String, default: '' }
 }, {
   timestamps: true
 });

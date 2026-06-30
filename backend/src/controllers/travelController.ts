@@ -11,6 +11,34 @@ export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   }
 
   try {
+    let fromLoc = 'Work Site';
+    let toLoc = 'Home';
+
+    if (type === 'home') {
+      const todayStart = new Date();
+      todayStart.setHours(0,0,0,0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23,59,59,999);
+
+      const lastJob = await Job.findOne({
+        workerId: req.user.id,
+        status: 'completed',
+        completedAt: { $gte: todayStart, $lte: todayEnd }
+      }).sort({ completedAt: -1 });
+
+      if (lastJob) {
+        fromLoc = lastJob.address;
+      }
+    } else {
+      fromLoc = 'Home';
+      if (jobId) {
+        const targetJob = await Job.findById(jobId);
+        if (targetJob) {
+          toLoc = targetJob.address;
+        }
+      }
+    }
+
     const travel = new TravelLog({
       workerId: req.user.id,
       date: date || new Date().toISOString().split('T')[0],
@@ -18,7 +46,9 @@ export const submitTravelLog = async (req: AuthRequest, res: Response) => {
       jobId: jobId || undefined,
       kms: Number(kms) || 0,
       allowance: 0,
-      status: 'pending'
+      status: 'pending',
+      fromLocation: fromLoc,
+      toLocation: toLoc
     });
 
     await travel.save();
@@ -76,7 +106,7 @@ export const approveTravelLog = async (req: AuthRequest, res: Response) => {
 
 export const updateTravelLog = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { date, type, kms, allowance, status } = req.body;
+  const { date, type, kms, allowance, status, fromLocation, toLocation } = req.body;
 
   try {
     const log = await TravelLog.findById(id);
@@ -89,6 +119,8 @@ export const updateTravelLog = async (req: AuthRequest, res: Response) => {
     if (kms !== undefined) log.kms = Number(kms);
     if (allowance !== undefined) log.allowance = Number(allowance);
     if (status !== undefined) log.status = status;
+    if (fromLocation !== undefined) log.fromLocation = fromLocation;
+    if (toLocation !== undefined) log.toLocation = toLocation;
 
     await log.save();
     res.status(200).json({ message: 'Travel log updated successfully', log });

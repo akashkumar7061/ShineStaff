@@ -267,6 +267,21 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
 
     // Create travel log for this completed cleanup job
     try {
+      const todayStart = new Date();
+      todayStart.setHours(0,0,0,0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23,59,59,999);
+
+      const prevJob = await Job.findOne({
+        workerId: job.workerId,
+        status: 'completed',
+        _id: { $ne: job._id },
+        completedAt: { $gte: todayStart, $lt: job.completedAt || new Date() }
+      }).sort({ completedAt: -1 });
+
+      const fromLoc = prevJob ? prevJob.address : 'Home';
+      const toLoc = job.address;
+
       const travelLog = new TravelLog({
         workerId: job.workerId,
         date: new Date(job.completedAt).toISOString().split('T')[0],
@@ -274,7 +289,9 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
         jobId: job._id,
         kms: finalKms,
         allowance: fuelAllowance,
-        status: 'approved'
+        status: 'approved',
+        fromLocation: fromLoc,
+        toLocation: toLoc
       });
       await travelLog.save();
     } catch (err) {
