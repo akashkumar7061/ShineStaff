@@ -208,25 +208,24 @@ const WorkerHome: React.FC = () => {
         </div>
 
         {/* RESPONSIVE LAYOUT COLS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-6">
           
-          {/* LEFT COLUMN: Clock-in widget, Today's Earnings card */}
-          <div className="space-y-6 md:col-span-1">
-            
-            {/* Daily checkin card removed from dashboard (available in Dedicated Attendance sidebar section) */}
-
+          {/* Row 1: Report Home Travel & Active Cleanup Tracker */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {/* Home Travel Commute Logging Card */}
-            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-indigo-500 shadow-xl">
+            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-indigo-500 shadow-xl flex flex-col justify-between h-full">
               <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-indigo-500/10 blur-xl" />
-              <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
-                <MapPin className="h-4 w-4 text-indigo-500" />
-                <span>Report Home Travel</span>
-              </h3>
-              <p className="text-[11px] text-slate-400 leading-relaxed mb-4">
-                Log your commute distance (KM) from your last clean job site back to your home. Admin will assign traveling allowance.
-              </p>
+              <div>
+                <h3 className="text-xs font-extrabold text-slate-455 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
+                  <MapPin className="h-4 w-4 text-indigo-500" />
+                  <span>Report Home Travel</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 leading-relaxed mb-4">
+                  Log your commute distance (KM) from your last clean job site back to your home. Admin will assign traveling allowance.
+                </p>
+              </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 mt-4">
                 <div>
                   <label className="block text-[9px] font-bold text-slate-400 mb-1 uppercase">Commute Distance (KM)</label>
                   <input
@@ -234,45 +233,20 @@ const WorkerHome: React.FC = () => {
                     value={homeKms}
                     onChange={(e) => setHomeKms(e.target.value)}
                     placeholder="E.g., 12"
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2.5 outline-none focus:border-secondary"
                   />
                 </div>
                 <button
                     onClick={handleReportHomeTravel}
-                    className="w-full py-2.5 bg-indigo-500 text-white rounded-lg text-xs font-bold hover:bg-indigo-600 transition-colors"
+                    className="w-full py-2.5 bg-indigo-500 text-white rounded-lg text-xs font-bold hover:bg-indigo-650 transition-colors"
                 >
                     Submit Commute
                 </button>
               </div>
             </div>
 
-            {/* My Attendance Register List removed from dashboard (available in Dedicated Attendance sidebar section) */}
-
-            {/* Earnings stats widget */}
-            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-teal-500 shadow-xl">
-              <div className="absolute top-0 right-0 -mt-6 -mr-6 h-20 w-20 rounded-full bg-teal-500/10 blur-lg" />
-              <span className="block text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-2 flex items-center space-x-1.5">
-                <DollarSign className="h-4 w-4 text-teal-500" />
-                <span>Earnings Today</span>
-              </span>
-              <div className="flex items-baseline space-x-1.5">
-                <span className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-400">
-                  ₹{salaryToday}
-                </span>
-                <span className="text-xs font-semibold text-slate-400">INR</span>
-              </div>
-              <span className="block text-[10px] text-slate-405 mt-2 border-t border-slate-100 dark:border-slate-800/80 pt-2.5">
-                Aggregated daily wages + fuel payouts
-              </span>
-            </div>
-
-          </div>
-
-          {/* CENTER & RIGHT COLUMNS: Active cleanup steps, and stats + links grid */}
-          <div className="space-y-6 md:col-span-2">
-            
             {/* Active Cleanup with visual step mapping */}
-            <div className="glass-card p-6 space-y-5 border-t-4 border-t-amber-500 shadow-xl">
+            <div className="glass-card p-6 border-t-4 border-t-amber-500 shadow-xl md:col-span-2 flex flex-col justify-between h-full space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest">Active Cleanup Tracker</h3>
                 <Link to="/worker/jobs" className="text-xs font-bold text-secondary hover:underline">
@@ -281,14 +255,14 @@ const WorkerHome: React.FC = () => {
               </div>
 
               {jobsSummary.active ? (
-                <div className="space-y-5">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-150/40 dark:border-slate-855/40">
+                <div className="space-y-5 flex-1 flex flex-col justify-between">
+                  <div className="bg-slate-55 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-150/40 dark:border-slate-855/40">
                     <span className="inline-block text-[9px] font-extrabold bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2.5 py-0.5 rounded-full uppercase mb-2">
                       {jobsSummary.active.company}
                     </span>
                     <h4 className="text-base font-bold text-slate-800 dark:text-white">{jobsSummary.active.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1">📍 {jobsSummary.active.address}</p>
-                    <p className="text-xs text-slate-400 mt-1">👤 Client: {jobsSummary.active.clientName} ({jobsSummary.active.clientPhone})</p>
+                    <p className="text-xs text-slate-405 mt-1">📍 {jobsSummary.active.address}</p>
+                    <p className="text-xs text-slate-405 mt-1">👤 Client: {jobsSummary.active.clientName} ({jobsSummary.active.clientPhone})</p>
                   </div>
 
                   {/* Visual Tracker map */}
@@ -301,7 +275,7 @@ const WorkerHome: React.FC = () => {
                       <span className="text-[9px] font-semibold text-slate-450 mt-1">Before photo</span>
                     </div>
                     <div className="flex flex-col items-center z-10">
-                      <div className="h-6.5 w-6.5 rounded-full bg-white dark:bg-slate-800 border-2 border-amber-500 text-amber-500 flex items-center justify-center text-[10px] font-bold shadow">2</div>
+                      <div className="h-6.5 w-6.5 rounded-full bg-white dark:bg-slate-800 border-2 border-amber-500 text-amber-505 flex items-center justify-center text-[10px] font-bold shadow">2</div>
                       <span className="text-[9px] font-semibold text-slate-450 mt-1">Working</span>
                     </div>
                     <div className="flex flex-col items-center z-10">
@@ -332,7 +306,7 @@ const WorkerHome: React.FC = () => {
                   </div>
                 </div>
               ) : jobsSummary.pending > 0 ? (
-                <div className="text-center py-6 space-y-4">
+                <div className="text-center py-6 space-y-4 flex-1 flex flex-col justify-center">
                   <p className="text-xs text-slate-400">
                     You have {jobsSummary.pending} pending cleanups. Get started on the first clean.
                   </p>
@@ -344,15 +318,35 @@ const WorkerHome: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="text-center text-xs text-slate-455 py-8">
+                <div className="text-center text-xs text-slate-455 py-8 flex-1 flex items-center justify-center">
                   🎉 No cleans scheduled currently. Enjoy your day!
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Quick Action Navigation Shortcuts Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              
+          {/* Row 2: Earnings card & Navigation Shortcuts */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Earnings stats widget */}
+            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-teal-500 shadow-xl md:col-span-1">
+              <div className="absolute top-0 right-0 -mt-6 -mr-6 h-20 w-20 rounded-full bg-teal-500/10 blur-lg" />
+              <span className="block text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-2 flex items-center space-x-1.5">
+                <DollarSign className="h-4 w-4 text-teal-500" />
+                <span>Earnings Today</span>
+              </span>
+              <div className="flex items-baseline space-x-1.5">
+                <span className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-400">
+                  ₹{salaryToday}
+                </span>
+                <span className="text-xs font-semibold text-slate-400">INR</span>
+              </div>
+              <span className="block text-[10px] text-slate-405 mt-2 border-t border-slate-100 dark:border-slate-800/80 pt-2.5">
+                Aggregated daily wages + fuel payouts
+              </span>
+            </div>
+
+            {/* Quick Action Shortcuts Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:col-span-2">
               <Link to="/worker/jobs" className="glass-card p-6 flex flex-col justify-between hover:scale-[1.02] hover:border-amber-500/30 transition-all shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="rounded-xl bg-amber-500/10 p-2 text-amber-500">
@@ -378,13 +372,10 @@ const WorkerHome: React.FC = () => {
                   <p className="text-[10px] text-slate-400 mt-0.5">Payroll records</p>
                 </div>
               </Link>
-
             </div>
-
           </div>
-
+          
         </div>
-
       </main>
       </div>
 
