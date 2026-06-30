@@ -173,7 +173,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </aside>
 
       {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-35 bg-slate-950/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+        <div 
+          className="lg:hidden fixed inset-0 z-35 bg-slate-955/40" 
+          style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+          onClick={() => setSidebarOpen(false)} 
+        />
       )}
 
       <div className="flex-1 flex flex-col min-w-0 z-30 relative max-w-full lg:ml-64">

@@ -469,7 +469,11 @@ const WorkerHome: React.FC = () => {
       </aside>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 z-45 bg-slate-950/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+        <div 
+          className="fixed inset-0 z-45 bg-slate-950/40" 
+          style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+          onClick={() => setSidebarOpen(false)} 
+        />
       )}
 
       {/* Verification Overlay Camera */}
