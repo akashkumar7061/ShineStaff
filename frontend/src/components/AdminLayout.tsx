@@ -171,7 +171,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <div className="lg:hidden fixed inset-0 z-40 bg-transparent" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className="flex-1 flex flex-col min-w-0 z-30 relative max-w-full lg:pl-64">
+      <div className="flex-1 flex flex-col min-w-0 z-30 relative max-w-full lg:ml-64">
         
         {/* Top Navbar */}
         <header className={`fixed top-0 right-0 z-40 flex items-center justify-between border-b border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 box-border overflow-x-hidden transition-all duration-300 lg:left-64 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
