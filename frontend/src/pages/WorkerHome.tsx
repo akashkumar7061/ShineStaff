@@ -151,32 +151,33 @@ const WorkerHome: React.FC = () => {
         <div className="absolute top-1/2 left-1/3 h-[200px] w-[200px] rounded-full bg-pink-400/15 dark:bg-pink-600/5 blur-[70px]" />
       </div>
 
+      {/* Sticky Header */}
+      <header className={`sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-full p-1.5 text-slate-550 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <span className="font-extrabold text-slate-900 dark:text-slate-100 text-lg tracking-tight">ShineStaff</span>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={toggleTheme}
+            className="rounded-full p-2 text-slate-505 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+          >
+            {theme === 'dark' ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+          </button>
+          <div className="rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
+            {user.company}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Shift Wrapper */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
-        {/* Sticky Header */}
-        <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="rounded-full p-1.5 text-slate-550 hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <span className="font-extrabold text-slate-900 dark:text-slate-100 text-lg tracking-tight">ShineStaff</span>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={toggleTheme}
-              className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-            >
-              {theme === 'dark' ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
-            </button>
-            <div className="rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
-              {user.company}
-            </div>
-          </div>
-        </header>
-
         {/* Main Container */}
         <main className="relative p-6 max-w-7xl mx-auto space-y-6 z-10">
         
