@@ -289,7 +289,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
         jobId: job._id,
         kms: finalKms,
         allowance: fuelAllowance,
-        status: 'approved',
+        status: 'pending',
         fromLocation: fromLoc,
         toLocation: toLoc
       });
