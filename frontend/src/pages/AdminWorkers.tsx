@@ -329,14 +329,14 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
 
       {/* Register Worker Modal */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/75 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-slate-850 dark:text-white text-base">Register New Worker</h3>
               <button onClick={() => setAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
-            <form onSubmit={handleAddWorker} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleAddWorker} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Full Name</label>
                 <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
@@ -401,14 +401,14 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
 
       {/* Edit Worker Modal */}
       {editModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/75 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-slate-850 dark:text-white text-base">Edit Worker Details</h3>
               <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
-            <form onSubmit={handleEditWorker} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleEditWorker} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div>
                 <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Full Name</label>
                 <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
@@ -467,8 +467,8 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
 
       {/* Worker Profile Detail View Modal */}
       {detailsModalOpen && selectedWorkerDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/75 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
@@ -477,7 +477,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
             </div>
 
             {/* Profile contents */}
-            <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 max-h-[75vh] overflow-y-auto">
+            <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto flex-1 text-xs">
               
               {/* Left Column: Bio info card */}
               <div className="space-y-4">
