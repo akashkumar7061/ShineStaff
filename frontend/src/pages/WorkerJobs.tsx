@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CameraCapture from '../components/CameraCapture';
+import GPSAddress from '../components/GPSAddress';
 import {
   Camera,
   CheckCircle,
@@ -37,6 +38,7 @@ const WorkerJobs: React.FC = () => {
   // Temporary snaps inside form
   const [tempBeforePhoto, setTempBeforePhoto] = useState<string | null>(null);
   const [tempAfterPhoto, setTempAfterPhoto] = useState<string | null>(null);
+  const [tempAfterPhotoGPS, setTempAfterPhotoGPS] = useState<{ lat: number; lng: number } | null>(null);
   const [tempKms, setTempKms] = useState('5');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -61,6 +63,7 @@ const WorkerJobs: React.FC = () => {
     setSelectedJob(job);
     setTempBeforePhoto(job.beforePhoto || null);
     setTempAfterPhoto(job.afterPhoto || null);
+    setTempAfterPhotoGPS(job.afterPhotoGPS || null);
     setTempKms(job.fuelKmsTravelled?.toString() || '5');
     setTempNotes(job.workerNotes || '');
   };
@@ -78,7 +81,12 @@ const WorkerJobs: React.FC = () => {
       }).then(() => {
         alert('Before Photo uploaded! Job started.');
         // Refresh local details
-        setSelectedJob({ ...selectedJob, status: 'started', beforePhoto: dataUrl });
+        setSelectedJob({
+          ...selectedJob,
+          status: 'started',
+          beforePhoto: dataUrl,
+          beforePhotoGPS: coords
+        });
         fetchJobs();
       }).catch((err) => {
         alert(err.response?.data?.message || 'Failed to start job');
@@ -86,6 +94,7 @@ const WorkerJobs: React.FC = () => {
       });
     } else {
       setTempAfterPhoto(dataUrl);
+      setTempAfterPhotoGPS(coords);
     }
   };
 
@@ -103,38 +112,36 @@ const WorkerJobs: React.FC = () => {
 
     setSubmittingReport(true);
     try {
-      // Get device GPS location
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
+      const submitJobCompletion = async (coords: { lat: number; lng: number }) => {
+        await api.put(`/jobs/${selectedJob._id}/complete`, {
+          afterPhotoDataUrl: tempAfterPhoto,
+          location: coords,
+          manualFuelKms: Number(tempKms),
+          workerNotes: tempNotes
+        });
+        alert('Cleanup sheet submitted successfully! Job marked as completed.');
+        setSelectedJob(null);
+        fetchJobs();
+      };
 
-          await api.put(`/jobs/${selectedJob._id}/complete`, {
-            afterPhotoDataUrl: tempAfterPhoto,
-            location: coords,
-            manualFuelKms: Number(tempKms),
-            workerNotes: tempNotes
-          });
-
-          alert('Cleanup sheet submitted successfully! Job marked as completed.');
-          setSelectedJob(null);
-          fetchJobs();
-        },
-        async (error) => {
-          console.warn('Geolocation failed. Completing job with default coordinates.', error);
-          await api.put(`/jobs/${selectedJob._id}/complete`, {
-            afterPhotoDataUrl: tempAfterPhoto,
-            location: { lat: 0, lng: 0 },
-            manualFuelKms: Number(tempKms),
-            workerNotes: tempNotes
-          });
-          alert('Cleanup sheet submitted successfully! Job marked as completed.');
-          setSelectedJob(null);
-          fetchJobs();
-        }
-      );
+      if (tempAfterPhotoGPS) {
+        await submitJobCompletion(tempAfterPhotoGPS);
+      } else {
+        // Fallback to fetch current location if they didn't snap clean photo just now
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const coords = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            await submitJobCompletion(coords);
+          },
+          async (error) => {
+            console.warn('Geolocation failed. Completing job with default coordinates.', error);
+            await submitJobCompletion({ lat: 0, lng: 0 });
+          }
+        );
+      }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Verification complete update failed');
     } finally {
@@ -311,6 +318,11 @@ const WorkerJobs: React.FC = () => {
                   {tempBeforePhoto ? (
                     <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow">
                       <img src={tempBeforePhoto} alt="Before snap" className="w-full h-full object-cover" />
+                      {selectedJob.beforePhotoGPS?.lat && (
+                        <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
+                          <GPSAddress lat={selectedJob.beforePhotoGPS.lat} lng={selectedJob.beforePhotoGPS.lng} className="text-white/90 max-w-[110px]" />
+                        </div>
+                      )}
                       {selectedJob.status === 'pending' && (
                         <button
                           type="button"
@@ -339,6 +351,11 @@ const WorkerJobs: React.FC = () => {
                   {tempAfterPhoto ? (
                     <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow">
                       <img src={tempAfterPhoto} alt="After snap" className="w-full h-full object-cover" />
+                      {tempAfterPhotoGPS?.lat && (
+                        <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
+                          <GPSAddress lat={tempAfterPhotoGPS.lat} lng={tempAfterPhotoGPS.lng} className="text-white/90 max-w-[110px]" />
+                        </div>
+                      )}
                       {selectedJob.status === 'started' && (
                         <button
                           type="button"
