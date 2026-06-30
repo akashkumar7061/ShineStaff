@@ -467,25 +467,26 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
 
       {/* Worker Profile Detail View Modal */}
       {detailsModalOpen && selectedWorkerDetails && (
-        <div className="fixed inset-0 z-[9999] bg-white dark:bg-slate-900 flex flex-col w-full h-full overflow-hidden">
-          
-          {/* Modal Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-105 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-            <div>
-              <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Worker Administration</span>
-              <h3 className="font-bold text-slate-850 dark:text-white text-base mt-0.5">Worker Profile & History</h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/70 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+              <div>
+                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Worker Administration</span>
+                <h3 className="font-bold text-slate-850 dark:text-white text-base mt-0.5">Worker Profile & History</h3>
+              </div>
+              <button
+                onClick={() => setDetailsModalOpen(false)}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center space-x-1.5 text-xs font-bold"
+              >
+                <span>Close Details</span>
+                <span className="text-[10px]">✕</span>
+              </button>
             </div>
-            <button
-              onClick={() => setDetailsModalOpen(false)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-slate-505 hover:text-slate-700 dark:hover:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center space-x-1.5 text-xs font-bold"
-            >
-              <span>Close Details</span>
-              <span className="text-[10px]">✕</span>
-            </button>
-          </div>
 
-          {/* Profile contents */}
-          <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto flex-1 text-xs">
+            {/* Profile contents */}
+            <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto flex-1 text-xs">
               
               {/* Left Column: Bio info card */}
               <div className="space-y-4">
@@ -729,6 +730,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
 
               </div>
             </div>
+          </div>
         </div>
       )}
 
