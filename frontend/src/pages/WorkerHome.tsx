@@ -142,7 +142,7 @@ const WorkerHome: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 text-slate-800 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden max-w-full">
+    <div className="relative h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300 overflow-hidden max-w-full">
       
       {/* Dynamic Background Mesh Color Blobs */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none select-none z-0">
@@ -151,7 +151,7 @@ const WorkerHome: React.FC = () => {
         <div className="absolute top-1/2 left-1/3 h-[200px] w-[200px] rounded-full bg-pink-400/15 dark:bg-pink-600/5 blur-[70px]" />
       </div>
 
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <div className={`h-screen overflow-y-auto pb-20 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {/* Sticky Header */}
         <header className="sticky top-0 z-40 w-full max-w-full flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden">
           <div className="flex items-center space-x-3">
