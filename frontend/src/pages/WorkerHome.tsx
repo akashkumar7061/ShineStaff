@@ -39,6 +39,7 @@ const WorkerHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [homeKms, setHomeKms] = useState('');
+  const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -48,6 +49,7 @@ const WorkerHome: React.FC = () => {
       const attRes = await api.get(`/attendance/worker/${user.id}`);
       const todayAtt = attRes.data.find((a: any) => a.date === todayStr);
       setAttendanceToday(todayAtt);
+      setAttendanceHistory(attRes.data);
 
       const salRes = await api.get(`/salary/dashboard?workerId=${user.id}`);
       setSalaryToday(salRes.data.earnings.todayEarnings);
@@ -234,14 +236,7 @@ const WorkerHome: React.FC = () => {
                 <DollarSign className="h-5 w-5 text-emerald-500" />
                 <span>Salary & Payouts</span>
               </Link>
-              <Link
-                to="/worker/leaves"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center space-x-3 rounded-custom hover:bg-slate-150/60 dark:hover:bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-550 dark:text-slate-400"
-              >
-                <Calendar className="h-5 w-5 text-rose-500" />
-                <span>Leaves Tracker</span>
-              </Link>
+              {/* Leaves tracker removed from worker panel */}
               
               <Link
                 to="/worker/profile"
@@ -359,11 +354,42 @@ const WorkerHome: React.FC = () => {
                   />
                 </div>
                 <button
-                  onClick={handleReportHomeTravel}
-                  className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white py-2.5 rounded-custom text-xs font-bold shadow-md shadow-indigo-500/10 transition-transform active:scale-95"
+                    onClick={handleReportHomeTravel}
+                    className="w-full py-2.5 bg-indigo-500 text-white rounded-lg text-xs font-bold hover:bg-indigo-600 transition-colors"
                 >
-                  Submit Commute Log
+                    Submit Commute
                 </button>
+              </div>
+            </div>
+
+            {/* My Attendance Register List */}
+            <div className="glass-card p-6 border-t-4 border-t-emerald-500 shadow-xl">
+              <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
+                <Calendar className="h-4 w-4 text-emerald-500" />
+                <span>My Attendance Register</span>
+              </h3>
+              <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                {attendanceHistory.length === 0 ? (
+                  <p className="text-center text-xs text-slate-400 py-4">No attendance logs registered.</p>
+                ) : (
+                  attendanceHistory.slice(0, 15).map((att: any) => (
+                    <div key={att._id} className="flex justify-between items-center text-xs p-2.5 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{att.date}</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
+                        att.status === 'present' ? 'bg-success/15 text-success' :
+                        att.status === 'late' ? 'bg-warning/15 text-warning' :
+                        'bg-slate-200 text-slate-500'
+                      }`}>
+                        {att.status}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -498,19 +524,6 @@ const WorkerHome: React.FC = () => {
                 </div>
               </Link>
 
-              <Link to="/worker/leaves" className="glass-card p-6 flex flex-col justify-between hover:scale-[1.02] hover:border-rose-500/30 transition-all shadow-xl">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="rounded-xl bg-rose-500/10 p-2 text-rose-500">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full">Apply</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-800 dark:text-white">Leaves Tracker</h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Check status history</p>
-                </div>
-              </Link>
-
             </div>
 
           </div>
@@ -528,14 +541,7 @@ const WorkerHome: React.FC = () => {
         />
       )}
 
-      {/* Mobile Floating Shutter clock button */}
-      <button
-        onClick={triggerAttendanceCamera}
-        disabled={!!attendanceToday}
-        className="fixed bottom-6 right-6 z-35 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg disabled:opacity-40 disabled:cursor-not-allowed md:hidden transition-transform active:scale-95"
-      >
-        <Camera className="h-6 w-6" />
-      </button>
+      {/* Floating clock-in button removed */}
 
     </div>
   );

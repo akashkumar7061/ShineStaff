@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import GPSAddress from '../components/GPSAddress';
-import { Camera, MapPin, Smartphone, CheckCircle2, UserCheck, Calendar, Plus } from 'lucide-react';
+import { Camera, Smartphone, Calendar, Plus } from 'lucide-react';
 
 interface AdminAttendanceLogsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
@@ -59,12 +59,6 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
     }
   };
 
-  // Filter logs by selected company branch
-  const filteredLogs = attendanceLogs.filter((log) => {
-    if (companyFilter === 'All') return true;
-    return log.workerId?.company === companyFilter;
-  });
-
   return (
     <div className="space-y-6">
       
@@ -77,7 +71,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
         
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setMarkModalOpen(true)}
+            onClick={() => { setWorkerId(''); setMarkModalOpen(true); }}
             className="btn-blue-gradient flex items-center space-x-2 rounded-custom px-4 py-3 text-xs font-bold"
           >
             <Plus className="h-4.5 w-4.5" />
@@ -99,9 +93,9 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
               <div key={n} className="animate-shimmer h-12 w-full rounded-lg" />
             ))}
           </div>
-        ) : filteredLogs.length === 0 ? (
+        ) : workers.length === 0 ? (
           <div className="text-center py-12 text-slate-400 text-sm border border-dashed border-slate-200 dark:border-slate-800 rounded-custom">
-            No employees have logged attendance today.
+            No employees registered in this branch.
           </div>
         ) : (
           <div className="overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
@@ -114,77 +108,98 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                   <th className="px-6 py-4">GPS Position</th>
                   <th className="px-6 py-4">Device Specs</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-center">Selfie Audit</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                {filteredLogs.map((log) => (
-                  <tr key={log._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
-                    <td className="px-6 py-3.5 flex items-center space-x-3">
-                      <img
-                        src={log.workerId?.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${log.workerId?.name}`}
-                        alt={log.workerId?.name}
-                        className="h-8 w-8 rounded-full object-cover border border-slate-205 dark:border-slate-800"
-                      />
-                      <div>
-                        <span className="block font-bold text-slate-850 dark:text-white">{log.workerId?.name}</span>
-                        <span className="block text-[10px] text-slate-400 mt-0.5">{log.workerId?.phone}</span>
-                      </div>
-                    </td>
+                {workers.map((worker) => {
+                  const log = attendanceLogs.find(l => (l.workerId?._id || l.workerId) === worker._id);
+                  return (
+                    <tr key={worker._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
+                      <td className="px-6 py-3.5 flex items-center space-x-3">
+                        <img
+                          src={worker.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${worker.name}`}
+                          alt={worker.name}
+                          className="h-8 w-8 rounded-full object-cover border border-slate-205 dark:border-slate-800"
+                        />
+                        <div>
+                          <span className="block font-bold text-slate-850 dark:text-white">{worker.name}</span>
+                          <span className="block text-[10px] text-slate-400 mt-0.5">{worker.phone}</span>
+                        </div>
+                      </td>
 
-                    <td className="px-6 py-3.5">
-                      <span className="inline-block text-[9px] font-bold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase">
-                        {log.workerId?.company}
-                      </span>
-                    </td>
+                      <td className="px-6 py-3.5">
+                        <span className="inline-block text-[9px] font-bold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase">
+                          {worker.company}
+                        </span>
+                      </td>
 
-                    <td className="px-6 py-3.5 font-medium">
-                      {new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </td>
+                      <td className="px-6 py-3.5 font-medium">
+                        {log ? (
+                          new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        ) : (
+                          <span className="text-slate-400 font-semibold italic">Not Marked</span>
+                        )}
+                      </td>
 
-                    <td className="px-6 py-3.5 text-slate-500">
-                      {log.location?.lat && log.location?.lng ? (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center space-x-1 hover:text-secondary"
-                        >
-                          <GPSAddress lat={log.location.lat} lng={log.location.lng} />
-                        </a>
-                      ) : (
-                        <span className="text-slate-400">No GPS Data</span>
-                      )}
-                    </td>
+                      <td className="px-6 py-3.5 text-slate-500">
+                        {log?.location?.lat && log?.location?.lng ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center space-x-1 hover:text-secondary"
+                          >
+                            <GPSAddress lat={log.location.lat} lng={log.location.lng} />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
 
-                    <td className="px-6 py-3.5 text-slate-400 max-w-[150px] truncate" title={log.deviceInfo}>
-                      <span className="flex items-center space-x-1">
-                        <Smartphone className="h-3.5 w-3.5" />
-                        <span className="truncate">{log.deviceInfo}</span>
-                      </span>
-                    </td>
+                      <td className="px-6 py-3.5 text-slate-400 max-w-[150px] truncate" title={log?.deviceInfo || ''}>
+                        {log ? (
+                          <span className="flex items-center space-x-1">
+                            <Smartphone className="h-3.5 w-3.5" />
+                            <span className="truncate">{log.deviceInfo}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
 
-                    <td className="px-6 py-3.5">
-                      <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                        log.status === 'present' ? 'bg-success/15 text-success' :
-                        log.status === 'late' ? 'bg-warning/15 text-warning' :
-                        'bg-slate-200 text-slate-500'
-                      }`}>
-                        {log.status}
-                      </span>
-                    </td>
+                      <td className="px-6 py-3.5">
+                        <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                          log?.status === 'present' ? 'bg-success/15 text-success' :
+                          log?.status === 'late' ? 'bg-warning/15 text-warning' :
+                          'bg-danger/15 text-danger'
+                        }`}>
+                          {log ? log.status : 'Absent'}
+                        </span>
+                      </td>
 
-                    <td className="px-6 py-3.5 text-center">
-                      <button
-                        onClick={() => setSelectedSelfieUrl(log.selfie)}
-                        className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 text-slate-550 hover:bg-secondary/15 hover:text-secondary transition-colors"
-                        title="Review Selfie Photo"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-6 py-3.5 text-center flex items-center justify-center space-x-3.5">
+                        {log ? (
+                          <button
+                            onClick={() => setSelectedSelfieUrl(log.selfie)}
+                            className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 text-slate-550 hover:bg-secondary/15 hover:text-secondary transition-colors"
+                            title="Review Selfie Photo"
+                            disabled={!log.selfie}
+                          >
+                            <Camera className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setWorkerId(worker._id); setStatus('present'); setMarkModalOpen(true); }}
+                            className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3.5 py-1.5 uppercase transition-colors"
+                          >
+                            Mark Attendance
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -196,7 +211,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-bold text-slate-850 dark:text-white text-base">Mark Manual Attendance</h3>
+              <h3 className="font-bold text-slate-855 dark:text-white text-base">Mark Manual Attendance</h3>
               <button onClick={() => setMarkModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
@@ -223,7 +238,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
                 />
               </div>
 
@@ -232,7 +247,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
                 >
                   <option value="present">Present (On Time)</option>
                   <option value="late">Late</option>
