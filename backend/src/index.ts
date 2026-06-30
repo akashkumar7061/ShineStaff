@@ -12,6 +12,8 @@ import bcrypt from 'bcryptjs';
 // Configurations
 import { connectDB } from './config/db';
 import User from './models/User';
+import Job from './models/Job';
+import TravelLog from './models/TravelLog';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -128,9 +130,43 @@ const seedAdmin = async () => {
 
 const PORT = process.env.PORT || 5000;
 
+const backfillTravelLogs = async () => {
+  try {
+    const completedJobs = await Job.find({
+      status: 'completed',
+      fuelKmsTravelled: { $gt: 0 }
+    });
+    let backfilledCount = 0;
+    for (const job of completedJobs) {
+      const exists = await TravelLog.findOne({ jobId: job._id });
+      if (!exists) {
+        const travelLog = new TravelLog({
+          workerId: job.workerId,
+          date: new Date(job.completedAt || new Date()).toISOString().split('T')[0],
+          type: 'job',
+          jobId: job._id,
+          kms: job.fuelKmsTravelled,
+          allowance: job.fuelAllowance || 0,
+          status: 'approved',
+          fromLocation: 'Home',
+          toLocation: job.address
+        });
+        await travelLog.save();
+        backfilledCount++;
+      }
+    }
+    if (backfilledCount > 0) {
+      console.log(`Successfully backfilled ${backfilledCount} missing travel logs from completed jobs.`);
+    }
+  } catch (err) {
+    console.error('Failed to backfill travel logs:', err);
+  }
+};
+
 const startServer = async () => {
   await connectDB();
   await seedAdmin();
+  await backfillTravelLogs();
   server.listen(PORT, () => {
     console.log(`ShineStaff Server running on port ${PORT}`);
   });
