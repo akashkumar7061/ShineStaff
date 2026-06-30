@@ -147,6 +147,19 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     }
   };
 
+  const handleDeletePayout = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this payment log? This will recalculate the remaining salary balance.')) return;
+    try {
+      await api.delete(`/salary/requests/${id}`);
+      alert('Payment log deleted successfully!');
+      if (selectedWorkerDetails?.worker?._id) {
+        handleOpenDetails(selectedWorkerDetails.worker._id);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete payment log');
+    }
+  };
+
   const handleOpenEdit = (worker: any) => {
     setEditingWorkerId(worker._id);
     setName(worker.name);
@@ -685,7 +698,16 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                                     <span className="block text-[10px] text-slate-400 font-medium mt-0.5">Reason: {pay.reason}</span>
                                   )}
                                 </div>
-                                <span className="text-sm font-extrabold text-slate-850 dark:text-white">₹{pay.amount}</span>
+                                <div className="flex items-center space-x-3.5">
+                                  <span className="text-sm font-extrabold text-slate-850 dark:text-white">₹{pay.amount}</span>
+                                  <button
+                                    onClick={() => handleDeletePayout(pay._id)}
+                                    className="text-danger hover:text-red-750 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                                    title="Delete payment log"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
                             ))
                           )}

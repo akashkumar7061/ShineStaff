@@ -7,7 +7,9 @@ import {
   CreditCard,
   X,
   CheckCircle,
-  Coins
+  Coins,
+  History,
+  Trash2
 } from 'lucide-react';
 
 interface AdminSalaryProps {
@@ -34,6 +36,36 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
   const [paymentMode, setPaymentMode] = useState<'Online' | 'Cash'>('Online');
   const [paymentTime, setPaymentTime] = useState('');
   const [payoutReason, setPayoutReason] = useState('');
+
+  // Payment history states
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyWorkerName, setHistoryWorkerName] = useState('');
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+
+  const handleOpenHistoryModal = async (workerId: string, name: string) => {
+    setHistoryWorkerName(name);
+    try {
+      const res = await api.get(`/salary/requests?workerId=${workerId}`);
+      // Filter to only show approved/recorded logs
+      const paidLogs = res.data.filter((r: any) => r.status === 'approved');
+      setPaymentHistory(paidLogs);
+      setHistoryModalOpen(true);
+    } catch (err) {
+      alert('Failed to load payment logs');
+    }
+  };
+
+  const handleDeletePayment = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this payment log? This will recalculate the remaining salary balance.')) return;
+    try {
+      await api.delete(`/salary/requests/${id}`);
+      alert('Payment log deleted successfully!');
+      setPaymentHistory(prev => prev.filter(p => p._id !== id));
+      fetchSalaryData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete payment log');
+    }
+  };
 
   const fetchSalaryData = async () => {
     setLoading(true);
@@ -193,10 +225,18 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
 
                       <button
                         onClick={() => handleDownloadPayslip(entry.worker.id)}
-                        className="rounded-lg border border-slate-200 dark:border-slate-800 p-2 text-slate-500 hover:text-slate-850 dark:hover:text-slate-205"
+                        className="rounded-lg border border-slate-200 dark:border-slate-800 p-2 text-slate-500 hover:text-slate-855 dark:hover:text-slate-205"
                         title="Download PDF Payslip"
                       >
                         <Download className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenHistoryModal(entry.worker.id, entry.worker.name)}
+                        className="rounded-lg border border-slate-200 dark:border-slate-800 p-2 text-slate-505 hover:text-slate-855 dark:hover:text-slate-205"
+                        title="View Payment Logs History"
+                      >
+                        <History className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
@@ -309,6 +349,78 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                 <span>{submittingPayout ? 'Recording...' : 'Confirm & Log Payment'}</span>
               </button>
             </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT HISTORY / DELETE MODAL */}
+      {historyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-850 flex flex-col">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+              <div>
+                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Payment Logs History</span>
+                <h3 className="font-bold text-sm text-slate-800 dark:text-white mt-0.5">{historyWorkerName}</h3>
+              </div>
+              <button
+                onClick={() => setHistoryModalOpen(false)}
+                className="text-slate-400 hover:text-slate-650 rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* List body */}
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
+              {paymentHistory.length === 0 ? (
+                <p className="text-center text-xs text-slate-400 py-6">No approved advances or payout records logged for this worker.</p>
+              ) : (
+                paymentHistory.map((pay: any) => (
+                  <div key={pay._id} className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                          pay.type === 'advance' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+                        }`}>
+                          {pay.type.replace('_', ' ')}
+                        </span>
+                        <span className="text-[10px] text-slate-450 font-semibold">{pay.paymentMode || 'Online'}</span>
+                        <span className="text-[10px] text-slate-400">({pay.month})</span>
+                      </div>
+                      <span className="block text-[10px] text-slate-450 mt-1">
+                        Logged: {pay.paymentTime ? new Date(pay.paymentTime).toLocaleString() : new Date(pay.createdAt).toLocaleString()}
+                      </span>
+                      {pay.reason && (
+                        <span className="block text-[10px] text-slate-400 font-medium mt-0.5">Remarks: {pay.reason}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3.5">
+                      <span className="text-sm font-extrabold text-slate-800 dark:text-white">₹{pay.amount}</span>
+                      <button
+                        onClick={() => handleDeletePayment(pay._id)}
+                        className="rounded-lg bg-red-100 dark:bg-red-950/20 p-2 text-danger hover:bg-danger/15 hover:text-white transition-colors"
+                        title="Delete this payment record"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setHistoryModalOpen(false)}
+                className="rounded-lg border border-slate-205 dark:border-slate-800 px-4 py-2.5 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
 
           </div>
         </div>

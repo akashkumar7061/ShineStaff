@@ -5,7 +5,8 @@ import {
   createSalaryRequest,
   processSalaryRequest,
   downloadPayslip,
-  recordPayout
+  recordPayout,
+  deleteSalaryRequest
 } from '../controllers/salaryController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -17,6 +18,7 @@ router.get('/dashboard', getSalaryDashboard);
 router.get('/requests', getSalaryRequests);
 router.post('/requests', authorizeRoles('worker'), createSalaryRequest);
 router.put('/requests/:id', authorizeRoles('admin'), processSalaryRequest);
+router.delete('/requests/:id', authorizeRoles('admin'), deleteSalaryRequest);
 router.post('/payouts', authorizeRoles('admin'), recordPayout);
 router.get('/payslip', downloadPayslip);
 

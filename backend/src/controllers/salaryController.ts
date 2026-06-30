@@ -343,3 +343,21 @@ export const downloadPayslip = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const deleteSalaryRequest = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can delete payment logs' });
+  }
+
+  try {
+    const request = await SalaryRequest.findByIdAndDelete(id);
+    if (!request) {
+      return res.status(404).json({ message: 'Payment record not found' });
+    }
+    res.status(200).json({ message: 'Payment record deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
