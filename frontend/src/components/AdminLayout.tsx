@@ -67,7 +67,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </div>
 
       {/* 1. Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 glass-panel border-r border-slate-205/60 dark:border-slate-800/65 p-6 space-y-6 select-none shrink-0 z-10 relative">
+      <aside className="hidden lg:flex flex-col w-64 glass-panel border-r border-slate-205/60 dark:border-slate-800/65 p-6 space-y-6 select-none shrink-0 z-20 fixed inset-y-0 left-0">
         
         {/* Sidebar Header branding */}
         <div className="flex items-center space-x-2.5 px-2">
@@ -171,7 +171,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <div className="lg:hidden fixed inset-0 z-40 bg-transparent" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className="flex-1 flex flex-col min-w-0 z-10 relative max-w-full">
+      <div className="flex-1 flex flex-col min-w-0 z-10 relative max-w-full lg:pl-64">
         
         {/* Top Navbar */}
         <header className={`fixed top-0 right-0 z-40 flex items-center justify-between border-b border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 box-border overflow-x-hidden transition-all duration-300 lg:left-64 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
