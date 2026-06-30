@@ -117,7 +117,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </aside>
 
       {/* 2. Mobile sidebar drawer (slide-shift style) */}
-      <aside className={`lg:hidden fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-205 dark:border-slate-800 p-6 flex flex-col overflow-y-auto space-y-6 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`lg:hidden fixed inset-y-0 left-0 z-[9999] w-64 bg-white dark:bg-slate-900 border-r border-slate-205 dark:border-slate-800 p-6 flex flex-col overflow-y-auto space-y-6 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 rounded-full p-1.5 text-slate-405 hover:bg-slate-105 dark:hover:bg-slate-800"
@@ -174,7 +174,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 z-35 bg-slate-955/40" 
+          className="lg:hidden fixed inset-0 z-[9998] bg-slate-950/40" 
           style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
           onClick={() => setSidebarOpen(false)} 
         />
