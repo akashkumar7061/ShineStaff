@@ -246,16 +246,17 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                 {workers.map((worker) => (
                   <tr key={worker._id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/40 transition-colors">
-                    {/* Worker Info */}
-                    <td className="px-6 py-4 flex items-center space-x-3.5">
-                      <img
-                        src={worker.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${worker.name}`}
-                        alt={worker.name}
-                        className="h-9 w-9 rounded-full object-cover border border-slate-200 dark:border-slate-800"
-                      />
-                      <div>
-                        <span className="block font-semibold text-slate-800 dark:text-slate-200">{worker.name}</span>
-                        <span className="block text-[10px] text-slate-400 mt-0.5">{worker.email} | {worker.phone}</span>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={worker.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${worker.name}`}
+                          alt={worker.name}
+                          className="h-9 w-9 rounded-full object-cover border border-slate-200 dark:border-slate-800 shadow-sm"
+                        />
+                        <div>
+                          <span className="block font-bold text-slate-850 dark:text-white text-xs">{worker.name}</span>
+                          <span className="block text-[10px] text-slate-450 mt-0.5">{worker.phone}</span>
+                        </div>
                       </div>
                     </td>
 
