@@ -65,8 +65,7 @@ const WorkerAttendance: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[250px] w-[250px] rounded-full bg-teal-400/10 dark:bg-teal-600/5 blur-[80px]" />
       </div>
 
-      {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-205/80 dark:border-slate-805 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-205 dark:border-slate-805 bg-white dark:bg-slate-900 px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setSidebarOpen(true)}

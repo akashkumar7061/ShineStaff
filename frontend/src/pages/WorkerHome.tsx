@@ -151,8 +151,7 @@ const WorkerHome: React.FC = () => {
         <div className="absolute top-1/2 left-1/3 h-[200px] w-[200px] rounded-full bg-pink-400/15 dark:bg-pink-600/5 blur-[70px]" />
       </div>
 
-      {/* Sticky Header */}
-      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setSidebarOpen(true)}
