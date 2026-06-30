@@ -120,6 +120,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
 
   useEffect(() => {
     fetchDashboardData();
+
+    const handleSocketUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'JOB_COMPLETED' || customEvent.detail?.type === 'TRAVEL_LOG_SUBMITTED') {
+        fetchDashboardData();
+      }
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [companyFilter]);
 
   if (loading) {

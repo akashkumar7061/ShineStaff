@@ -80,6 +80,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   useEffect(() => {
     fetchJobsAndWorkers();
+
+    const handleSocketUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'JOB_COMPLETED') {
+        fetchJobsAndWorkers();
+      }
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [companyFilter]);
 
   const handleCreateJob = async (e: React.FormEvent) => {

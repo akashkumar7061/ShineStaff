@@ -138,6 +138,15 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
 
   useEffect(() => {
     fetchSalaryData();
+
+    const handleSocketUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'JOB_COMPLETED' || customEvent.detail?.type === 'TRAVEL_LOG_APPROVED') {
+        fetchSalaryData();
+      }
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [companyFilter, selectedMonth]);
 
   const handleDownloadPayslip = (workerId: string) => {

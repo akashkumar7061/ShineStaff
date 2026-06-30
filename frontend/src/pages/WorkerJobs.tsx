@@ -57,6 +57,15 @@ const WorkerJobs: React.FC = () => {
 
   useEffect(() => {
     fetchJobs();
+
+    const handleSocketUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'NEW_JOB') {
+        fetchJobs();
+      }
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, []);
 
   const openWorkSheet = (job: any) => {

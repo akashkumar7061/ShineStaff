@@ -2,6 +2,7 @@ import { Response } from 'express';
 import TravelLog from '../models/TravelLog';
 import Job from '../models/Job';
 import { AuthRequest } from '../middleware/auth';
+import { getIO } from '../index';
 
 export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   const { date, type, jobId, kms } = req.body;
@@ -52,6 +53,17 @@ export const submitTravelLog = async (req: AuthRequest, res: Response) => {
     });
 
     await travel.save();
+
+    // Emit Socket alert to admins for real-time dashboard reload
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'TRAVEL_LOG_SUBMITTED',
+        message: `New commute log submitted.`,
+        travelId: travel._id
+      });
+    }
+
     res.status(201).json({ message: 'Travel commute logged successfully', travel });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -98,6 +110,17 @@ export const approveTravelLog = async (req: AuthRequest, res: Response) => {
     log.status = 'approved';
 
     await log.save();
+
+    // Notify worker via Socket
+    const io = getIO();
+    if (io) {
+      io.to(log.workerId.toString()).emit('notification', {
+        type: 'TRAVEL_LOG_APPROVED',
+        message: `Your travel allowance of ₹${allowance} was approved.`,
+        travelId: log._id
+      });
+    }
+
     res.status(200).json({ message: 'Travel allowance approved successfully', log });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -123,6 +146,22 @@ export const updateTravelLog = async (req: AuthRequest, res: Response) => {
     if (toLocation !== undefined) log.toLocation = toLocation;
 
     await log.save();
+
+    // Notify admins and worker via Socket
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'TRAVEL_LOG_UPDATED',
+        message: `Travel log updated.`,
+        travelId: log._id
+      });
+      io.to(log.workerId.toString()).emit('notification', {
+        type: 'TRAVEL_LOG_UPDATED',
+        message: `Your travel log was updated by admin.`,
+        travelId: log._id
+      });
+    }
+
     res.status(200).json({ message: 'Travel log updated successfully', log });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

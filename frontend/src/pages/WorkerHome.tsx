@@ -74,6 +74,15 @@ const WorkerHome: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    const handleSocketUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'NEW_JOB' || customEvent.detail?.type === 'TRAVEL_LOG_APPROVED') {
+        fetchData();
+      }
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [user]);
 
   const handleCameraCapture = async (dataUrl: string, coords: { lat: number; lng: number }) => {

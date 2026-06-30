@@ -38,6 +38,15 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
 
   useEffect(() => {
     fetchTravelLogs();
+
+    const handleSocketUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'TRAVEL_LOG_SUBMITTED' || customEvent.detail?.type === 'TRAVEL_LOG_UPDATED') {
+        fetchTravelLogs();
+      }
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [companyFilter]);
 
   const handleOpenApproveModal = (log: any) => {
