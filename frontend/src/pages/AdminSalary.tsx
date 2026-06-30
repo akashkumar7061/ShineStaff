@@ -9,7 +9,8 @@ import {
   CheckCircle,
   Coins,
   History,
-  Trash2
+  Trash2,
+  Edit
 } from 'lucide-react';
 
 interface AdminSalaryProps {
@@ -41,6 +42,50 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyWorkerName, setHistoryWorkerName] = useState('');
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+
+  // Edit payout states
+  const [editPayoutModalOpen, setEditPayoutModalOpen] = useState(false);
+  const [editPayoutId, setEditPayoutId] = useState('');
+  const [editPayoutAmount, setEditPayoutAmount] = useState('');
+  const [editPayoutType, setEditPayoutType] = useState<'regular_payout' | 'advance'>('regular_payout');
+  const [editPaymentMode, setEditPaymentMode] = useState<'Online' | 'Cash'>('Online');
+  const [editPaymentTime, setEditPaymentTime] = useState('');
+  const [editPayoutReason, setEditPayoutReason] = useState('');
+  const [editPayoutMonth, setEditPayoutMonth] = useState('');
+
+  const handleOpenEditPayoutModal = (payment: any) => {
+    setEditPayoutId(payment._id);
+    setEditPayoutAmount(payment.amount.toString());
+    setEditPayoutType(payment.type || 'regular_payout');
+    setEditPaymentMode(payment.paymentMode || 'Online');
+    setEditPaymentTime(payment.paymentTime ? new Date(payment.paymentTime).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16));
+    setEditPayoutReason(payment.reason || '');
+    setEditPayoutMonth(payment.month || selectedMonth);
+    setEditPayoutModalOpen(true);
+  };
+
+  const handleEditPayoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put(`/salary/payouts/${editPayoutId}`, {
+        amount: Number(editPayoutAmount),
+        type: editPayoutType,
+        paymentMode: editPaymentMode,
+        paymentTime: new Date(editPaymentTime).toISOString(),
+        reason: editPayoutReason,
+        month: editPayoutMonth
+      });
+      alert('Payment record updated successfully!');
+      setEditPayoutModalOpen(false);
+      // Refresh history modal
+      const res = await api.get(`/salary/requests?workerId=${payoutWorkerId || paymentHistory[0]?.workerId}`);
+      const paidLogs = res.data.filter((r: any) => r.status === 'approved');
+      setPaymentHistory(paidLogs);
+      fetchSalaryData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update payment record');
+    }
+  };
 
   const handleOpenHistoryModal = async (workerId: string, name: string) => {
     setHistoryWorkerName(name);
@@ -397,8 +442,15 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                         <span className="block text-[10px] text-slate-400 font-medium mt-0.5">Remarks: {pay.reason}</span>
                       )}
                     </div>
-                    <div className="flex items-center space-x-3.5">
-                      <span className="text-sm font-extrabold text-slate-800 dark:text-white">₹{pay.amount}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-extrabold text-slate-800 dark:text-white mr-1.5">₹{pay.amount}</span>
+                      <button
+                        onClick={() => handleOpenEditPayoutModal(pay)}
+                        className="rounded-lg bg-indigo-100 dark:bg-indigo-950/20 p-2 text-indigo-500 hover:bg-indigo-500/20 transition-colors"
+                        title="Edit this payment record"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handleDeletePayment(pay._id)}
                         className="rounded-lg bg-red-100 dark:bg-red-950/20 p-2 text-danger hover:bg-danger/15 hover:text-white transition-colors"
@@ -426,6 +478,98 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
         </div>
       )}
 
+      {/* Edit Payout Modal */}
+      {editPayoutModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-205 dark:border-slate-800 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-855 dark:text-white text-base">Edit Payout Record</h3>
+              <button onClick={() => setEditPayoutModalOpen(false)} className="text-slate-400 hover:text-slate-650">✕</button>
+            </div>
+            
+            <form onSubmit={handleEditPayoutSubmit} className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editPayoutAmount}
+                    onChange={(e) => setEditPayoutAmount(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Month (YYYY-MM)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 2026-06"
+                    value={editPayoutMonth}
+                    onChange={(e) => setEditPayoutMonth(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Payout Type</label>
+                  <select
+                    value={editPayoutType}
+                    onChange={(e: any) => setEditPayoutType(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  >
+                    <option value="regular_payout">Regular Salary Payout</option>
+                    <option value="regular_salary">Regular Salary Request</option>
+                    <option value="advance">Salary Advance</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Payment Mode</label>
+                  <select
+                    value={editPaymentMode}
+                    onChange={(e: any) => setEditPaymentMode(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  >
+                    <option value="Online">Online Transfer</option>
+                    <option value="Cash">Cash Payout</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Payment Timestamp</label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={editPaymentTime}
+                  onChange={(e) => setEditPaymentTime(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Remarks / Reason</label>
+                <textarea
+                  value={editPayoutReason}
+                  onChange={(e) => setEditPayoutReason(e.target.value)}
+                  rows={2}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary resize-none"
+                  placeholder="Payment remarks details..."
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
+                <button type="button" onClick={() => setEditPayoutModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2 text-xs font-semibold">Cancel</button>
+                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2 text-xs font-bold">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

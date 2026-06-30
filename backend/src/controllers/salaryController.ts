@@ -361,3 +361,32 @@ export const deleteSalaryRequest = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const updateSalaryRequest = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { amount, type, status, paymentMode, paymentTime, reason, month } = req.body;
+
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can edit payment logs' });
+  }
+
+  try {
+    const request = await SalaryRequest.findById(id);
+    if (!request) {
+      return res.status(404).json({ message: 'Payment record not found' });
+    }
+
+    if (amount !== undefined) request.amount = Number(amount);
+    if (type !== undefined) request.type = type;
+    if (status !== undefined) request.status = status;
+    if (paymentMode !== undefined) request.paymentMode = paymentMode;
+    if (paymentTime !== undefined) request.paymentTime = paymentTime;
+    if (reason !== undefined) request.reason = reason;
+    if (month !== undefined) request.month = month;
+
+    await request.save();
+    res.status(200).json({ message: 'Payment record updated successfully', request });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
