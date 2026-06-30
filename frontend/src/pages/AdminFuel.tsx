@@ -226,18 +226,17 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
           </div>
         )}
       </div>
-
       {/* Approval modal */}
       {approvalModalOpen && selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-slate-855 dark:text-white text-base">Approve Traveling Allowance</h3>
               <button onClick={() => setApprovalModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
-            <form onSubmit={handleApproveSubmit} className="p-6 space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl space-y-1.5 text-xs text-slate-500">
+            <form onSubmit={handleApproveSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-955 p-4 rounded-2xl space-y-1.5 text-slate-550">
                 <div>Worker Name: <span className="font-bold text-slate-800 dark:text-slate-100">{selectedLog.workerId?.name}</span></div>
                 <div>Distance Commuted: <span className="font-bold text-secondary">{selectedLog.kms} KM</span></div>
                 <div>Commute Type: <span className="font-bold uppercase text-[9px] bg-secondary/15 text-secondary px-2 py-0.5 rounded">{selectedLog.type}</span></div>
@@ -250,14 +249,14 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                   required
                   value={allowance}
                   onChange={(e) => setAllowance(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2.5 outline-none focus:border-secondary"
                 />
                 <span className="text-[10px] text-slate-400 block mt-1">Recommended calculation: ₹10 per KM (₹{selectedLog.kms * 10})</span>
               </div>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
-                <button type="button" onClick={() => setApprovalModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2.5 text-xs font-semibold">Cancel</button>
-                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2.5 text-xs font-bold">Approve Log</button>
+                <button type="button" onClick={() => setApprovalModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2 text-xs font-semibold">Cancel</button>
+                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2 text-xs font-bold">Approve Log</button>
               </div>
             </form>
           </div>
@@ -266,93 +265,99 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
       {/* Edit modal */}
       {editModalOpen && editLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-205 dark:border-slate-800">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-205 dark:border-slate-800 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-slate-855 dark:text-white text-base">Edit Travel Log</h3>
               <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 text-xs">
-              <div className="bg-slate-50 dark:bg-slate-955 p-4 rounded-2xl space-y-1.5 text-slate-550">
+            <form onSubmit={handleEditSubmit} className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
+              <div className="bg-slate-50 dark:bg-slate-955 p-3.5 rounded-2xl space-y-1 text-slate-550">
                 <div>Worker: <span className="font-bold text-slate-800 dark:text-slate-100">{editLog.workerId?.name}</span></div>
                 {editLog.jobId && <div>Job: <span className="font-bold text-slate-800 dark:text-slate-100">{editLog.jobId.title}</span></div>}
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Date</label>
-                <input
-                  type="date"
-                  required
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Type</label>
+                  <select
+                    value={editType}
+                    onChange={(e: any) => setEditType(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  >
+                    <option value="job">Cleanup (job)</option>
+                    <option value="home">Home (home)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Origin (From)</label>
+                  <input
+                    type="text"
+                    value={editFromLocation}
+                    onChange={(e) => setEditFromLocation(e.target.value)}
+                    placeholder="e.g. Home"
+                    className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Destination (To)</label>
+                  <input
+                    type="text"
+                    value={editToLocation}
+                    onChange={(e) => setEditToLocation(e.target.value)}
+                    placeholder="e.g. Site"
+                    className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Distance (KM)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={editKms}
+                    onChange={(e) => setEditKms(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Allowance (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={editAllowance}
+                    onChange={(e) => setEditAllowance(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Commute Type</label>
-                <select
-                  value={editType}
-                  onChange={(e: any) => setEditType(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
-                >
-                  <option value="job">Cleanup site travel (job)</option>
-                  <option value="home">Last work to home (home)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Origin (From)</label>
-                <input
-                  type="text"
-                  value={editFromLocation}
-                  onChange={(e) => setEditFromLocation(e.target.value)}
-                  placeholder="e.g. Home, Previous Site Address"
-                  className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Destination (To)</label>
-                <input
-                  type="text"
-                  value={editToLocation}
-                  onChange={(e) => setEditToLocation(e.target.value)}
-                  placeholder="e.g. Site Address, Home"
-                  className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Distance (KM)</label>
-                <input
-                  type="number"
-                  required
-                  min={0}
-                  value={editKms}
-                  onChange={(e) => setEditKms(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Travel Allowance (₹)</label>
-                <input
-                  type="number"
-                  required
-                  min={0}
-                  value={editAllowance}
-                  onChange={(e) => setEditAllowance(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Status</label>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1 uppercase">Status</label>
                 <select
                   value={editStatus}
                   onChange={(e: any) => setEditStatus(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
                 >
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
@@ -360,8 +365,8 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
               </div>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
-                <button type="button" onClick={() => setEditModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2.5 text-xs font-semibold">Cancel</button>
-                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2.5 text-xs font-bold">Save Changes</button>
+                <button type="button" onClick={() => setEditModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2 text-xs font-semibold">Cancel</button>
+                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2 text-xs font-bold">Save Changes</button>
               </div>
             </form>
           </div>
