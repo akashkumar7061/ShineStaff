@@ -24,21 +24,16 @@ interface AdminJobsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
 }
 
-const timeSlotsList = [
-  '07:00 AM - 08:00 AM',
-  '08:00 AM - 09:00 AM',
-  '09:00 AM - 10:00 AM',
-  '10:00 AM - 11:00 AM',
-  '11:00 AM - 12:00 PM',
-  '12:00 PM - 01:00 PM',
-  '01:00 PM - 02:00 PM',
-  '02:00 PM - 03:00 PM',
-  '03:00 PM - 04:00 PM',
-  '04:00 PM - 05:00 PM',
-  '05:00 PM - 06:00 PM',
-  '06:00 PM - 07:00 PM',
-  '07:00 PM - 08:00 PM'
-];
+const formatTimeTo12Hour = (timeStr: string) => {
+  if (!timeStr) return '';
+  const [hourStr, minStr] = timeStr.split(':');
+  let hour = parseInt(hourStr, 10);
+  const min = minStr;
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  hour = hour ? hour : 12;
+  return `${hour}:${min} ${ampm}`;
+};
 
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -66,6 +61,16 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [price, setPrice] = useState('');
   const [date, setDate] = useState('');
   const [timeSlot, setTimeSlot] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+
+  useEffect(() => {
+    if (startTime && endTime) {
+      setTimeSlot(`${formatTimeTo12Hour(startTime)} - ${formatTimeTo12Hour(endTime)}`);
+    } else if (startTime) {
+      setTimeSlot(formatTimeTo12Hour(startTime));
+    }
+  }, [startTime, endTime]);
 
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
@@ -154,6 +159,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setPrice('');
     setDate('');
     setTimeSlot('');
+    setStartTime('');
+    setEndTime('');
   };
 
   const handleOpenPhotoComparison = (job: any) => {
@@ -518,7 +525,28 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary" />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Time Slot</label>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Time Slot (Select Range)</label>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <span className="block text-[8px] font-semibold text-slate-450 uppercase mb-0.5">Start</span>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-semibold text-slate-450 uppercase mb-0.5">End</span>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                        />
+                      </div>
+                    </div>
+
                     <input
                       type="text"
                       required
