@@ -71,8 +71,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         
         {/* Sidebar Header branding */}
         <div className="flex items-center space-x-2.5 px-2">
-          <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-205/50 dark:border-slate-800 p-0.5 shadow-sm overflow-hidden h-9 w-9 flex items-center justify-center shrink-0">
-            <img src="/logo.png" alt="ShineStaff Logo" className="h-full w-full object-cover" />
+          <div className="rounded-xl bg-gradient-to-tr from-secondary to-blue-500 p-2.5 text-white shadow-md shadow-blue-500/10">
+            <Sparkles className="h-5 w-5" />
           </div>
           <div>
             <h1 className="font-bold text-slate-900 dark:text-white text-sm tracking-tight">ShineStaff</h1>
@@ -126,8 +126,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </button>
 
         <div className="flex items-center space-x-2.5 mb-2">
-          <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-205/50 dark:border-slate-800 p-0.5 shadow-sm overflow-hidden h-8 w-8 flex items-center justify-center shrink-0">
-            <img src="/logo.png" alt="ShineStaff Logo" className="h-full w-full object-cover" />
+          <div className="rounded-xl bg-gradient-to-tr from-secondary to-blue-500 p-2 text-white shadow-md">
+            <Sparkles className="h-4.5 w-4.5" />
           </div>
           <div>
             <h1 className="font-bold text-slate-900 dark:text-white text-xs tracking-tight">ShineStaff</h1>
