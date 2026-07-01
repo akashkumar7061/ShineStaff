@@ -326,16 +326,21 @@ const WorkerJobs: React.FC = () => {
                         >
                           {/* Job Details */}
                           <td className="px-6 py-5">
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
                               <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
-                              <div className="flex items-center space-x-1.5">
-                                <span className="inline-block text-[8px] font-extrabold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase tracking-wider">
+                              
+                              <div className="flex flex-col gap-1.5 items-start">
+                                <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
                                   {job.company}
                                 </span>
+
                                 {job.fuelKmsTravelled > 0 && (
-                                  <span className="inline-block text-[8px] font-extrabold bg-success/15 text-success px-2 py-0.5 rounded uppercase tracking-wider">
-                                    ⛽ {job.fuelKmsTravelled} KM (+₹{job.fuelAllowance})
-                                  </span>
+                                  <div className="flex items-center space-x-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold text-[10px] tracking-wide uppercase mt-0.5">
+                                    <span>⛽</span>
+                                    <span>{job.fuelKmsTravelled} KM Travel</span>
+                                    <span className="text-emerald-300 dark:text-emerald-700">|</span>
+                                    <span>Allowance: ₹{job.fuelAllowance}</span>
+                                  </div>
                                 )}
                               </div>
                             </div>
