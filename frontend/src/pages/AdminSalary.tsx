@@ -242,34 +242,34 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                 {payrollList.map((entry) => (
                   <tr key={entry.worker.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
-                    <td className="px-6 py-3.5">
+                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="block font-bold text-slate-805 dark:text-white">{entry.worker.name}</span>
                       <span className="inline-block text-[9px] font-bold bg-secondary/10 text-secondary px-2.5 py-0.5 rounded mt-1 uppercase">
                         {entry.worker.company}
                       </span>
                     </td>
 
-                    <td className="px-6 py-3.5 text-center font-semibold text-slate-500">
+                    <td className="px-6 py-5 text-center font-semibold text-slate-500 whitespace-nowrap">
                       {entry.counters.present} present / {entry.counters.late} late
                     </td>
 
-                    <td className="px-6 py-3.5 font-medium">₹{entry.worker.dailySalary || 0}</td>
+                    <td className="px-6 py-5 font-medium whitespace-nowrap">₹{entry.worker.dailySalary || 0}</td>
 
-                    <td className="px-6 py-3.5 font-semibold text-slate-700 dark:text-slate-300">₹{entry.earnings.baseWage}</td>
+                    <td className="px-6 py-5 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">₹{entry.earnings.baseWage}</td>
 
-                    <td className="px-6 py-3.5 text-success font-semibold">
+                    <td className="px-6 py-5 text-success font-semibold whitespace-nowrap">
                       ₹{entry.earnings.fuelAllowance} <span className="text-[10px] text-slate-400 block font-normal">({entry.earnings.fuelKms} KM)</span>
                     </td>
 
-                    <td className="px-6 py-3.5 font-bold text-slate-800 dark:text-slate-100">₹{entry.earnings.grossEarnings}</td>
+                    <td className="px-6 py-5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">₹{entry.earnings.grossEarnings}</td>
 
-                    <td className="px-6 py-3.5 text-danger font-semibold">₹{entry.earnings.advanceDeducted}</td>
+                    <td className="px-6 py-5 text-danger font-semibold whitespace-nowrap">₹{entry.earnings.advanceDeducted}</td>
 
-                    <td className="px-6 py-3.5 text-success font-semibold">₹{entry.earnings.paidAmount}</td>
+                    <td className="px-6 py-5 text-success font-semibold whitespace-nowrap">₹{entry.earnings.paidAmount}</td>
 
-                    <td className="px-6 py-3.5 font-extrabold text-secondary text-sm">₹{entry.earnings.remainingSalary}</td>
+                    <td className="px-6 py-5 font-extrabold text-secondary text-sm whitespace-nowrap">₹{entry.earnings.remainingSalary}</td>
 
-                    <td className="px-6 py-3.5 text-center flex items-center justify-center space-x-2.5">
+                    <td className="px-6 py-5 text-center flex items-center justify-center space-x-2.5 whitespace-nowrap">
                       <button
                         onClick={() => handleOpenPayoutModal(entry.worker.id, entry.worker.name, entry.earnings.remainingSalary)}
                         className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3.5 py-1.5 uppercase transition-colors"
