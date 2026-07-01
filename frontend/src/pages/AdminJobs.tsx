@@ -257,16 +257,21 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     
                     {/* Job Details */}
                     <td className="px-6 py-5">
-                      <div className="space-y-1.5">
-                        <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
-                        <div className="flex items-center space-x-1.5">
-                          <span className="inline-block text-[8px] font-extrabold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase tracking-wider">
+                      <div className="space-y-2">
+                        <span className="block font-extrabold text-slate-850 dark:text-white text-sm leading-snug">{job.title}</span>
+                        
+                        <div className="flex flex-col gap-1.5 items-start">
+                          <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
                             {job.company}
                           </span>
+
                           {job.fuelKmsTravelled > 0 && (
-                            <span className="inline-block text-[8px] font-extrabold bg-success/15 text-success px-2 py-0.5 rounded uppercase tracking-wider">
-                              ⛽ {job.fuelKmsTravelled} KM (+₹{job.fuelAllowance})
-                            </span>
+                            <div className="flex items-center space-x-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold text-[10px] tracking-wide uppercase mt-0.5">
+                              <span>⛽</span>
+                              <span>{job.fuelKmsTravelled} KM Travel</span>
+                              <span className="text-emerald-300 dark:text-emerald-700">|</span>
+                              <span>Allowance: ₹{job.fuelAllowance}</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -294,9 +299,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
                     {/* Clean Date & Time */}
                     <td className="px-6 py-5 font-medium">
-                      <div className="space-y-1">
-                        <span className="block text-secondary font-bold text-xs">{job.date || 'N/A'}</span>
-                        <span className="block text-[10px] text-slate-400 font-semibold">{job.timeSlot || 'N/A'}</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-200">
+                          <Calendar className="h-3.5 w-3.5 text-secondary" />
+                          <span className="font-bold text-xs">{job.date || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 text-slate-400">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">{job.timeSlot || 'N/A'}</span>
+                        </div>
                       </div>
                     </td>
 
