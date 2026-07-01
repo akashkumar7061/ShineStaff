@@ -211,17 +211,26 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
 
           {/* Quick HUD controls */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 md:space-x-4">
             <button
               onClick={toggleTheme}
-              className="rounded-full p-2 text-slate-550 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+              className="rounded-full p-2 text-slate-555 hover:bg-slate-105 dark:hover:bg-slate-900 transition-colors"
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
 
+            {/* Logout button visible on mobile/tablet */}
+            <button
+              onClick={handleLogout}
+              className="lg:hidden rounded-full p-2 text-danger hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+
             <div
               onClick={() => navigate('/admin/profile')}
-              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-80 transition-opacity"
+              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition-opacity"
             >
               <img
                 src={user?.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name || 'Admin'}`}

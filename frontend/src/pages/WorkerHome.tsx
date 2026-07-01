@@ -171,13 +171,22 @@ const WorkerHome: React.FC = () => {
           <span className="font-extrabold text-slate-900 dark:text-slate-100 text-lg tracking-tight">ShineStaff</span>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <button
             onClick={toggleTheme}
-            className="rounded-full p-2 text-slate-505 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+            className="rounded-full p-2 text-slate-505 hover:bg-slate-105 dark:hover:bg-slate-900 transition-colors"
           >
             {theme === 'dark' ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
           </button>
+
+          <button
+            onClick={logout}
+            className="rounded-full p-2 text-danger hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+            title="Log Out"
+          >
+            <LogOut className="h-4.5 w-4.5" />
+          </button>
+
           <div className="rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
             {user.company}
           </div>
