@@ -18,7 +18,9 @@ import {
   Edit,
   Save,
   CheckCircle2,
-  X
+  X,
+  Search,
+  Calendar
 } from 'lucide-react';
 
 const WorkerJobs: React.FC = () => {
@@ -42,16 +44,14 @@ const WorkerJobs: React.FC = () => {
   const [tempKms, setTempKms] = useState('5');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [filterDate, setFilterDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let url = '/jobs';
-      if (filterDate) {
-        url += `?date=${filterDate}`;
-      }
-      const res = await api.get(url);
+      const res = await api.get('/jobs');
       setJobs(res.data);
     } catch (err) {
       console.error('Failed to fetch worker jobs:', err);
@@ -71,7 +71,7 @@ const WorkerJobs: React.FC = () => {
     };
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, [filterDate]);
+  }, []);
 
   const openWorkSheet = (job: any) => {
     setSelectedJob(job);
@@ -174,8 +174,30 @@ const WorkerJobs: React.FC = () => {
   };
 
   const filteredJobs = jobs.filter((job) => {
-    if (activeFilter === 'all') return true;
-    return job.status === activeFilter;
+    // 1. Status Filter
+    if (activeFilter !== 'all' && job.status !== activeFilter) {
+      return false;
+    }
+
+    // 2. Date Range Filter
+    if (startDate && job.date && job.date < startDate) {
+      return false;
+    }
+    if (endDate && job.date && job.date > endDate) {
+      return false;
+    }
+
+    // 3. Search Query Filter (Job Title or Client Name)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = job.title?.toLowerCase().includes(q);
+      const matchClient = job.clientName?.toLowerCase().includes(q);
+      if (!matchTitle && !matchClient) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   return (
@@ -208,7 +230,7 @@ const WorkerJobs: React.FC = () => {
           {/* Left Columns: Tabs and jobs list */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Filter Tabs & Date Filter */}
+            {/* Filter Tabs & Search Bar */}
             <div className="space-y-4">
               <div className="flex space-x-1 rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-1 border border-slate-200/20">
                 {['all', 'pending', 'started', 'completed'].map((filter) => (
@@ -226,19 +248,42 @@ const WorkerJobs: React.FC = () => {
                 ))}
               </div>
 
-              <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 dark:border-white/5 shadow-sm">
-                <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Filter By Clean Date:</span>
-                <div className="flex items-center space-x-2">
+              {/* Search and Date Range Filters bar */}
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs">
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                  {/* Job/Client Search */}
+                  <div className="relative min-w-[200px] w-full md:w-auto">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search jobs, clients..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 pl-9 pr-3 py-2 outline-none focus:border-secondary w-full text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Date Range Selector */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                  <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Date Range:</span>
                   <input
                     type="date"
-                    value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
-                    className="text-xs font-semibold rounded-lg border border-slate-250 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
                   />
-                  {filterDate && (
+                  <span className="text-slate-400 font-bold">➔</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                  />
+                  {(startDate || endDate) && (
                     <button
-                      onClick={() => setFilterDate('')}
-                      className="text-xs text-danger font-semibold hover:underline px-1"
+                      onClick={() => { setStartDate(''); setEndDate(''); }}
+                      className="text-xs text-danger font-semibold hover:underline px-2"
                     >
                       Clear
                     </button>
@@ -247,12 +292,12 @@ const WorkerJobs: React.FC = () => {
               </div>
             </div>
 
-            {/* Jobs Card List */}
-            <div className="space-y-4">
+            {/* Jobs Table Dashboard */}
+            <div className="glass-card p-6">
               {loading ? (
                 <div className="space-y-3">
-                  {[1, 2].map((n) => (
-                    <div key={n} className="animate-shimmer h-32 w-full rounded-custom" />
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="animate-shimmer h-12 w-full rounded-lg" />
                   ))}
                 </div>
               ) : filteredJobs.length === 0 ? (
@@ -260,40 +305,109 @@ const WorkerJobs: React.FC = () => {
                   No cleaning jobs found under this status.
                 </div>
               ) : (
-                filteredJobs.map((job) => (
-                  <div
-                    key={job._id}
-                    onClick={() => openWorkSheet(job)}
-                    className="glass-card p-5 border border-slate-100 dark:border-slate-850 hover:scale-[1.01] transition-transform space-y-4 cursor-pointer hover:border-amber-500/25"
-                  >
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="inline-block text-[9px] font-bold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded-full uppercase">
-                          {job.company}
-                        </span>
-                        <span className={`text-[10px] font-bold uppercase ${
-                          job.status === 'completed' ? 'text-success' :
-                          job.status === 'started' ? 'text-secondary' :
-                          job.status === 'cancelled' ? 'text-danger' :
-                          'text-warning'
-                        }`}>
-                          {job.status}
-                        </span>
-                      </div>
+                <div className="overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                      <tr>
+                        <th className="px-6 py-4">Job Details</th>
+                        <th className="px-6 py-4">Client Info</th>
+                        <th className="px-6 py-4">Clean Date & Time</th>
+                        <th className="px-6 py-4">Address / Location</th>
+                        <th className="px-6 py-4 text-center">Status</th>
+                        <th className="px-6 py-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                      {filteredJobs.map((job) => (
+                        <tr
+                          key={job._id}
+                          onClick={() => openWorkSheet(job)}
+                          className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors cursor-pointer"
+                        >
+                          {/* Job Details */}
+                          <td className="px-6 py-5">
+                            <div className="space-y-1.5">
+                              <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
+                              <div className="flex items-center space-x-1.5">
+                                <span className="inline-block text-[8px] font-extrabold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase tracking-wider">
+                                  {job.company}
+                                </span>
+                                {job.fuelKmsTravelled > 0 && (
+                                  <span className="inline-block text-[8px] font-extrabold bg-success/15 text-success px-2 py-0.5 rounded uppercase tracking-wider">
+                                    ⛽ {job.fuelKmsTravelled} KM (+₹{job.fuelAllowance})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
 
-                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">{job.title}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">📍 {job.address}</p>
-                    </div>
+                          {/* Client Info */}
+                          <td className="px-6 py-5">
+                            <div className="space-y-1">
+                              <span className="block font-semibold text-slate-750 dark:text-slate-205">{job.clientName}</span>
+                              <span className="block text-[10px] text-slate-400 mt-0.5">{job.clientPhone || '—'}</span>
+                            </div>
+                          </td>
 
-                    <div className="text-[10px] text-slate-450 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 pt-3">
-                      <span>👤 Client: {job.clientName}</span>
-                      <span className="text-secondary font-bold hover:underline">Open Work Sheet →</span>
-                    </div>
-                  </div>
-                ))
+                          {/* Clean Date & Time */}
+                          <td className="px-6 py-5 font-medium whitespace-nowrap">
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-200">
+                                <Calendar className="h-3.5 w-3.5 text-secondary" />
+                                <span className="font-bold text-xs">{job.date || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center space-x-1.5 text-slate-400">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">{job.timeSlot || 'N/A'}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Address / Location */}
+                          <td className="px-6 py-5 max-w-[200px]">
+                            <div className="space-y-1">
+                              <span className="block text-slate-600 dark:text-slate-350 truncate" title={job.address}>
+                                📍 {job.address}
+                              </span>
+                              {job.locationName && (
+                                <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
+                                  GPS: {job.locationName}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-6 py-5 text-center">
+                            <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                              job.status === 'completed' ? 'bg-success/15 text-success' :
+                              job.status === 'started' ? 'bg-secondary/15 text-secondary' :
+                              job.status === 'cancelled' ? 'bg-danger/15 text-danger' :
+                              'bg-warning/15 text-warning'
+                            }`}>
+                              {job.status}
+                            </span>
+                          </td>
+
+                          {/* Action */}
+                          <td className="px-6 py-5 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openWorkSheet(job);
+                              }}
+                              className="rounded-lg bg-secondary text-white font-bold text-[10px] px-3 py-1.5 uppercase hover:bg-secondary/90 transition-colors shadow-sm"
+                            >
+                              Work Sheet
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
-
           </div>
 
           {/* Right Column: Instructions Sidebar */}
