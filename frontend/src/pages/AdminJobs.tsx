@@ -298,7 +298,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </td>
 
                     {/* Clean Date & Time */}
-                    <td className="px-6 py-5 font-medium">
+                    <td className="px-6 py-5 font-medium whitespace-nowrap">
                       <div className="space-y-2">
                         <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-200">
                           <Calendar className="h-3.5 w-3.5 text-secondary" />
