@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import GPSAddress from '../components/GPSAddress';
-import { Camera, Smartphone, Calendar, Plus, Edit } from 'lucide-react';
+import { Camera, Smartphone, Calendar, Plus, Edit, Search } from 'lucide-react';
 
 interface AdminAttendanceLogsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
@@ -12,6 +12,9 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSelfieUrl, setSelectedSelfieUrl] = useState<string | null>(null);
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [searchWorker, setSearchWorker] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'present' | 'late' | 'half-day' | 'absent'>('All');
 
   // Manual mark attendance modal state
   const [markModalOpen, setMarkModalOpen] = useState(false);
@@ -29,7 +32,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
   const fetchLogsAndWorkers = async () => {
     setLoading(true);
     try {
-      const logsRes = await api.get('/attendance/today');
+      const logsRes = await api.get(`/attendance/today?date=${filterDate}`);
       setAttendanceLogs(logsRes.data);
 
       const workersRes = await api.get(`/workers?company=${companyFilter}`);
@@ -43,7 +46,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
 
   useEffect(() => {
     fetchLogsAndWorkers();
-  }, [companyFilter]);
+  }, [companyFilter, filterDate]);
 
   const handleMarkAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,14 +86,26 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
     }
   };
 
+  const filteredWorkers = workers.filter((worker) => {
+    if (searchWorker && !worker.name.toLowerCase().includes(searchWorker.toLowerCase())) {
+      return false;
+    }
+    const log = attendanceLogs.find(l => (l.workerId?._id || l.workerId) === worker._id);
+    const workerStatus = log ? log.status : 'absent';
+    if (statusFilter !== 'All' && workerStatus !== statusFilter) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Today's Attendance Register</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Audit verified worker selfie uploads and manually log attendance states</p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Worker Daily Logs Dashboard</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Audit verified worker selfie uploads, GPS clock-in positions, device specs, and log attendance states</p>
         </div>
         
         <div className="flex items-center space-x-3">
@@ -101,11 +116,47 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
             <Plus className="h-4.5 w-4.5" />
             <span>Mark Attendance</span>
           </button>
+        </div>
+      </div>
 
-          <div className="flex items-center space-x-2 text-xs font-semibold text-slate-405 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-custom px-3 py-2.5">
-            <Calendar className="h-4 w-4 text-secondary" />
-            <span>{new Date().toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+      {/* Search and Filters Bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Worker Search */}
+          <div className="relative min-w-[200px] w-full md:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search worker by name..."
+              value={searchWorker}
+              onChange={(e) => setSearchWorker(e.target.value)}
+              className="rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 pl-9 pr-3 py-2 outline-none focus:border-secondary w-full text-xs font-semibold"
+            />
           </div>
+
+          {/* Status Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-955/70 px-3 py-2 outline-none focus:border-secondary text-xs font-semibold"
+          >
+            <option value="All">All Attendance Statuses</option>
+            <option value="present">Present Only</option>
+            <option value="late">Late Only</option>
+            <option value="half-day">Half-Day Only</option>
+            <option value="absent">Absent Only</option>
+          </select>
+        </div>
+
+        {/* Date Selector */}
+        <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
+          <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Select Date:</span>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+          />
         </div>
       </div>
 
@@ -117,9 +168,9 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
               <div key={n} className="animate-shimmer h-12 w-full rounded-lg" />
             ))}
           </div>
-        ) : workers.length === 0 ? (
+        ) : filteredWorkers.length === 0 ? (
           <div className="text-center py-12 text-slate-400 text-sm border border-dashed border-slate-200 dark:border-slate-800 rounded-custom">
-            No employees registered in this branch.
+            No employees match the current filters.
           </div>
         ) : (
           <div className="overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
@@ -136,7 +187,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                {workers.map((worker) => {
+                {filteredWorkers.map((worker) => {
                   const log = attendanceLogs.find(l => (l.workerId?._id || l.workerId) === worker._id);
                   return (
                     <tr key={worker._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">

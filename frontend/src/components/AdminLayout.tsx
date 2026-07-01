@@ -41,7 +41,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, color: 'text-blue-500' },
-    { name: "Today's Attendance", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
+    { name: "Worker Management Logs", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
     { name: 'Worker Management', path: '/admin/workers', icon: Users, color: 'text-indigo-500' },
     { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },

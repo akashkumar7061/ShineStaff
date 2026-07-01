@@ -7,8 +7,9 @@ import { AuthRequest } from '../middleware/auth';
 
 export const getTodayAttendance = async (req: Request, res: Response) => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const logs = await Attendance.find({ date: today }).populate('workerId', 'name email phone company photo');
+    const queryDate = req.query.date as string;
+    const targetDate = queryDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const logs = await Attendance.find({ date: targetDate }).populate('workerId', 'name email phone company photo');
     res.status(200).json(logs);
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
