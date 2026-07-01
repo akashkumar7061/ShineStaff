@@ -223,115 +223,175 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         </div>
       </div>
 
-      {/* Jobs grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Jobs Table Dashboard */}
+      <div className="glass-card p-6">
         {loading ? (
-          [1, 2, 3].map((n) => (
-            <div key={n} className="animate-shimmer h-44 rounded-custom" />
-          ))
+          <div className="space-y-3">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="animate-shimmer h-12 w-full rounded-lg" />
+            ))}
+          </div>
         ) : filteredJobs.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-slate-400 text-sm">
+          <div className="text-center py-12 text-slate-400 text-sm border border-dashed border-slate-200 dark:border-slate-800 rounded-custom">
             No assigned cleanups listed in this state currently.
           </div>
         ) : (
-          filteredJobs.map((job) => (
-            <div
-              key={job._id}
-              className="glass-card p-5 border border-slate-100 dark:border-slate-850 hover:scale-[1.01] transition-transform space-y-4"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="inline-block text-[9px] font-bold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded-full uppercase">
-                    {job.company}
-                  </span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    job.status === 'completed' ? 'text-success' :
-                    job.status === 'started' ? 'text-secondary' :
-                    job.status === 'cancelled' ? 'text-danger' :
-                    'text-warning'
-                  }`}>
-                    {job.status}
-                  </span>
-                </div>
+          <div className="overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <tr>
+                  <th className="px-6 py-4">Job Details</th>
+                  <th className="px-6 py-4">Assigned Worker</th>
+                  <th className="px-6 py-4">Client Info</th>
+                  <th className="px-6 py-4">Clean Date & Time</th>
+                  <th className="px-6 py-4">Address / GPS Position</th>
+                  <th className="px-6 py-4 text-center">Price</th>
+                  <th className="px-6 py-4 text-center">Compliance</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                {filteredJobs.map((job) => (
+                  <tr key={job._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
+                    
+                    {/* Job Details */}
+                    <td className="px-6 py-3.5">
+                      <div className="space-y-1">
+                        <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="inline-block text-[8px] font-extrabold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase tracking-wider">
+                            {job.company}
+                          </span>
+                          {job.fuelKmsTravelled > 0 && (
+                            <span className="inline-block text-[8px] font-extrabold bg-success/15 text-success px-2 py-0.5 rounded uppercase tracking-wider">
+                              ⛽ {job.fuelKmsTravelled} KM (+₹{job.fuelAllowance})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">{job.title}</h3>
-                
-                <p className="text-xs text-slate-550 dark:text-slate-350 mt-1.5">
-                  📍 {job.address} 
-                  {job.locationName && (
-                    <span className="text-[10px] font-bold text-violet-500 block mt-0.5">GPS Area: {job.locationName}</span>
-                  )}
-                </p>
+                    {/* Assigned Worker */}
+                    <td className="px-6 py-3.5">
+                      {job.workerId ? (
+                        <div>
+                          <span className="block font-bold text-slate-700 dark:text-slate-200">{job.workerId.name}</span>
+                          <span className="block text-[10px] text-slate-400 mt-0.5">{job.workerId.phone}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic">Unassigned</span>
+                      )}
+                    </td>
 
-                {/* Price & Schedule details inside card */}
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-450">
-                  <div>
-                    <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400">Price Payout</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">₹{job.price || 0}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400">Schedule Time</span>
-                    <span className="font-semibold text-secondary block">{job.date || 'N/A'}</span>
-                    <span className="text-[9px] text-slate-400">{job.timeSlot || 'N/A'}</span>
-                  </div>
-                </div>
+                    {/* Client Info */}
+                    <td className="px-6 py-3.5">
+                      <div>
+                        <span className="block font-semibold text-slate-750 dark:text-slate-205">{job.clientName}</span>
+                        <span className="block text-[10px] text-slate-400 mt-0.5">{job.clientPhone}</span>
+                      </div>
+                    </td>
 
-                <div className="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                  👤 Assigned: <span className="font-semibold text-slate-700 dark:text-slate-350">{job.workerId?.name || 'Unassigned'}</span>
-                </div>
-              </div>
+                    {/* Clean Date & Time */}
+                    <td className="px-6 py-3.5 font-medium">
+                      <div className="space-y-0.5">
+                        <span className="block text-secondary font-bold text-xs">{job.date || 'N/A'}</span>
+                        <span className="block text-[10px] text-slate-400">{job.timeSlot || 'N/A'}</span>
+                      </div>
+                    </td>
 
-              {/* Photo stamp compliance flags */}
-              <div className="flex space-x-2 text-[9px] uppercase tracking-wider font-bold">
-                <span className={`px-2 py-0.5 rounded ${job.beforePhoto ? 'bg-success/15 text-success' : 'bg-slate-100 text-slate-400'}`}>
-                  Before Photo
-                </span>
-                <span className={`px-2 py-0.5 rounded ${job.afterPhoto ? 'bg-success/15 text-success' : 'bg-slate-100 text-slate-400'}`}>
-                  After Photo
-                </span>
-              </div>
+                    {/* Address / GPS Position */}
+                    <td className="px-6 py-3.5 max-w-[200px]">
+                      <div className="space-y-1">
+                        {job.location?.lat && job.location?.lng ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-slate-600 dark:text-slate-350 hover:text-secondary underline truncate"
+                            title={job.address}
+                          >
+                            📍 {job.address}
+                          </a>
+                        ) : (
+                          <span className="block text-slate-600 dark:text-slate-350 truncate" title={job.address}>
+                            📍 {job.address}
+                          </span>
+                        )}
+                        {job.locationName && (
+                          <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
+                            GPS: {job.locationName}
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-              <div className="text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800/80 pt-3 space-y-1">
-                <div>Client: <span className="font-medium text-slate-650 dark:text-slate-200">{job.clientName} ({job.clientPhone})</span></div>
-                {job.fuelKmsTravelled > 0 && (
-                  <div className="text-success font-semibold">⛽ Fuel allowance: ₹{job.fuelAllowance} ({job.fuelKmsTravelled} KM)</div>
-                )}
-              </div>
+                    {/* Price */}
+                    <td className="px-6 py-3.5 text-center font-extrabold text-slate-800 dark:text-slate-100 text-xs">
+                      ₹{job.price || 0}
+                    </td>
 
-              {/* Actions footer */}
-              <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                {job.status === 'completed' ? (
-                  <button
-                    onClick={() => handleOpenPhotoComparison(job)}
-                    className="flex items-center space-x-1.5 text-xs font-semibold text-secondary hover:underline"
-                  >
-                    <FileCheck2 className="h-4 w-4" />
-                    <span>View Photos</span>
-                  </button>
-                ) : (
-                  <div className="w-1" />
-                )}
+                    {/* Compliance Photos */}
+                    <td className="px-6 py-3.5 text-center">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex space-x-1.5 text-[8px] uppercase tracking-wider font-extrabold">
+                          <span className={`px-1.5 py-0.5 rounded ${job.beforePhoto ? 'bg-success/15 text-success' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                            Before
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded ${job.afterPhoto ? 'bg-success/15 text-success' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                            After
+                          </span>
+                        </div>
+                        {job.status === 'completed' && (
+                          <button
+                            onClick={() => handleOpenPhotoComparison(job)}
+                            className="flex items-center justify-center space-x-1 text-[10px] font-bold text-secondary hover:underline"
+                          >
+                            <FileCheck2 className="h-3.5 w-3.5" />
+                            <span>View Images</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
 
-                <div className="flex space-x-2">
-                  {job.status !== 'completed' && job.status !== 'cancelled' && (
-                    <button
-                      onClick={() => handleCancelJob(job._id)}
-                      className="rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-[10px] font-bold text-danger uppercase hover:bg-danger/5"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDeleteJob(job._id)}
-                    className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 hover:text-danger hover:bg-danger/10"
-                    title="Delete Job"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
+                    {/* Status */}
+                    <td className="px-6 py-3.5 text-center">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        job.status === 'completed' ? 'bg-success/15 text-success' :
+                        job.status === 'started' ? 'bg-secondary/15 text-secondary' :
+                        job.status === 'cancelled' ? 'bg-danger/15 text-danger' :
+                        'bg-warning/15 text-warning'
+                      }`}>
+                        {job.status}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-6 py-3.5 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        {job.status !== 'completed' && job.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleCancelJob(job._id)}
+                            className="rounded-lg border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-danger uppercase hover:bg-danger/5"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteJob(job._id)}
+                          className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 hover:text-danger hover:bg-danger/10 transition-colors"
+                          title="Delete Job"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
