@@ -148,22 +148,22 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                 {filteredLogs.map((log) => (
                   <tr key={log._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
-                    <td className="px-6 py-3.5 flex items-center space-x-3">
+                    <td className="px-6 py-5 flex items-center space-x-3">
                       <div>
                         <span className="block font-bold text-slate-850 dark:text-white">{log.workerId?.name}</span>
                         <span className="block text-[10px] text-slate-400 mt-0.5">{log.workerId?.phone}</span>
                       </div>
                     </td>
 
-                    <td className="px-6 py-3.5">
+                    <td className="px-6 py-5">
                       <span className="inline-block text-[9px] font-bold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase">
                         {log.workerId?.company}
                       </span>
                     </td>
 
-                    <td className="px-6 py-3.5 font-medium">{log.date}</td>
+                    <td className="px-6 py-5 font-medium">{log.date}</td>
 
-                    <td className="px-6 py-3.5 font-semibold text-slate-700 dark:text-slate-205">
+                    <td className="px-6 py-5 font-semibold text-slate-700 dark:text-slate-205">
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                         log.type === 'home' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-orange-500/10 text-orange-500'
                       }`}>
@@ -171,7 +171,7 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                       </span>
                     </td>
 
-                    <td className="px-6 py-3.5 max-w-[220px]">
+                    <td className="px-6 py-5 max-w-[220px]">
                       <div className="space-y-1">
                         {log.type === 'job' ? (
                           <span className="block font-bold text-slate-700 dark:text-slate-300 truncate">
@@ -194,13 +194,13 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                       </div>
                     </td>
 
-                    <td className="px-6 py-3.5 font-extrabold text-secondary text-center text-sm">{log.kms} KM</td>
+                    <td className="px-6 py-5 font-extrabold text-secondary text-center text-sm">{log.kms} KM</td>
 
-                    <td className="px-6 py-3.5 font-extrabold text-success text-center text-sm">
+                    <td className="px-6 py-5 font-extrabold text-success text-center text-sm">
                       {log.status === 'approved' ? `₹${log.allowance}` : 'Pending'}
                     </td>
 
-                    <td className="px-6 py-3.5 text-center">
+                    <td className="px-6 py-5 text-center">
                       <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                         log.status === 'approved' ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'
                       }`}>
@@ -208,7 +208,7 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                       </span>
                     </td>
 
-                    <td className="px-6 py-3.5 text-center">
+                    <td className="px-6 py-5 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         {log.status === 'pending' && (
                           <button

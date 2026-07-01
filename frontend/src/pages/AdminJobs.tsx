@@ -256,8 +256,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   <tr key={job._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
                     
                     {/* Job Details */}
-                    <td className="px-6 py-3.5">
-                      <div className="space-y-1">
+                    <td className="px-6 py-5">
+                      <div className="space-y-1.5">
                         <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
                         <div className="flex items-center space-x-1.5">
                           <span className="inline-block text-[8px] font-extrabold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase tracking-wider">
@@ -273,48 +273,48 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </td>
 
                     {/* Assigned Worker */}
-                    <td className="px-6 py-3.5">
+                    <td className="px-6 py-5">
                       {job.workerId ? (
-                        <div>
+                        <div className="space-y-1">
                           <span className="block font-bold text-slate-700 dark:text-slate-200">{job.workerId.name}</span>
                           <span className="block text-[10px] text-slate-400 mt-0.5">{job.workerId.phone}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-400 italic">Unassigned</span>
+                        <span className="text-slate-400 italic font-medium">Unassigned</span>
                       )}
                     </td>
 
                     {/* Client Info */}
-                    <td className="px-6 py-3.5">
-                      <div>
+                    <td className="px-6 py-5">
+                      <div className="space-y-1">
                         <span className="block font-semibold text-slate-750 dark:text-slate-205">{job.clientName}</span>
                         <span className="block text-[10px] text-slate-400 mt-0.5">{job.clientPhone}</span>
                       </div>
                     </td>
 
                     {/* Clean Date & Time */}
-                    <td className="px-6 py-3.5 font-medium">
-                      <div className="space-y-0.5">
+                    <td className="px-6 py-5 font-medium">
+                      <div className="space-y-1">
                         <span className="block text-secondary font-bold text-xs">{job.date || 'N/A'}</span>
-                        <span className="block text-[10px] text-slate-400">{job.timeSlot || 'N/A'}</span>
+                        <span className="block text-[10px] text-slate-400 font-semibold">{job.timeSlot || 'N/A'}</span>
                       </div>
                     </td>
 
                     {/* Address / GPS Position */}
-                    <td className="px-6 py-3.5 max-w-[200px]">
-                      <div className="space-y-1">
+                    <td className="px-6 py-5 max-w-[200px]">
+                      <div className="space-y-1.5">
                         {job.location?.lat && job.location?.lng ? (
                           <a
                             href={`https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="block text-slate-600 dark:text-slate-350 hover:text-secondary underline truncate"
+                            className="block text-slate-600 dark:text-slate-350 hover:text-secondary underline truncate font-medium"
                             title={job.address}
                           >
                             📍 {job.address}
                           </a>
                         ) : (
-                          <span className="block text-slate-600 dark:text-slate-350 truncate" title={job.address}>
+                          <span className="block text-slate-600 dark:text-slate-350 truncate font-medium" title={job.address}>
                             📍 {job.address}
                           </span>
                         )}
@@ -327,12 +327,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </td>
 
                     {/* Price */}
-                    <td className="px-6 py-3.5 text-center font-extrabold text-slate-800 dark:text-slate-100 text-xs">
+                    <td className="px-6 py-5 text-center font-extrabold text-slate-800 dark:text-slate-100 text-xs">
                       ₹{job.price || 0}
                     </td>
 
                     {/* Compliance Photos */}
-                    <td className="px-6 py-3.5 text-center">
+                    <td className="px-6 py-5 text-center">
                       <div className="flex flex-col items-center gap-1.5">
                         <div className="flex space-x-1.5 text-[8px] uppercase tracking-wider font-extrabold">
                           <span className={`px-1.5 py-0.5 rounded ${job.beforePhoto ? 'bg-success/15 text-success' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
@@ -355,7 +355,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </td>
 
                     {/* Status */}
-                    <td className="px-6 py-3.5 text-center">
+                    <td className="px-6 py-5 text-center">
                       <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                         job.status === 'completed' ? 'bg-success/15 text-success' :
                         job.status === 'started' ? 'bg-secondary/15 text-secondary' :
@@ -367,12 +367,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </td>
 
                     {/* Actions */}
-                    <td className="px-6 py-3.5 text-center">
+                    <td className="px-6 py-5 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         {job.status !== 'completed' && job.status !== 'cancelled' && (
                           <button
                             onClick={() => handleCancelJob(job._id)}
-                            className="rounded-lg border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-danger uppercase hover:bg-danger/5"
+                            className="rounded-lg border border-slate-205 dark:border-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-danger uppercase hover:bg-danger/5"
                           >
                             Cancel
                           </button>

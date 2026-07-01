@@ -191,7 +191,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                   const log = attendanceLogs.find(l => (l.workerId?._id || l.workerId) === worker._id);
                   return (
                     <tr key={worker._id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
-                      <td className="px-6 py-3.5 flex items-center space-x-3">
+                      <td className="px-6 py-5 flex items-center space-x-3">
                         <img
                           src={worker.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${worker.name}`}
                           alt={worker.name}
@@ -203,13 +203,13 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                         </div>
                       </td>
 
-                      <td className="px-6 py-3.5">
+                      <td className="px-6 py-5">
                         <span className="inline-block text-[9px] font-bold bg-secondary/15 text-secondary px-2 py-0.5 rounded uppercase">
                           {worker.company}
                         </span>
                       </td>
 
-                      <td className="px-6 py-3.5 font-medium">
+                      <td className="px-6 py-5 font-medium">
                         {log ? (
                           new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         ) : (
@@ -217,7 +217,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                         )}
                       </td>
 
-                      <td className="px-6 py-3.5 text-slate-500">
+                      <td className="px-6 py-5 text-slate-500">
                         {log?.location?.lat && log?.location?.lng ? (
                           <a
                             href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
@@ -232,7 +232,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                         )}
                       </td>
 
-                      <td className="px-6 py-3.5 text-slate-400 max-w-[150px] truncate" title={log?.deviceInfo || ''}>
+                      <td className="px-6 py-5 text-slate-400 max-w-[150px] truncate" title={log?.deviceInfo || ''}>
                         {log ? (
                           <span className="flex items-center space-x-1">
                             <Smartphone className="h-3.5 w-3.5" />
@@ -243,7 +243,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                         )}
                       </td>
 
-                      <td className="px-6 py-3.5">
+                      <td className="px-6 py-5">
                         <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                           log?.status === 'present' ? 'bg-success/15 text-success' :
                           log?.status === 'late' ? 'bg-warning/15 text-warning' :
@@ -254,7 +254,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                         </span>
                       </td>
 
-                      <td className="px-6 py-3.5 text-center flex items-center justify-center space-x-3.5">
+                      <td className="px-6 py-5 text-center flex items-center justify-center space-x-3.5">
                         {log ? (
                           <div className="flex items-center space-x-2">
                             <button
