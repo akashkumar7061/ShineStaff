@@ -16,7 +16,8 @@ import {
   CheckCircle,
   FileCheck2,
   Clock,
-  DollarSign
+  DollarSign,
+  Search
 } from 'lucide-react';
 
 interface AdminJobsProps {
@@ -44,7 +45,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'started' | 'completed' | 'cancelled'>('all');
-  const [filterDate, setFilterDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [searchWorkerName, setSearchWorkerName] = useState('');
 
   // Modals visibility
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -67,11 +70,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
     try {
-      let url = `/jobs?company=${companyFilter}`;
-      if (filterDate) {
-        url += `&date=${filterDate}`;
-      }
-      const jobsRes = await api.get(url);
+      const jobsRes = await api.get(`/jobs?company=${companyFilter}`);
       setJobs(jobsRes.data);
 
       const workersRes = await api.get(`/workers?company=${companyFilter}`);
@@ -94,7 +93,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     };
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, [companyFilter, filterDate]);
+  }, [companyFilter]);
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,8 +162,28 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   };
 
   const filteredJobs = jobs.filter((job) => {
-    if (activeTab === 'all') return true;
-    return job.status === activeTab;
+    // 1. Status Filter
+    if (activeTab !== 'all' && job.status !== activeTab) {
+      return false;
+    }
+
+    // 2. Date Range Filter
+    if (startDate && job.date && job.date < startDate) {
+      return false;
+    }
+    if (endDate && job.date && job.date > endDate) {
+      return false;
+    }
+
+    // 3. Worker Name Search
+    if (searchWorkerName) {
+      const workerName = job.workerId?.name || 'Unassigned';
+      if (!workerName.toLowerCase().includes(searchWorkerName.toLowerCase())) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   return (
@@ -186,35 +205,58 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         </button>
       </div>
 
-      {/* Tabs & Date Filter */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-2">
-        <div className="flex space-x-1">
-          {['all', 'pending', 'started', 'completed', 'cancelled'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`rounded-t-lg px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-b-2 ${
-                activeTab === tab
-                  ? 'border-secondary text-secondary font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      {/* Tabs */}
+      <div className="flex space-x-1 border-b border-slate-200 dark:border-slate-800 pb-px">
+        {['all', 'pending', 'started', 'completed', 'cancelled'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={`rounded-t-lg px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-b-2 ${
+              activeTab === tab
+                ? 'border-secondary text-secondary font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Search and Filters Bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs mt-2">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Worker Search */}
+          <div className="relative min-w-[200px] w-full md:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by worker name..."
+              value={searchWorkerName}
+              onChange={(e) => setSearchWorkerName(e.target.value)}
+              className="rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 pl-9 pr-3 py-2 outline-none focus:border-secondary w-full text-xs font-semibold"
+            />
+          </div>
         </div>
 
-        <div className="flex items-center space-x-2 pb-1.5 md:pb-0">
-          <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Scheduled Date:</span>
+        {/* Date Range Selectors */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Date Range:</span>
           <input
             type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
           />
-          {filterDate && (
+          <span className="text-slate-400 font-bold">➔</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+          />
+          {(startDate || endDate) && (
             <button
-              onClick={() => setFilterDate('')}
+              onClick={() => { setStartDate(''); setEndDate(''); }}
               className="text-xs text-danger font-semibold hover:underline px-2"
             >
               Clear
