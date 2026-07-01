@@ -387,6 +387,17 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
               </div>
 
               <div>
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Aadhaar Card Number</label>
+                <input
+                  type="text"
+                  value={aadhaarNumber}
+                  onChange={(e) => setAadhaarNumber(e.target.value)}
+                  placeholder="12-digit Aadhaar Number"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Address</label>
                 <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
               </div>
