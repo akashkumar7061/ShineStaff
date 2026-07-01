@@ -65,7 +65,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [locationName, setLocationName] = useState('');
   const [price, setPrice] = useState('');
   const [date, setDate] = useState('');
-  const [timeSlot, setTimeSlot] = useState(timeSlotsList[0]);
+  const [timeSlot, setTimeSlot] = useState('');
 
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
@@ -153,7 +153,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setLocationName('');
     setPrice('');
     setDate('');
-    setTimeSlot(timeSlotsList[0]);
+    setTimeSlot('');
   };
 
   const handleOpenPhotoComparison = (job: any) => {
@@ -518,12 +518,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary" />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">1-Hour Time Slot (7 AM - 8 PM)</label>
-                    <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary">
-                      {timeSlotsList.map((slot) => (
-                        <option key={slot} value={slot}>{slot}</option>
-                      ))}
-                    </select>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Time Slot</label>
+                    <input
+                      type="text"
+                      required
+                      value={timeSlot}
+                      onChange={(e) => setTimeSlot(e.target.value)}
+                      placeholder="E.g., 9:00 AM - 10:30 AM"
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary"
+                    />
                   </div>
                 </div>
               </div>
