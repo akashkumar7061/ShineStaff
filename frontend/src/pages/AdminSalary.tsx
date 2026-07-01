@@ -231,7 +231,6 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                   <th className="px-6 py-4 text-center">Duty Days (P / L)</th>
                   <th className="px-6 py-4">Monthly Salary</th>
                   <th className="px-6 py-4">Fuel Commute</th>
-                  <th className="px-6 py-4">Gross Earned</th>
                   <th className="px-6 py-4">Advance Paid</th>
                   <th className="px-6 py-4">Net Remaining</th>
                   <th className="px-6 py-4 text-center">Payroll Actions</th>
@@ -258,8 +257,6 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                     <td className="px-6 py-5 text-success font-semibold whitespace-nowrap">
                       ₹{entry.earnings.fuelAllowance} <span className="text-[10px] text-slate-400 block font-normal">({entry.earnings.fuelKms} KM)</span>
                     </td>
-
-                    <td className="px-6 py-5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">₹{entry.earnings.grossEarnings}</td>
 
                     <td className="px-6 py-5 text-danger font-semibold whitespace-nowrap">₹{entry.earnings.advanceDeducted}</td>
 
