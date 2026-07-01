@@ -44,6 +44,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'started' | 'completed' | 'cancelled'>('all');
+  const [filterDate, setFilterDate] = useState('');
 
   // Modals visibility
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -66,7 +67,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
     try {
-      const jobsRes = await api.get(`/jobs?company=${companyFilter}`);
+      let url = `/jobs?company=${companyFilter}`;
+      if (filterDate) {
+        url += `&date=${filterDate}`;
+      }
+      const jobsRes = await api.get(url);
       setJobs(jobsRes.data);
 
       const workersRes = await api.get(`/workers?company=${companyFilter}`);
@@ -89,7 +94,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     };
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, [companyFilter]);
+  }, [companyFilter, filterDate]);
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,21 +186,41 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-1 border-b border-slate-200 dark:border-slate-800 pb-px">
-        {['all', 'pending', 'started', 'completed', 'cancelled'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`rounded-t-lg px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-b-2 ${
-              activeTab === tab
-                ? 'border-secondary text-secondary font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-250'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Tabs & Date Filter */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="flex space-x-1">
+          {['all', 'pending', 'started', 'completed', 'cancelled'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`rounded-t-lg px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-b-2 ${
+                activeTab === tab
+                  ? 'border-secondary text-secondary font-bold'
+                  : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-250'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center space-x-2 pb-1.5 md:pb-0">
+          <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Scheduled Date:</span>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+          />
+          {filterDate && (
+            <button
+              onClick={() => setFilterDate('')}
+              className="text-xs text-danger font-semibold hover:underline px-2"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Jobs grid */}

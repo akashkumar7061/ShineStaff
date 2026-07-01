@@ -46,12 +46,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
       filter.company = company;
     }
     if (date) {
-      // Find jobs created on this date
-      const start = new Date(date as string);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date as string);
-      end.setHours(23, 59, 59, 999);
-      filter.createdAt = { $gte: start, $lte: end };
+      filter.date = date;
     }
 
     const jobs = await Job.find(filter)

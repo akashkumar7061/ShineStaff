@@ -42,11 +42,16 @@ const WorkerJobs: React.FC = () => {
   const [tempKms, setTempKms] = useState('5');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [filterDate, setFilterDate] = useState('');
 
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/jobs');
+      let url = '/jobs';
+      if (filterDate) {
+        url += `?date=${filterDate}`;
+      }
+      const res = await api.get(url);
       setJobs(res.data);
     } catch (err) {
       console.error('Failed to fetch worker jobs:', err);
@@ -66,7 +71,7 @@ const WorkerJobs: React.FC = () => {
     };
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, []);
+  }, [filterDate]);
 
   const openWorkSheet = (job: any) => {
     setSelectedJob(job);
@@ -203,21 +208,43 @@ const WorkerJobs: React.FC = () => {
           {/* Left Columns: Tabs and jobs list */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Filter Tabs */}
-            <div className="flex space-x-1 rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-1 border border-slate-200/20">
-              {['all', 'pending', 'started', 'completed'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter as any)}
-                  className={`flex-1 rounded-lg py-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
-                    activeFilter === filter
-                      ? 'bg-gradient-to-r from-secondary to-blue-500 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-350'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+            {/* Filter Tabs & Date Filter */}
+            <div className="space-y-4">
+              <div className="flex space-x-1 rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-1 border border-slate-200/20">
+                {['all', 'pending', 'started', 'completed'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter as any)}
+                    className={`flex-1 rounded-lg py-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
+                      activeFilter === filter
+                        ? 'bg-gradient-to-r from-secondary to-blue-500 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-350'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 dark:border-white/5 shadow-sm">
+                <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Filter By Clean Date:</span>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="text-xs font-semibold rounded-lg border border-slate-250 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                  />
+                  {filterDate && (
+                    <button
+                      onClick={() => setFilterDate('')}
+                      className="text-xs text-danger font-semibold hover:underline px-1"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Jobs Card List */}
