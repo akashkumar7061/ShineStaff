@@ -229,12 +229,10 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                 <tr>
                   <th className="px-6 py-4">Worker Profile</th>
                   <th className="px-6 py-4 text-center">Duty Days (P / L)</th>
-                  <th className="px-6 py-4">Daily Rate</th>
-                  <th className="px-6 py-4">Wage Earned</th>
+                  <th className="px-6 py-4">Monthly Salary</th>
                   <th className="px-6 py-4">Fuel Commute</th>
                   <th className="px-6 py-4">Gross Earned</th>
                   <th className="px-6 py-4">Advance Paid</th>
-                  <th className="px-6 py-4">Regular Paid</th>
                   <th className="px-6 py-4">Net Remaining</th>
                   <th className="px-6 py-4 text-center">Payroll Actions</th>
                 </tr>
@@ -243,7 +241,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                 {payrollList.map((entry) => (
                   <tr key={entry.worker.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
                      <td className="px-6 py-5 whitespace-nowrap">
-                      <span className="block font-bold text-slate-805 dark:text-white">{entry.worker.name}</span>
+                      <span className="block font-bold text-slate-855 dark:text-white">{entry.worker.name}</span>
                       <span className="inline-block text-[9px] font-bold bg-secondary/10 text-secondary px-2.5 py-0.5 rounded mt-1 uppercase">
                         {entry.worker.company}
                       </span>
@@ -253,9 +251,9 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                       {entry.counters.present} present / {entry.counters.late} late
                     </td>
 
-                    <td className="px-6 py-5 font-medium whitespace-nowrap">₹{entry.worker.dailySalary || 0}</td>
-
-                    <td className="px-6 py-5 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">₹{entry.earnings.baseWage}</td>
+                    <td className="px-6 py-5 font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                      ₹{entry.worker.monthlySalary || 0}
+                    </td>
 
                     <td className="px-6 py-5 text-success font-semibold whitespace-nowrap">
                       ₹{entry.earnings.fuelAllowance} <span className="text-[10px] text-slate-400 block font-normal">({entry.earnings.fuelKms} KM)</span>
@@ -264,8 +262,6 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                     <td className="px-6 py-5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">₹{entry.earnings.grossEarnings}</td>
 
                     <td className="px-6 py-5 text-danger font-semibold whitespace-nowrap">₹{entry.earnings.advanceDeducted}</td>
-
-                    <td className="px-6 py-5 text-success font-semibold whitespace-nowrap">₹{entry.earnings.paidAmount}</td>
 
                     <td className="px-6 py-5 font-extrabold text-secondary text-sm whitespace-nowrap">₹{entry.earnings.remainingSalary}</td>
 
