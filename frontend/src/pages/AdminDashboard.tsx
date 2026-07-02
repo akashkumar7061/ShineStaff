@@ -1,20 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
-import MapView from '../components/MapView';
-import Leaderboard from '../components/Leaderboard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import {
   Users,
   Briefcase,
   DollarSign,
-  AlertCircle,
-  Activity,
-  Map,
-  Camera,
-  MapPin,
-  Smartphone,
-  CheckCircle2,
-  Calendar
+  AlertCircle
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -23,27 +14,23 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   const [stats, setStats] = useState<any>(null);
-  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
-  const [workersList, setWorkersList] = useState<any[]>([]);
-  const [jobsList, setJobsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [selectedSelfieUrl, setSelectedSelfieUrl] = useState<string | null>(null);
+  const [jobsList, setJobsList] = useState<any[]>([]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const attRes = await api.get('/attendance/today');
+      // Parallelize heavy API requests
+      const [attRes, workersRes, jobsRes] = await Promise.all([
+        api.get('/attendance/today'),
+        api.get(`/workers?company=${companyFilter}`),
+        api.get(`/jobs?company=${companyFilter}`)
+      ]);
+
       const attToday = attRes.data;
-      setAttendanceLogs(attToday);
-
-      const workersRes = await api.get(`/workers?company=${companyFilter}`);
       const workers = workersRes.data;
-      setWorkersList(workers);
-
-      const jobsRes = await api.get(`/jobs?company=${companyFilter}`);
       const jobs = jobsRes.data;
+
       setJobsList(jobs);
 
       const presentCount = attToday.filter((a: any) => a.status === 'present' || a.status === 'late').length;
@@ -56,15 +43,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
       const activeJobs = jobs.filter((j: any) => j.status === 'started');
       const cancelledJobs = jobs.filter((j: any) => j.status === 'cancelled');
 
-      let monthlySalaryExpense = 0;
-      for (const w of workers) {
-        try {
-          const salRes = await api.get(`/salary/dashboard?workerId=${w._id}`);
-          monthlySalaryExpense += salRes.data.earnings.grossEarnings;
-        } catch (salErr) {
-          console.error(`Failed to calculate salary for worker ${w._id}`, salErr);
-        }
-      }
+      // Fetch salary dashboards in parallel to avoid N-request loop delays
+      const salaryPromises = workers.map((w: any) =>
+        api.get(`/salary/dashboard?workerId=${w._id}`).catch((err) => {
+          console.error(`Failed to load salary for ${w._id}`, err);
+          return { data: { earnings: { grossEarnings: 0 } } };
+        })
+      );
+      const salaryResults = await Promise.all(salaryPromises);
+      const monthlySalaryExpense = salaryResults.reduce((sum, res) => sum + (res.data?.earnings?.grossEarnings || 0), 0);
 
       setStats({
         present: presentCount,
@@ -82,35 +69,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
         salaryExpense: monthlySalaryExpense
       });
 
-      const activities: any[] = [];
-      attToday.forEach((a: any) => {
-        activities.push({
-          id: `att_${a._id}`,
-          type: 'attendance',
-          message: `${a.workerId?.name || 'Worker'} checked in as ${a.status.toUpperCase()}`,
-          time: new Date(a.checkInTime)
-        });
-      });
-      completedJobs.forEach((j: any) => {
-        activities.push({
-          id: `job_${j._id}`,
-          type: 'job',
-          message: `Cleanup job "${j.title}" completed by ${(j.workerId as any)?.name || 'Worker'}`,
-          time: new Date(j.completedAt)
-        });
-      });
-      activeJobs.forEach((j: any) => {
-        activities.push({
-          id: `job_start_${j._id}`,
-          type: 'job_started',
-          message: `Cleanup job "${j.title}" started by ${(j.workerId as any)?.name || 'Worker'}`,
-          time: new Date(j.startedAt)
-        });
-      });
-
-      activities.sort((a, b) => b.time.getTime() - a.time.getTime());
-      setRecentActivities(activities.slice(0, 10));
-
     } catch (err) {
       console.error('Failed to load admin dashboard stats:', err);
     } finally {
@@ -123,7 +81,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'JOB_COMPLETED' || customEvent.detail?.type === 'TRAVEL_LOG_SUBMITTED') {
+      const type = customEvent.detail?.type;
+      if (
+        type === 'JOB_COMPLETED' || 
+        type === 'JOB_STARTED' || 
+        type === 'JOB_CREATED' || 
+        type === 'JOB_CANCELLED' || 
+        type === 'JOB_DELETED'
+      ) {
         fetchDashboardData();
       }
     };
@@ -157,50 +122,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   ];
   const COLORS = ['#F59E0B', '#10B981'];
 
-  const mapPins = [
-    ...workersList
-      .filter((w) => w.currentLocation?.lat && w.currentLocation?.lng)
-      .map((w) => ({
-        id: w._id,
-        name: w.name,
-        lat: w.currentLocation.lat,
-        lng: w.currentLocation.lng,
-        type: 'worker' as const,
-        info: `Status: ${w.status} | Last active: ${w.lastActive ? new Date(w.lastActive).toLocaleTimeString() : 'N/A'}`
-      })),
-    ...jobsList
-      .filter((j) => j.location?.lat && j.location?.lng)
-      .map((j) => ({
-        id: j._id,
-        name: j.title,
-        lat: j.location.lat,
-        lng: j.location.lng,
-        type: 'job' as const,
-        company: j.company,
-        info: `Client: ${j.clientName} | Status: ${j.status.toUpperCase()}`
-      }))
-  ];
-
-  const leaderboardWorkers = workersList.map((w) => {
-    const completed = jobsList.filter((j) => j.workerId?._id === w._id && j.status === 'completed').length;
-    const total = jobsList.filter((j) => j.workerId?._id === w._id).length;
-    const attCount = attendanceLogs.filter((a) => a.workerId?._id === w._id).length;
-    
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 100;
-    const attendanceRate = Math.min(100, Math.round((attCount / 30) * 100)) || 85;
-    const score = Math.round((completionRate * 0.6) + (attendanceRate * 0.4));
-
-    return {
-      id: w._id,
-      name: w.name,
-      photo: w.photo,
-      company: w.company,
-      completedJobs: completed,
-      attendanceRate,
-      performanceScore: score
-    };
-  });
-
   return (
     <div className="space-y-8">
       
@@ -210,7 +131,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
         {/* Attendance Card */}
         <div className="glass-card p-6 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 dark:from-emerald-500/15 dark:to-teal-500/5 border-l-4 border-l-success shadow-md shadow-emerald-500/5 hover:border-emerald-500/40 hover:scale-[1.02] transition-all flex items-center justify-between">
           <div>
-            <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest">Attendance Today</span>
+            <span className="block text-[10px] font-bold text-slate-455 uppercase tracking-widest">Attendance Today</span>
             <span className="block text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 mt-1">
               {stats?.present} / {stats?.totalWorkers}
             </span>
@@ -234,7 +155,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
         {/* Jobs Card */}
         <div className="glass-card p-6 bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border-l-4 border-l-warning shadow-md shadow-amber-500/5 hover:border-amber-500/40 hover:scale-[1.02] transition-all flex items-center justify-between">
           <div>
-            <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest">Completed Cleans</span>
+            <span className="block text-[10px] font-bold text-slate-455 uppercase tracking-widest">Completed Cleans</span>
             <span className="block text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-500 mt-1">
               {stats?.jobs.completed}
             </span>
@@ -246,7 +167,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
         {/* Payroll Card */}
         <div className="glass-card p-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 dark:from-blue-500/15 dark:to-indigo-500/5 border-l-4 border-l-secondary shadow-md shadow-blue-500/5 hover:border-blue-500/40 hover:scale-[1.02] transition-all flex items-center justify-between">
           <div>
-            <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest">Payroll Expense</span>
+            <span className="block text-[10px] font-bold text-slate-455 uppercase tracking-widest">Payroll Expense</span>
             <span className="block text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500 mt-1">
               ₹{stats?.salaryExpense}
             </span>
@@ -258,7 +179,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
 
       {/* SECTION 2: Job Progression Metrics Chart (Full Width) */}
       <div className="glass-card p-6">
-        <h3 className="font-semibold text-slate-850 dark:text-slate-100 mb-4">Job Progression Metrics</h3>
+        <h3 className="font-semibold text-slate-855 dark:text-slate-100 mb-4">Job Progression Metrics</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={jobsChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -278,7 +199,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
 
       {/* SECTION 3: Business Ratio Distribution Chart (Full Width) */}
       <div className="glass-card p-6">
-        <h3 className="font-semibold text-slate-850 dark:text-slate-100 mb-2">Company Task Distribution</h3>
+        <h3 className="font-semibold text-slate-855 dark:text-slate-100 mb-2">Company Task Distribution</h3>
         <div className="h-64 relative flex justify-center items-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -314,74 +235,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
           </div>
         </div>
       </div>
-
-      {/* SECTION 4: Live GPS tracking Map (Full Width) */}
-      <div className="glass-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-semibold text-slate-850 dark:text-slate-100">Live GPS Coordinates Map</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Real-time overlay locations for scheduled cleans and workers</p>
-          </div>
-          <Map className="h-5 w-5 text-secondary" />
-        </div>
-        <div className="h-96">
-          <MapView pins={mapPins} />
-        </div>
-      </div>
-
-      {/* SECTION 5: Worker Performance Leaderboard (Full Width) */}
-      <div className="glass-card p-6">
-        <Leaderboard workers={leaderboardWorkers} />
-      </div>
-
-      {/* SECTION 6: Recent System Action Logs (Full Width) */}
-      <div className="glass-card p-6">
-        <div className="flex items-center space-x-2 mb-6">
-          <div className="rounded-xl bg-secondary/10 p-2 text-secondary"><Activity className="h-5 w-5" /></div>
-          <div>
-            <h3 className="font-semibold text-slate-850 dark:text-slate-100">Recent Activities Timeline</h3>
-            <p className="text-xs text-slate-400">Chronological logs of worker check-ins and cleaning progress reports</p>
-          </div>
-        </div>
-        <div className="relative border-l border-slate-150 dark:border-slate-800 ml-3 space-y-6">
-          {recentActivities.length === 0 ? (
-            <div className="text-center py-6 text-sm text-slate-400 pl-4">No activity logs recorded today.</div>
-          ) : (
-            recentActivities.map((act) => (
-              <div key={act.id} className="relative pl-6">
-                <span className={`absolute left-0 top-1.5 -ml-1.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-slate-900 ${
-                  act.type === 'attendance' ? 'bg-success' : act.type === 'job' ? 'bg-secondary' : 'bg-warning'
-                }`} />
-                <div>
-                  <p className="text-xs font-semibold text-slate-750 dark:text-slate-250">{act.message}</p>
-                  <span className="text-[10px] text-slate-400">
-                    {act.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-      {/* Today's Selfie Attendance Registry Table removed from main dashboard (available in sidebar) */}
-
-      {selectedSelfieUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-fade-in">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-              <span className="font-bold text-xs text-slate-400 uppercase tracking-widest">Selfie Camera Snap Check</span>
-              <button onClick={() => setSelectedSelfieUrl(null)} className="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-            <div className="p-6 flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-              <img
-                src={selectedSelfieUrl}
-                alt="Selfie Check"
-                className="max-h-[50vh] object-contain rounded-2xl shadow border border-slate-200 dark:border-slate-800"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
