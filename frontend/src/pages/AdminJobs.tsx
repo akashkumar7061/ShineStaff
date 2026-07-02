@@ -76,10 +76,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
     try {
-      const jobsRes = await api.get(`/jobs?company=${companyFilter}`);
+      const [jobsRes, workersRes] = await Promise.all([
+        api.get(`/jobs?company=${companyFilter}`),
+        api.get(`/workers?company=${companyFilter}`)
+      ]);
       setJobs(jobsRes.data);
-
-      const workersRes = await api.get(`/workers?company=${companyFilter}`);
       setWorkers(workersRes.data);
     } catch (err) {
       console.error('Failed to load jobs/workers:', err);

@@ -46,15 +46,19 @@ const WorkerHome: React.FC = () => {
     setLoading(true);
     try {
       const todayStr = new Date().toISOString().split('T')[0];
-      const attRes = await api.get(`/attendance/worker/${user.id}`);
-      const todayAtt = attRes.data.find((a: any) => a.date === todayStr);
-      setAttendanceToday(todayAtt);
-      setAttendanceHistory(attRes.data);
+      const [attRes, salRes, jobsRes] = await Promise.all([
+        api.get(`/attendance/worker/${user.id}`),
+        api.get(`/salary/dashboard?workerId=${user.id}`),
+        api.get('/jobs')
+      ]);
 
-      const salRes = await api.get(`/salary/dashboard?workerId=${user.id}`);
+      const attToday = attRes.data;
+      const todayAtt = attToday.find((a: any) => a.date === todayStr);
+      setAttendanceToday(todayAtt);
+      setAttendanceHistory(attToday);
+
       setSalaryToday(salRes.data.earnings.todayEarnings);
 
-      const jobsRes = await api.get('/jobs');
       const jobs = jobsRes.data;
       const pendingJobs = jobs.filter((j: any) => j.status === 'pending');
       const completedJobs = jobs.filter((j: any) => j.status === 'completed');

@@ -43,15 +43,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
       const activeJobs = jobs.filter((j: any) => j.status === 'started');
       const cancelledJobs = jobs.filter((j: any) => j.status === 'cancelled');
 
-      // Fetch salary dashboards in parallel to avoid N-request loop delays
-      const salaryPromises = workers.map((w: any) =>
-        api.get(`/salary/dashboard?workerId=${w._id}`).catch((err) => {
-          console.error(`Failed to load salary for ${w._id}`, err);
-          return { data: { earnings: { grossEarnings: 0 } } };
-        })
-      );
-      const salaryResults = await Promise.all(salaryPromises);
-      const monthlySalaryExpense = salaryResults.reduce((sum, res) => sum + (res.data?.earnings?.grossEarnings || 0), 0);
+      // Sum up monthly salaries of all active workers to get estimated payroll expense
+      const monthlySalaryExpense = workers.reduce((sum: number, w: any) => sum + (w.monthlySalary || 0), 0);
 
       setStats({
         present: presentCount,
