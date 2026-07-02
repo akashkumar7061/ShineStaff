@@ -65,7 +65,14 @@ const WorkerJobs: React.FC = () => {
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'NEW_JOB') {
+      const type = customEvent.detail?.type;
+      if (
+        type === 'NEW_JOB' ||
+        type === 'JOB_STARTED' ||
+        type === 'JOB_COMPLETED' ||
+        type === 'JOB_CANCELLED' ||
+        type === 'JOB_DELETED'
+      ) {
         fetchJobs();
       }
     };

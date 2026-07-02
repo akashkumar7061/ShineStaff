@@ -93,7 +93,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'JOB_COMPLETED') {
+      const type = customEvent.detail?.type;
+      if (
+        type === 'JOB_COMPLETED' ||
+        type === 'JOB_STARTED' ||
+        type === 'JOB_CREATED' ||
+        type === 'JOB_CANCELLED' ||
+        type === 'JOB_DELETED'
+      ) {
         fetchJobsAndWorkers();
       }
     };

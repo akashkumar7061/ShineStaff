@@ -162,6 +162,9 @@ export const startJob = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
 
+    const worker = await User.findById(req.user.id);
+    const workerName = worker ? worker.name : 'Worker';
+
     if (job.status !== 'pending') {
       return res.status(400).json({ message: 'Job has already been started or processed' });
     }
@@ -185,6 +188,27 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     job.startedAt = new Date();
 
     await job.save();
+
+    // Send real-time notifications
+    try {
+      const io = getIO();
+      if (io) {
+        // Notify admin
+        io.emit('adminNotification', {
+          type: 'JOB_STARTED',
+          message: `${workerName} started job "${job.title}" for ${job.company}.`,
+          jobId: job._id
+        });
+        // Notify worker room
+        io.to(job.workerId.toString()).emit('notification', {
+          type: 'JOB_STARTED',
+          message: `Job "${job.title}" has been successfully started.`,
+          jobId: job._id
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send job started socket notification:', err);
+    }
 
     res.status(200).json({ message: 'Job started successfully', job });
   } catch (error: any) {
@@ -310,12 +334,17 @@ Before/After photos uploaded successfully.`;
 
     await sendWhatsAppAlert(adminPhone, alertMsg);
 
-    // Socket alert to admins
+    // Socket alert to admins and worker
     const io = getIO();
     if (io) {
       io.emit('adminNotification', {
         type: 'JOB_COMPLETED',
         message: `${workerName} completed job "${job.title}" for ${job.company}.`,
+        jobId: job._id
+      });
+      io.to(job.workerId.toString()).emit('notification', {
+        type: 'JOB_COMPLETED',
+        message: `Job "${job.title}" has been successfully completed.`,
         jobId: job._id
       });
     }
@@ -337,6 +366,24 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
     job.status = 'cancelled';
     await job.save();
 
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit('adminNotification', {
+          type: 'JOB_CANCELLED',
+          message: `Job "${job.title}" has been cancelled.`,
+          jobId: job._id
+        });
+        io.to(job.workerId.toString()).emit('notification', {
+          type: 'JOB_CANCELLED',
+          message: `Job "${job.title}" has been cancelled.`,
+          jobId: job._id
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send job cancelled socket notification:', err);
+    }
+
     res.status(200).json({ message: 'Job status set to cancelled', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -350,6 +397,25 @@ export const deleteJob = async (req: Request, res: Response) => {
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
     }
+
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit('adminNotification', {
+          type: 'JOB_DELETED',
+          message: `Job "${job.title}" has been deleted.`,
+          jobId: id
+        });
+        io.to(job.workerId.toString()).emit('notification', {
+          type: 'JOB_DELETED',
+          message: `Job "${job.title}" has been deleted.`,
+          jobId: id
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send job deleted socket notification:', err);
+    }
+
     res.status(200).json({ message: 'Job deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
