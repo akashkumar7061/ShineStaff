@@ -17,7 +17,8 @@ import {
   FileCheck2,
   Clock,
   DollarSign,
-  Search
+  Search,
+  Camera
 } from 'lucide-react';
 
 interface AdminJobsProps {
@@ -393,22 +394,54 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
                     {/* Compliance Photos */}
                     <td className="px-6 py-5 text-center">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="flex space-x-1.5 text-[8px] uppercase tracking-wider font-extrabold">
-                          <span className={`px-1.5 py-0.5 rounded ${job.beforePhoto ? 'bg-success/15 text-success' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                            Before
-                          </span>
-                          <span className={`px-1.5 py-0.5 rounded ${job.afterPhoto ? 'bg-success/15 text-success' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                            After
-                          </span>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex items-center space-x-3 justify-center">
+                          {/* Before Photo */}
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-[8px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Before</span>
+                            {job.beforePhoto ? (
+                              <div 
+                                className="relative cursor-pointer group" 
+                                onClick={() => handleOpenPhotoComparison(job)}
+                                title="Click to view full screen & location details"
+                              >
+                                <img src={job.beforePhoto} alt="Before" className="h-9 w-9 rounded-lg object-cover border border-emerald-500/30 shadow-sm hover:scale-110 transition-transform duration-200" />
+                                <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white text-[8px] font-extrabold shadow-sm">✓</span>
+                              </div>
+                            ) : (
+                              <div className="h-9 w-9 rounded-lg bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-350 dark:text-slate-650" title="Kaam abhi shuru nahi hua (Before snap pending)">
+                                <Camera className="h-4 w-4" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* After Photo */}
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-[8px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">After</span>
+                            {job.afterPhoto ? (
+                              <div 
+                                className="relative cursor-pointer group" 
+                                onClick={() => handleOpenPhotoComparison(job)}
+                                title="Click to view full screen & location details"
+                              >
+                                <img src={job.afterPhoto} alt="After" className="h-9 w-9 rounded-lg object-cover border border-emerald-500/30 shadow-sm hover:scale-110 transition-transform duration-200" />
+                                <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white text-[8px] font-extrabold shadow-sm">✓</span>
+                              </div>
+                            ) : (
+                              <div className="h-9 w-9 rounded-lg bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-350 dark:text-slate-650" title="Kaam chal raha hai ya pending hai (After snap pending)">
+                                <Camera className="h-4 w-4" />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {job.status === 'completed' && (
+
+                        {(job.beforePhoto || job.afterPhoto) && (
                           <button
                             onClick={() => handleOpenPhotoComparison(job)}
-                            className="flex items-center justify-center space-x-1 text-[10px] font-bold text-secondary hover:underline"
+                            className="flex items-center justify-center space-x-1 text-[9px] font-bold text-secondary hover:underline mt-0.5"
                           >
-                            <FileCheck2 className="h-3.5 w-3.5" />
-                            <span>View Images</span>
+                            <FileCheck2 className="h-3 w-3" />
+                            <span>Audit Details</span>
                           </button>
                         )}
                       </div>
