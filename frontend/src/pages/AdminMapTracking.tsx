@@ -82,21 +82,18 @@ const AdminMapTracking: React.FC<AdminMapTrackingProps> = ({ companyFilter }) =>
         </div>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
-            <input
-              type="text"
-              placeholder="Search worker by name..."
+            <select
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 pr-10 outline-none focus:border-secondary transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
-              >
-                ✕
-              </button>
-            )}
+              className="w-full text-xs rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 outline-none focus:border-secondary transition-all cursor-pointer"
+            >
+              <option value="">🔍 All Workers List</option>
+              {workersList.map((w) => (
+                <option key={w._id} value={w.name}>
+                  👤 {w.name} ({w.company})
+                </option>
+              ))}
+            </select>
           </div>
           <button
             onClick={fetchTrackingData}
