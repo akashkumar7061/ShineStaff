@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { io as socketIO } from 'socket.io-client';
 import { Sparkles } from 'lucide-react';
+import api from './utils/api';
 
 // Pages
 import Login from './pages/Login';
@@ -141,8 +142,45 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       }
     });
 
+    // Background Geolocation Tracking for workers
+    let locationInterval: any = null;
+
+    if (user.role === 'worker') {
+      const updateLocation = () => {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              try {
+                await api.put(`/workers/${user.id}/location`, {
+                  lat: latitude,
+                  lng: longitude
+                });
+                console.log(`Worker live location updated: ${latitude}, ${longitude}`);
+              } catch (err) {
+                console.error('Failed to report live GPS coordinates:', err);
+              }
+            },
+            (err) => {
+              console.error('GPS Geolocation error:', err.message);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        }
+      };
+
+      // Run immediately on load
+      updateLocation();
+
+      // Track location every 30 seconds
+      locationInterval = setInterval(updateLocation, 30000);
+    }
+
     return () => {
       socket.disconnect();
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
     };
   }, [user]);
 
