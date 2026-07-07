@@ -79,11 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initializeAuth = async () => {
       let currentToken = localStorage.getItem('token') || getCookie('token');
-      const savedRefreshToken = localStorage.getItem('refreshToken') || getCookie('refreshToken');
+      const savedRefreshToken = localStorage.getItem('refreshToken');
+      const hasSavedRefresh = savedRefreshToken || getCookie('hasRefreshToken') === 'true';
 
-      if (!currentToken && savedRefreshToken) {
+      if (!currentToken && hasSavedRefresh) {
         try {
-          console.log('Access token missing but refresh token found. Attempting silent refresh...');
+          console.log('Access token missing but refresh token indicator found. Attempting silent refresh...');
           const res = await api.post('/auth/refresh', { refreshToken: savedRefreshToken || '' });
           currentToken = res.data.token;
           localStorage.setItem('token', currentToken || '');

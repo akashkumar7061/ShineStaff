@@ -49,6 +49,13 @@ const generateTokens = async (userId: string, res: Response) => {
     maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
   });
 
+  // Set a non-HttpOnly cookie to notify the client that a refresh token exists
+  res.cookie('hasRefreshToken', 'true', {
+    secure: true,
+    sameSite: 'none',
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+  });
+
   return { accessToken, refreshToken: refreshTokenString };
 };
 
@@ -196,6 +203,10 @@ export const logout = async (req: Request, res: Response) => {
 
   res.clearCookie('refreshToken', {
     httpOnly: true,
+    secure: true,
+    sameSite: 'none'
+  });
+  res.clearCookie('hasRefreshToken', {
     secure: true,
     sameSite: 'none'
   });
