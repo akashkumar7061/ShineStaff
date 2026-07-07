@@ -40,7 +40,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
     };
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid or Expired Token' });
+    return res.status(401).json({ message: 'Invalid or Expired Token' });
   }
 };
 

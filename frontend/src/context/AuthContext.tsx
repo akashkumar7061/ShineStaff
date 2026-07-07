@@ -49,16 +49,7 @@ const eraseCookie = (name: string) => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(() => {
-    let t = localStorage.getItem('token');
-    if (!t) {
-      t = getCookie('token');
-      if (t) {
-        localStorage.setItem('token', t);
-      }
-    }
-    return t;
-  });
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async () => {
@@ -86,12 +77,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    if (token) {
-      fetchProfile();
-    } else {
+    const initializeAuth = async () => {
+      let currentToken = localStorage.getItem('token') || getCookie('token');
+      const savedRefreshToken = localStorage.getItem('refreshToken') || getCookie('refreshToken');
+
+      if (!currentToken && savedRefreshToken) {
+        try {
+          console.log('Access token missing but refresh token found. Attempting silent refresh...');
+          const res = await api.post('/auth/refresh', { refreshToken: savedRefreshToken || '' });
+          currentToken = res.data.token;
+          localStorage.setItem('token', currentToken || '');
+        } catch (err) {
+          console.error('Failed to perform startup token refresh:', err);
+          logout();
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (currentToken) {
+        setToken(currentToken);
+        try {
+          const res = await api.get('/auth/profile');
+          const profile = {
+            ...res.data,
+            id: res.data._id || res.data.id
+          };
+          setUser(profile);
+        } catch (err: any) {
+          console.error('Failed to load profile during init:', err);
+          if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+            logout();
+          } else {
+            // Transient error: retry in 5s
+            setTimeout(fetchProfile, 5000);
+            return; // don't set loading to false yet
+          }
+        }
+      }
+      
       setLoading(false);
-    }
-  }, [token]);
+    };
+
+    initializeAuth();
+  }, []);
 
   const login = (newToken: string, newRefreshToken: string, profile: UserProfile) => {
     setToken(newToken);
@@ -104,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     const savedRefreshToken = localStorage.getItem('refreshToken') || getCookie('refreshToken');
-    api.post('/auth/logout', { refreshToken: savedRefreshToken }).catch((err) => {
+    api.post('/auth/logout', { refreshToken: savedRefreshToken || '' }).catch((err) => {
       console.error('Failed to revoke refresh token on server:', err);
     });
 
@@ -117,7 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUser = async () => {
-    if (token) {
+    const activeToken = token || localStorage.getItem('token') || getCookie('token');
+    if (activeToken) {
       try {
         const res = await api.get('/auth/profile');
         const profile = {
