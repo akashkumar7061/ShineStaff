@@ -12,7 +12,14 @@ const api = axios.create({
 // Request interceptor to append JWT token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    let token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) {
+      const match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+      if (match) {
+        token = match[2];
+        localStorage.setItem('token', token);
+      }
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,6 +37,7 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
+      document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
       // Redirect to login if not already there
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';

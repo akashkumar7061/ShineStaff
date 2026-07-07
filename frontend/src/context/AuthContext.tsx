@@ -22,10 +22,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getCookie = (name: string): string | null => {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+};
+
+const setCookie = (name: string, value: string, days: number) => {
+  let expires = "";
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure";
+};
+
+const eraseCookie = (name: string) => {
+  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('token');
+    let t = localStorage.getItem('token');
+    if (!t) {
+      t = getCookie('token');
+      if (t) {
+        localStorage.setItem('token', t);
+      }
+    }
+    return t;
   });
   const [loading, setLoading] = useState(true);
 
@@ -61,16 +93,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
-  const login = (newToken: string, profile: UserProfile, rememberMe: boolean) => {
+  const login = (newToken: string, profile: UserProfile, _rememberMe: boolean) => {
     setToken(newToken);
     setUser(profile);
     localStorage.setItem('token', newToken);
+    setCookie('token', newToken, 365); // Save cookie backup for 365 days
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
+    eraseCookie('token');
   };
 
   const refreshUser = async () => {
