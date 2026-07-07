@@ -41,18 +41,18 @@ const generateTokens = async (userId: string, res: Response) => {
   });
   await newRefreshToken.save();
 
-  // Set the refresh token as an HttpOnly, Secure, SameSite=None cookie for cross-domain support
+  // Set the refresh token as an HttpOnly, Secure, SameSite=Lax cookie for first-party support
   res.cookie('refreshToken', refreshTokenString, {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
+    sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
   });
 
   // Set a non-HttpOnly cookie to notify the client that a refresh token exists
   res.cookie('hasRefreshToken', 'true', {
     secure: true,
-    sameSite: 'none',
+    sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
   });
 
@@ -204,11 +204,11 @@ export const logout = async (req: Request, res: Response) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: true,
-    sameSite: 'none'
+    sameSite: 'lax'
   });
   res.clearCookie('hasRefreshToken', {
     secure: true,
-    sameSite: 'none'
+    sameSite: 'lax'
   });
 
   res.status(200).json({ message: 'Logged out successfully' });
