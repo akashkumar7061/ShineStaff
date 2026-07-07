@@ -2,9 +2,55 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import RefreshToken from '../models/RefreshToken';
 import { sendMail } from '../config/mailer';
 import { AuthRequest } from '../middleware/auth';
 import { uploadToCloudinary } from '../config/cloudinary';
+
+// Helper to parse cookies manually from headers
+const parseCookies = (req: Request) => {
+  const list: { [key: string]: string } = {};
+  const rc = req.headers.cookie;
+  if (rc) {
+    rc.split(';').forEach((cookie) => {
+      const parts = cookie.split('=');
+      list[parts.shift()!.trim()] = decodeURI(parts.join('='));
+    });
+  }
+  return list;
+};
+
+// Helper to generate and save both access and refresh tokens
+const generateTokens = async (userId: string, res: Response) => {
+  const secret = process.env.JWT_SECRET || 'supersecretshinestaffkey12345!';
+  
+  // Access Token expires in 15 minutes
+  const accessToken = jwt.sign({ id: userId }, secret, { expiresIn: '15m' });
+  
+  // Refresh Token expires in 30 days
+  const refreshTokenString = jwt.sign({ id: userId }, secret, { expiresIn: '30d' });
+
+  // Save the refresh token in the database
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+  
+  const newRefreshToken = new RefreshToken({
+    token: refreshTokenString,
+    userId,
+    expiresAt
+  });
+  await newRefreshToken.save();
+
+  // Set the refresh token as an HttpOnly, Secure, SameSite=None cookie for cross-domain support
+  res.cookie('refreshToken', refreshTokenString, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+  });
+
+  return { accessToken, refreshToken: refreshTokenString };
+};
 
 export const register = async (req: Request, res: Response) => {
   const { name, email, password, role, company, phone, address, aadhaarNumber } = req.body;
@@ -38,12 +84,12 @@ export const register = async (req: Request, res: Response) => {
 
     await user.save();
 
-    const secret = process.env.JWT_SECRET || 'supersecretshinestaffkey12345!';
-    const token = jwt.sign({ id: user._id }, secret, { expiresIn: '365d' });
+    const { accessToken, refreshToken } = await generateTokens(user._id.toString(), res);
 
     res.status(201).json({
       message: 'Account registered successfully',
-      token,
+      token: accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -59,7 +105,7 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { phone, password, rememberMe } = req.body;
+  const { phone, password } = req.body;
 
   try {
     const user = await User.findOne({
@@ -82,11 +128,11 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid mobile number or password' });
     }
 
-    const secret = process.env.JWT_SECRET || 'supersecretshinestaffkey12345!';
-    const token = jwt.sign({ id: user._id }, secret, { expiresIn: '365d' });
+    const { accessToken, refreshToken } = await generateTokens(user._id.toString(), res);
 
     res.status(200).json({
-      token,
+      token: accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -102,6 +148,61 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+export const refresh = async (req: Request, res: Response) => {
+  const cookies = parseCookies(req);
+  const token = cookies.refreshToken || req.body?.refreshToken;
+
+  if (!token) {
+    return res.status(401).json({ message: 'Refresh token not found' });
+  }
+
+  try {
+    const secret = process.env.JWT_SECRET || 'supersecretshinestaffkey12345!';
+    const decoded = jwt.verify(token, secret) as { id: string };
+
+    const savedToken = await RefreshToken.findOne({ token, userId: decoded.id });
+    if (!savedToken) {
+      return res.status(401).json({ message: 'Refresh token invalid or revoked' });
+    }
+
+    if (savedToken.expiresAt < new Date()) {
+      await RefreshToken.deleteOne({ _id: savedToken._id });
+      return res.status(401).json({ message: 'Refresh token expired' });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user || user.status === 'inactive') {
+      return res.status(401).json({ message: 'User not found or deactivated' });
+    }
+
+    const newAccessToken = jwt.sign({ id: user._id }, secret, { expiresIn: '15m' });
+    res.status(200).json({ token: newAccessToken });
+  } catch (error: any) {
+    return res.status(401).json({ message: 'Invalid refresh token', error: error.message });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  const cookies = parseCookies(req);
+  const token = cookies.refreshToken || req.body?.refreshToken;
+
+  if (token) {
+    try {
+      await RefreshToken.deleteOne({ token });
+    } catch (err) {
+      console.error('Failed to revoke refresh token:', err);
+    }
+  }
+
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none'
+  });
+
+  res.status(200).json({ message: 'Logged out successfully' });
+};
+
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
@@ -110,11 +211,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User with this email does not exist' });
     }
 
-    // For testing/mocking, we can generate a short numeric code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // In a real app we'd save this code and check expiry. For simplicity:
-    // We send code via mail (and also return it in response for convenience in testing)
     const emailHtml = `
       <h3>ShineStaff Password Reset</h3>
       <p>Hello ${user.name},</p>
@@ -127,7 +225,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: 'Reset code sent to email',
-      // Return code in response for easier mock testing
       resetCode
     });
   } catch (error: any) {

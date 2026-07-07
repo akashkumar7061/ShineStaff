@@ -15,7 +15,7 @@ interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
   loading: boolean;
-  login: (token: string, profile: UserProfile, rememberMe: boolean) => void;
+  login: (token: string, refreshToken: string, profile: UserProfile) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -93,18 +93,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
-  const login = (newToken: string, profile: UserProfile, _rememberMe: boolean) => {
+  const login = (newToken: string, newRefreshToken: string, profile: UserProfile) => {
     setToken(newToken);
     setUser(profile);
     localStorage.setItem('token', newToken);
+    localStorage.setItem('refreshToken', newRefreshToken);
     setCookie('token', newToken, 365); // Save cookie backup for 365 days
+    setCookie('refreshToken', newRefreshToken, 365); // Save cookie backup for 365 days
   };
 
   const logout = () => {
+    const savedRefreshToken = localStorage.getItem('refreshToken') || getCookie('refreshToken');
+    api.post('/auth/logout', { refreshToken: savedRefreshToken }).catch((err) => {
+      console.error('Failed to revoke refresh token on server:', err);
+    });
+
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     eraseCookie('token');
+    eraseCookie('refreshToken');
   };
 
   const refreshUser = async () => {

@@ -44,9 +44,9 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const res = await api.post('/auth/login', { phone: loginPhone, password, rememberMe });
-      const { token, user } = res.data;
-      login(token, user, rememberMe);
+      const res = await api.post('/auth/login', { phone: loginPhone, password });
+      const { token, refreshToken, user } = res.data;
+      login(token, refreshToken, user);
       
       if (user.role === 'admin') {
         navigate('/admin');
@@ -75,8 +75,8 @@ const Login: React.FC = () => {
         role,
         company
       });
-      const { token, user } = res.data;
-      login(token, user, rememberMe);
+      const { token, refreshToken, user } = res.data;
+      login(token, refreshToken, user);
 
       if (user.role === 'admin') {
         navigate('/admin');
