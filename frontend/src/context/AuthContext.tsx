@@ -37,11 +37,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: res.data._id || res.data.id
       };
       setUser(profile);
-    } catch (err) {
-      console.error('Failed to load profile', err);
-      logout();
-    } finally {
       setLoading(false);
+    } catch (err: any) {
+      console.error('Failed to load profile, checking error type...', err);
+      // Only call logout if the error status code is explicitly 401 (Unauthorized) or 403 (Forbidden)
+      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+        logout();
+        setLoading(false);
+      } else {
+        // If it's a network timeout, server offline, 502/504 proxy error, do NOT logout.
+        // Keep loading = true and schedule a retry in 5 seconds.
+        console.log('Transient network/server error. Retrying profile load in 5s...');
+        setTimeout(fetchProfile, 5000);
+      }
     }
   };
 

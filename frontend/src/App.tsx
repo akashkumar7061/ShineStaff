@@ -42,7 +42,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRole: 'admin'
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-350 border-t-secondary" />
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-350 border-t-secondary" />
+          <p className="text-xs font-semibold text-slate-500 animate-pulse">Connecting to ShineStaff...</p>
+        </div>
       </div>
     );
   }
@@ -65,7 +68,10 @@ const RootRedirect: React.FC = () => {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-350 border-t-secondary" />
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-350 border-t-secondary" />
+          <p className="text-xs font-semibold text-slate-500 animate-pulse">Connecting to ShineStaff...</p>
+        </div>
       </div>
     );
   }
