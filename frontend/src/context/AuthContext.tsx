@@ -80,19 +80,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       let currentToken = localStorage.getItem('token') || getCookie('token');
       const savedRefreshToken = localStorage.getItem('refreshToken');
-      const hasSavedRefresh = savedRefreshToken || getCookie('hasRefreshToken') === 'true';
 
-      if (!currentToken && hasSavedRefresh) {
+      if (!currentToken) {
         try {
-          console.log('Access token missing but refresh token indicator found. Attempting silent refresh...');
+          console.log('Access token missing on startup. Attempting silent token refresh...');
           const res = await api.post('/auth/refresh', { refreshToken: savedRefreshToken || '' });
           currentToken = res.data.token;
           localStorage.setItem('token', currentToken || '');
         } catch (err) {
-          console.error('Failed to perform startup token refresh:', err);
-          logout();
-          setLoading(false);
-          return;
+          console.log('No active session found or silent refresh failed during startup.');
         }
       }
 
