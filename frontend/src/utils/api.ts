@@ -35,12 +35,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
-      document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
-      // Redirect to login if not already there
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+      // Only force logout if the failure occurred on the profile check endpoint itself
+      const isProfileRoute = error.config && error.config.url && error.config.url.includes('/auth/profile');
+      if (isProfileRoute) {
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
+        // Redirect to login if not already there
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
