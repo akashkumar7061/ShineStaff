@@ -63,7 +63,13 @@ io.on('connection', (socket) => {
 app.use(helmet({
   crossOriginResourcePolicy: false // Allows loading local mock static images
 }));
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Dynamically echo the origin to support credentials for all clean sources
+    callback(null, true);
+  },
+  credentials: true
+}));
 // Set high size limits since pictures are sent as base64 strings
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
