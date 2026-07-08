@@ -72,6 +72,11 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
     }
   };
 
+  const toLocalISOString = (dateObj: Date) => {
+    const tzoffset = dateObj.getTimezoneOffset() * 60000;
+    return new Date(dateObj.getTime() - tzoffset).toISOString().slice(0, 16);
+  };
+
   const handleEditAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLogId) return;
@@ -79,7 +84,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
       await api.put(`/attendance/${selectedLogId}`, {
         status: editStatus,
         date: editDate,
-        checkInTime: editCheckInTime
+        checkInTime: editCheckInTime ? new Date(editCheckInTime).toISOString() : undefined
       });
       alert('Attendance record updated successfully!');
       setEditModalOpen(false);
@@ -186,6 +191,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                   <th className="px-6 py-4">GPS Position</th>
                   <th className="px-6 py-4">Device Specs</th>
                   <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Reason</th>
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
@@ -247,22 +253,24 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                       </td>
 
                       <td className="px-6 py-5">
-                        <div className="flex flex-col items-start gap-1">
-                          <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                            log?.status === 'present' ? 'bg-success/15 text-success' :
-                            log?.status === 'late' ? 'bg-warning/15 text-warning' :
-                            log?.status === 'half-day' ? 'bg-indigo-500/15 text-indigo-500' :
-                            'bg-danger/15 text-danger'
-                          }`}>
-                            {log ? (log.status === 'half-day' ? 'Half-Day' : log.status) : 'Absent'}
-                          </span>
-                          {log?.status === 'late' && log.lateReason && (
-                            <div className="flex flex-col bg-amber-500/10 text-amber-600 dark:text-amber-450 px-2.5 py-1 rounded-lg border border-amber-500/20 font-semibold text-[9px] mt-0.5 max-w-[150px] text-left leading-normal whitespace-pre-line">
-                              <span className="font-extrabold text-[8px] uppercase text-amber-500">Reason:</span>
-                              <span>{log.lateReason}</span>
-                            </div>
-                          )}
-                        </div>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                          log?.status === 'present' ? 'bg-success/15 text-success' :
+                          log?.status === 'late' ? 'bg-warning/15 text-warning' :
+                          log?.status === 'half-day' ? 'bg-indigo-500/15 text-indigo-500' :
+                          'bg-danger/15 text-danger'
+                        }`}>
+                          {log ? (log.status === 'half-day' ? 'Half-Day' : log.status) : 'Absent'}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-5 text-slate-500">
+                        {log?.lateReason ? (
+                          <div className="flex flex-col bg-slate-100 dark:bg-slate-800/40 text-slate-650 dark:text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-205 dark:border-slate-800 font-semibold text-[9px] max-w-[150px] text-left leading-normal whitespace-pre-line">
+                            <span>{log.lateReason}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
 
                       <td className="px-6 py-5 text-center flex items-center justify-center space-x-3.5">
@@ -278,11 +286,11 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                             </button>
                             <button
                               onClick={() => {
-                                setSelectedLogId(log._id);
-                                setEditStatus(log.status);
-                                setEditDate(log.date);
-                                setEditCheckInTime(log.checkInTime ? new Date(log.checkInTime).toISOString().slice(0, 16) : '');
-                                setEditModalOpen(true);
+                                  setSelectedLogId(log._id);
+                                  setEditStatus(log.status);
+                                  setEditDate(log.date);
+                                  setEditCheckInTime(log.checkInTime ? toLocalISOString(new Date(log.checkInTime)) : '');
+                                  setEditModalOpen(true);
                               }}
                               className="rounded-full bg-slate-100 dark:bg-slate-800 p-2 text-slate-550 hover:bg-amber-500/15 hover:text-amber-500 transition-colors"
                               title="Edit Attendance Record"
