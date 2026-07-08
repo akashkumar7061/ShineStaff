@@ -119,7 +119,7 @@ const WorkerAttendance: React.FC = () => {
                       <span className="text-xs font-bold text-emerald-700 dark:text-emerald-450 block">Attendance Recorded</span>
                       <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
                         <Clock className="h-3 w-3" />
-                        <span>Clocked: {new Date(attendanceToday.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>Clocked: {new Date(attendanceToday.checkInTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                     
@@ -161,7 +161,7 @@ const WorkerAttendance: React.FC = () => {
                         <div>
                           <span className="font-bold text-slate-800 dark:text-slate-200">{att.date}</span>
                           <span className="text-[10px] text-slate-400 block mt-1">
-                            Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            Clocked: {new Date(att.checkInTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <div className="flex flex-col items-end gap-1">

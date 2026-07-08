@@ -220,7 +220,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
 
                       <td className="px-6 py-5 font-medium">
                         {log ? (
-                          new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          new Date(log.checkInTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })
                         ) : (
                           <span className="text-slate-400 font-semibold italic">Not Marked</span>
                         )}

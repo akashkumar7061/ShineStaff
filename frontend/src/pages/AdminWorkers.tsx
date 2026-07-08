@@ -665,7 +665,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                               <div>
                                 <span className="font-bold text-slate-800 dark:text-slate-150">{att.date}</span>
                                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                                  Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  Clocked: {new Date(att.checkInTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-3">

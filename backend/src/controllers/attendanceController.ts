@@ -34,10 +34,15 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    // Convert current UTC date on server to Indian Standard Time (IST)
     const now = new Date();
-    const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    const today = istNow.toISOString().split('T')[0]; // Format: YYYY-MM-DD in India
+    
+    // Get local date in India (YYYY-MM-DD)
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
 
     // Check if already marked today
     const existing = await Attendance.findOne({ workerId: req.user.id, date: today });
@@ -59,8 +64,16 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
       await settings.save();
     }
 
-    const checkInHour = istNow.getUTCHours(); // Hour in IST
-    const checkInMin = istNow.getUTCMinutes(); // Minute in IST
+    // Get exact local hour and minute in India
+    const timeParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(now);
+    
+    const checkInHour = Number(timeParts.find(p => p.type === 'hour')?.value);
+    const checkInMin = Number(timeParts.find(p => p.type === 'minute')?.value);
 
     // Default target time is 09:00 AM.
     // If checkIn time is past 09:00 + graceMins (e.g. 09:15), then status is 'late'
@@ -134,10 +147,21 @@ export const createManualAttendance = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Attendance already exists for this date' });
     }
 
+    const now = new Date();
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    
+    const isToday = date === todayStr;
+    const checkInTimeVal = isToday ? now : new Date(`${date}T03:30:00.000Z`);
+
     const attendance = new Attendance({
       workerId,
       date,
-      checkInTime: new Date(`${date}T03:30:00.000Z`), // 09:00 AM IST
+      checkInTime: checkInTimeVal,
       selfie: 'https://via.placeholder.com/150?text=Manual+Entry',
       location: { lat: 0, lng: 0 },
       deviceInfo: 'Admin Manual Entry',
