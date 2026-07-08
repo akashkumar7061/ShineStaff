@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import api from '../utils/api';
 import MapView from '../components/MapView';
 import GPSAddress from '../components/GPSAddress';
@@ -77,6 +77,191 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [calculationReason, setCalculationReason] = useState('');
   const [calculatingDistance, setCalculatingDistance] = useState(false);
+  const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [resolvingGPS, setResolvingGPS] = useState(false);
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+
+  const pickerMapRef = useRef<any>(null);
+  const startMarkerRef = useRef<any>(null);
+  const endMarkerRef = useRef<any>(null);
+  const polylineRef = useRef<any>(null);
+
+  // Dynamic Leaflet Loader for AdminJobs
+  useEffect(() => {
+    if ((window as any).L) {
+      setLeafletLoaded(true);
+      return;
+    }
+
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(cssLink);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => {
+      setLeafletLoaded(true);
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  // Geocoding function using OpenStreetMap Nominatim
+  const handleResolveGPS = async () => {
+    const query = locationName || address;
+    if (!query) {
+      alert('Please fill in the Site Address or GPS Location Name first.');
+      return;
+    }
+
+    setResolvingGPS(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setLatitude(Number(lat).toFixed(6));
+        setLongitude(Number(lon).toFixed(6));
+      } else {
+        alert('Could not find GPS coordinates for this address. Please click on the map picker to select the location.');
+      }
+    } catch (err) {
+      console.error('Geocoding failed:', err);
+      alert('Failed to resolve coordinates. Please click on the map picker to select the location.');
+    } finally {
+      setResolvingGPS(false);
+    }
+  };
+
+  // Initialize Picker Map in modal
+  useEffect(() => {
+    if (!createModalOpen || !leafletLoaded) {
+      if (pickerMapRef.current) {
+        pickerMapRef.current.remove();
+        pickerMapRef.current = null;
+        startMarkerRef.current = null;
+        endMarkerRef.current = null;
+        polylineRef.current = null;
+      }
+      return;
+    }
+
+    const L = (window as any).L;
+    if (!L) return;
+
+    const timer = setTimeout(() => {
+      const container = document.getElementById('picker-map');
+      if (!container || pickerMapRef.current) return;
+
+      const defaultCenter = [19.0760, 72.8777]; // Mumbai
+      pickerMapRef.current = L.map(container, {
+        zoomControl: true
+      }).setView(defaultCenter, 11);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(pickerMapRef.current);
+
+      pickerMapRef.current.on('click', (e: any) => {
+        const { lat, lng } = e.latlng;
+        setLatitude(lat.toFixed(6));
+        setLongitude(lng.toFixed(6));
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [createModalOpen, leafletLoaded]);
+
+  // Update Map overlays when coordinates change
+  useEffect(() => {
+    if (!pickerMapRef.current || !leafletLoaded) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    // 1. Update Start Marker
+    if (startMarkerRef.current) {
+      startMarkerRef.current.remove();
+      startMarkerRef.current = null;
+    }
+
+    if (startCoords && startCoords.lat && startCoords.lng) {
+      const workerSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#2563EB" width="28px" height="28px">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M12 14c-6.1 0-11 4.9-11 11h22c0-6.1-4.9-11-11-11z"/>
+        </svg>
+      `;
+      const startIcon = L.divIcon({
+        className: 'custom-start-marker',
+        html: workerSvg,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
+      });
+
+      startMarkerRef.current = L.marker([startCoords.lat, startCoords.lng], { icon: startIcon })
+        .bindPopup("Worker Starting Point")
+        .addTo(pickerMapRef.current);
+    }
+
+    // 2. Update End Marker
+    if (endMarkerRef.current) {
+      endMarkerRef.current.remove();
+      endMarkerRef.current = null;
+    }
+
+    if (latitude && longitude) {
+      const latVal = Number(latitude);
+      const lngVal = Number(longitude);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        const jobSvg = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#EF4444" width="32px" height="32px">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        `;
+        const endIcon = L.divIcon({
+          className: 'custom-end-marker',
+          html: jobSvg,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
+        });
+
+        endMarkerRef.current = L.marker([latVal, lngVal], { icon: endIcon })
+          .bindPopup("New Cleanup Site")
+          .addTo(pickerMapRef.current);
+      }
+    }
+
+    // 3. Draw Polyline
+    if (polylineRef.current) {
+      polylineRef.current.remove();
+      polylineRef.current = null;
+    }
+
+    if (startCoords && startCoords.lat && startCoords.lng && latitude && longitude) {
+      const latVal = Number(latitude);
+      const lngVal = Number(longitude);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        polylineRef.current = L.polyline(
+          [[startCoords.lat, startCoords.lng], [latVal, lngVal]],
+          { color: '#8B5CF6', weight: 4, dashArray: '5, 10' }
+        ).addTo(pickerMapRef.current);
+
+        const bounds = L.latLngBounds([[startCoords.lat, startCoords.lng], [latVal, lngVal]]);
+        pickerMapRef.current.fitBounds(bounds, { padding: [40, 40] });
+      }
+    } else if (startCoords && startCoords.lat && startCoords.lng) {
+      pickerMapRef.current.setView([startCoords.lat, startCoords.lng], 12);
+    } else if (latitude && longitude) {
+      const latVal = Number(latitude);
+      const lngVal = Number(longitude);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        pickerMapRef.current.setView([latVal, lngVal], 12);
+      }
+    }
+  }, [startCoords, latitude, longitude, leafletLoaded]);
 
   useEffect(() => {
     if (startTime && endTime) {
@@ -91,6 +276,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       if (!workerId || !latitude || !longitude || !date) {
         setCalculatedDistance(null);
         setCalculationReason('');
+        setStartCoords(null);
         return;
       }
 
@@ -122,6 +308,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         }
 
         if (startLat && startLng) {
+          setStartCoords({ lat: startLat, lng: startLng });
           const lat1 = startLat;
           const lon1 = startLng;
           const lat2 = Number(latitude);
@@ -140,11 +327,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           setCalculatedDistance(Number(d.toFixed(2)));
           setCalculationReason(reason);
         } else {
+          setStartCoords(null);
           setCalculatedDistance(null);
           setCalculationReason('No previous job today or live GPS coordinates found for this worker.');
         }
       } catch (err) {
         console.error('Failed to calculate distance:', err);
+        setStartCoords(null);
         setCalculatedDistance(null);
         setCalculationReason('Error fetching worker location data.');
       } finally {
@@ -647,7 +836,17 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Site Latitude</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] font-bold text-slate-455 uppercase">Site Latitude</label>
+                    <button
+                      type="button"
+                      onClick={handleResolveGPS}
+                      disabled={resolvingGPS}
+                      className="text-[9px] text-violet-500 font-extrabold hover:underline"
+                    >
+                      {resolvingGPS ? 'Finding...' : '🔍 Get from Address'}
+                    </button>
+                  </div>
                   <input
                     type="number"
                     step="any"
@@ -689,6 +888,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   )}
                 </div>
               )}
+
+              {/* Map Location Picker */}
+              <div className="space-y-1.5 text-left">
+                <span className="block text-[10px] font-bold text-slate-455 uppercase">Map Location Picker (Click to Select Site)</span>
+                <div id="picker-map" className="h-48 w-full rounded-lg border border-slate-200 dark:border-slate-800 z-10" />
+                <span className="block text-[9px] text-slate-400">Click anywhere on the map to automatically pin the Site Latitude and Longitude.</span>
+              </div>
 
               {/* Schedule and Worker Slot */}
               <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 p-4 space-y-3.5">
