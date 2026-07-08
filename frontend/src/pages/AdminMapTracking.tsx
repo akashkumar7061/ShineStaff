@@ -34,6 +34,30 @@ const AdminMapTracking: React.FC<AdminMapTrackingProps> = ({ companyFilter }) =>
     fetchTrackingData();
   }, [companyFilter]);
 
+  useEffect(() => {
+    const handleLocationUpdate = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      if (!data || !data.workerId || !data.lat || !data.lng) return;
+
+      // Real-time live coordinate update inside state lists
+      setWorkersList((prevList) =>
+        prevList.map((w) => {
+          if (w._id === data.workerId) {
+            return {
+              ...w,
+              currentLocation: { lat: data.lat, lng: data.lng },
+              lastActive: data.lastActive || new Date()
+            };
+          }
+          return w;
+        })
+      );
+    };
+
+    window.addEventListener('worker-location-update', handleLocationUpdate);
+    return () => window.removeEventListener('worker-location-update', handleLocationUpdate);
+  }, []);
+
   // Filter workers and jobs by search query
   const filteredWorkers = searchQuery
     ? workersList.filter((w) => w.name.toLowerCase().includes(searchQuery.toLowerCase()))

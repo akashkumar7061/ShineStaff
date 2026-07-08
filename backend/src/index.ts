@@ -54,6 +54,16 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined room: ${userId}`);
   });
 
+  // Real-time high frequency worker location reporting
+  socket.on('reportLocation', (data: { workerId: string; lat: number; lng: number }) => {
+    io?.emit('workerLocationUpdate', {
+      workerId: data.workerId,
+      lat: Number(data.lat),
+      lng: Number(data.lng),
+      lastActive: new Date()
+    });
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });

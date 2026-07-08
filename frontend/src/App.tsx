@@ -148,8 +148,15 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       }
     });
 
+    socket.on('workerLocationUpdate', (data: any) => {
+      if (user.role === 'admin') {
+        window.dispatchEvent(new CustomEvent('worker-location-update', { detail: data }));
+      }
+    });
+
     // Background Geolocation Tracking for workers
     let locationInterval: any = null;
+    let socketLocationInterval: any = null;
 
     if (user.role === 'worker') {
       const updateLocation = () => {
@@ -162,7 +169,7 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
                   lat: latitude,
                   lng: longitude
                 });
-                console.log(`Worker live location updated: ${latitude}, ${longitude}`);
+                console.log(`Worker DB live location updated: ${latitude}, ${longitude}`);
               } catch (err) {
                 console.error('Failed to report live GPS coordinates:', err);
               }
@@ -178,14 +185,37 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       // Run immediately on load
       updateLocation();
 
-      // Track location every 30 seconds
+      // Track location database write every 30 seconds
       locationInterval = setInterval(updateLocation, 30000);
+
+      // Emit high-frequency live GPS location over socket every 1 second
+      socketLocationInterval = setInterval(() => {
+        if ('geolocation' in navigator && socket) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              socket.emit('reportLocation', {
+                workerId: user.id,
+                lat: latitude,
+                lng: longitude
+              });
+            },
+            (err) => {
+              console.error('Socket GPS error:', err.message);
+            },
+            { enableHighAccuracy: true, timeout: 950, maximumAge: 0 }
+          );
+        }
+      }, 1000);
     }
 
     return () => {
       socket.disconnect();
       if (locationInterval) {
         clearInterval(locationInterval);
+      }
+      if (socketLocationInterval) {
+        clearInterval(socketLocationInterval);
       }
     };
   }, [user]);
