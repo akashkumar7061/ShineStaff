@@ -51,7 +51,7 @@ const WorkerJobs: React.FC = () => {
   const [tempAfterPhotos, setTempAfterPhotos] = useState<string[]>(['', '', '', '', '']);
   const [tempAfterPhotosGPS, setTempAfterPhotosGPS] = useState<({ lat: number; lng: number } | null)[]>([null, null, null, null, null]);
   const [activeAfterPhotoIndex, setActiveAfterPhotoIndex] = useState<number | null>(null);
-  const [tempKms, setTempKms] = useState('5');
+  const [tempKms, setTempKms] = useState('');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
   const [startDate, setStartDate] = useState(getTodayString);
@@ -106,7 +106,7 @@ const WorkerJobs: React.FC = () => {
     } else {
       setTempAfterPhotosGPS([null, null, null, null, null]);
     }
-    setTempKms(job.fuelKmsTravelled?.toString() || '5');
+    setTempKms(job.fuelKmsTravelled?.toString() || '');
     setTempNotes(job.workerNotes || '');
   };
 
@@ -641,12 +641,11 @@ const WorkerJobs: React.FC = () => {
                       </button>
                       <input
                         type="number"
-                        required
                         min={0}
                         value={tempKms}
                         disabled={!tempBeforePhoto}
                         onChange={(e) => setTempKms(e.target.value)}
-                        placeholder="KM"
+                        placeholder="KM (Optional)"
                         className="flex-1 text-center h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955 p-2.5 outline-none focus:border-secondary disabled:opacity-40 font-bold text-base"
                       />
                       <button
