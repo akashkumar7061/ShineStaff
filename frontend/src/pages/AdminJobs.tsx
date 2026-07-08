@@ -127,11 +127,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     document.head.appendChild(script);
   }, []);
 
-  // Geocoding function using OpenStreetMap Nominatim
   const handleResolveGPS = async () => {
     const query = locationName || address;
     if (!query) {
-      alert('Please fill in the Site Address or GPS Location Name first.');
       return;
     }
 
@@ -144,12 +142,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         const { lat, lon } = data[0];
         setLatitude(Number(lat).toFixed(6));
         setLongitude(Number(lon).toFixed(6));
-      } else {
-        alert('Could not find GPS coordinates for this address. Please click on the map picker to select the location.');
       }
     } catch (err) {
       console.error('Geocoding failed:', err);
-      alert('Failed to resolve coordinates. Please click on the map picker to select the location.');
     } finally {
       setResolvingGPS(false);
     }
