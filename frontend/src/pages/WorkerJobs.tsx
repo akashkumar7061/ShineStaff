@@ -48,8 +48,9 @@ const WorkerJobs: React.FC = () => {
 
   // Temporary snaps inside form
   const [tempBeforePhoto, setTempBeforePhoto] = useState<string | null>(null);
-  const [tempAfterPhoto, setTempAfterPhoto] = useState<string | null>(null);
-  const [tempAfterPhotoGPS, setTempAfterPhotoGPS] = useState<{ lat: number; lng: number } | null>(null);
+  const [tempAfterPhotos, setTempAfterPhotos] = useState<string[]>(['', '', '', '', '']);
+  const [tempAfterPhotosGPS, setTempAfterPhotosGPS] = useState<({ lat: number; lng: number } | null)[]>([null, null, null, null, null]);
+  const [activeAfterPhotoIndex, setActiveAfterPhotoIndex] = useState<number | null>(null);
   const [tempKms, setTempKms] = useState('5');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -92,8 +93,19 @@ const WorkerJobs: React.FC = () => {
   const openWorkSheet = (job: any) => {
     setSelectedJob(job);
     setTempBeforePhoto(job.beforePhoto || null);
-    setTempAfterPhoto(job.afterPhoto || null);
-    setTempAfterPhotoGPS(job.afterPhotoGPS || null);
+    if (job.afterPhotos && job.afterPhotos.length > 0) {
+      setTempAfterPhotos(job.afterPhotos);
+    } else if (job.afterPhoto) {
+      setTempAfterPhotos([job.afterPhoto, '', '', '', '']);
+    } else {
+      setTempAfterPhotos(['', '', '', '', '']);
+    }
+
+    if (job.afterPhotoGPS) {
+      setTempAfterPhotosGPS([job.afterPhotoGPS, null, null, null, null]);
+    } else {
+      setTempAfterPhotosGPS([null, null, null, null, null]);
+    }
     setTempKms(job.fuelKmsTravelled?.toString() || '5');
     setTempNotes(job.workerNotes || '');
   };
@@ -123,9 +135,24 @@ const WorkerJobs: React.FC = () => {
         setTempBeforePhoto(null);
       });
     } else {
-      setTempAfterPhoto(dataUrl);
-      setTempAfterPhotoGPS(coords);
+      if (activeAfterPhotoIndex !== null) {
+        const newPhotos = [...tempAfterPhotos];
+        newPhotos[activeAfterPhotoIndex] = dataUrl;
+        setTempAfterPhotos(newPhotos);
+
+        const newGPS = [...tempAfterPhotosGPS];
+        newGPS[activeAfterPhotoIndex] = coords;
+        setTempAfterPhotosGPS(newGPS);
+
+        setActiveAfterPhotoIndex(null);
+      }
     }
+  };
+
+  const triggerAfterPhotoIndexCapture = (idx: number) => {
+    setActiveAfterPhotoIndex(idx);
+    setCameraType('after');
+    setCameraActive(true);
   };
 
   const handleCompleteWorkSheetSubmit = async (e: React.FormEvent) => {
@@ -135,8 +162,9 @@ const WorkerJobs: React.FC = () => {
       alert('Before photo is mandatory');
       return;
     }
-    if (!tempAfterPhoto) {
-      alert('After photo is mandatory to complete job');
+    const incompleteAfter = tempAfterPhotos.some(photo => !photo);
+    if (incompleteAfter) {
+      alert('All 5 completion photos are mandatory to complete job');
       return;
     }
 
@@ -144,7 +172,7 @@ const WorkerJobs: React.FC = () => {
     try {
       const submitJobCompletion = async (coords: { lat: number; lng: number }) => {
         await api.put(`/jobs/${selectedJob._id}/complete`, {
-          afterPhotoDataUrl: tempAfterPhoto,
+          afterPhotoDataUrls: tempAfterPhotos,
           location: coords,
           manualFuelKms: Number(tempKms),
           workerNotes: tempNotes
@@ -154,8 +182,9 @@ const WorkerJobs: React.FC = () => {
         fetchJobs();
       };
 
-      if (tempAfterPhotoGPS) {
-        await submitJobCompletion(tempAfterPhotoGPS);
+      const firstValidGPS = tempAfterPhotosGPS.find(g => g !== null);
+      if (firstValidGPS) {
+        await submitJobCompletion(firstValidGPS);
       } else {
         // Fallback to fetch current location if they didn't snap clean photo just now
         navigator.geolocation.getCurrentPosition(
@@ -497,79 +526,82 @@ const WorkerJobs: React.FC = () => {
                   )}
                 </div>
                 {selectedJob.description && <div>📝 Client Instructions: <span className="text-slate-455">{selectedJob.description}</span></div>}
-              </div>
-
-              {/* Photos Slots side-by-side */}
-              <div className="grid grid-cols-2 gap-4">
-                
                 {/* Before Photo Box */}
-                <div className="flex flex-col items-center space-y-2">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Before Photo</span>
-                  {tempBeforePhoto ? (
-                    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow">
-                      <img src={tempBeforePhoto} alt="Before snap" className="w-full h-full object-cover" />
-                      {selectedJob.beforePhotoGPS?.lat && (
-                        <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
-                          <GPSAddress lat={selectedJob.beforePhotoGPS.lat} lng={selectedJob.beforePhotoGPS.lng} className="text-white/90 max-w-[110px]" />
-                        </div>
-                      )}
-                      {selectedJob.status === 'pending' && (
-                        <button
-                          type="button"
-                          onClick={triggerBeforeCapture}
-                          className="absolute bottom-2 right-2 rounded-full bg-violet-600 text-white p-1.5 shadow"
-                        >
-                          <Camera className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={triggerBeforeCapture}
-                      className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1"
-                    >
-                      <Camera className="h-5 w-5 text-slate-400" />
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Snap Arrival Photo</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* After Photo Box */}
-                <div className="flex flex-col items-center space-y-2">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">After Photo</span>
-                  {tempAfterPhoto ? (
-                    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow">
-                      <img src={tempAfterPhoto} alt="After snap" className="w-full h-full object-cover" />
-                      {tempAfterPhotoGPS?.lat && (
-                        <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
-                          <GPSAddress lat={tempAfterPhotoGPS.lat} lng={tempAfterPhotoGPS.lng} className="text-white/90 max-w-[110px]" />
-                        </div>
-                      )}
-                      {selectedJob.status === 'started' && (
-                        <button
-                          type="button"
-                          onClick={triggerAfterCapture}
-                          className="absolute bottom-2 right-2 rounded-full bg-violet-600 text-white p-1.5 shadow"
-                        >
-                          <Camera className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={!tempBeforePhoto || selectedJob.status === 'completed'}
-                      onClick={triggerAfterCapture}
-                      className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Camera className="h-5 w-5 text-slate-400" />
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Snap Clean Photo</span>
-                    </button>
-                  )}
-                </div>
-
+              <div className="space-y-2">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Before Cleaning Photo</span>
+                {tempBeforePhoto ? (
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow max-w-sm mx-auto">
+                    <img src={tempBeforePhoto} alt="Before snap" className="w-full h-full object-cover" />
+                    {selectedJob.beforePhotoGPS?.lat && (
+                      <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
+                        <GPSAddress lat={selectedJob.beforePhotoGPS.lat} lng={selectedJob.beforePhotoGPS.lng} className="text-white/90 max-w-[110px]" />
+                      </div>
+                    )}
+                    {selectedJob.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={triggerBeforeCapture}
+                        className="absolute bottom-2 right-2 rounded-full bg-violet-600 text-white p-1.5 shadow"
+                      >
+                        <Camera className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={triggerBeforeCapture}
+                    className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 max-w-sm mx-auto"
+                  >
+                    <Camera className="h-5 w-5 text-slate-400" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Snap Arrival Photo</span>
+                  </button>
+                )}
               </div>
+
+              {/* After Photos (5 Distinct Slots) */}
+              <div className="space-y-3 pt-2">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">After Cleaning Photos (5 Required)</span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[0, 1, 2, 3, 4].map((idx) => {
+                    const photoUrl = tempAfterPhotos[idx];
+                    const gps = tempAfterPhotosGPS[idx];
+                    return (
+                      <div key={idx} className="flex flex-col items-center space-y-1.5">
+                        {photoUrl ? (
+                          <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow bg-slate-50">
+                            <img src={photoUrl} alt={`After ${idx+1}`} className="w-full h-full object-cover" />
+                            {gps?.lat && (
+                              <div className="absolute bottom-1 left-1 bg-slate-900/85 backdrop-blur-sm rounded px-1.5 py-0.5 border border-slate-700/50">
+                                <span className="text-[7px] text-white/80">📍 Logged</span>
+                              </div>
+                            )}
+                            {selectedJob.status === 'started' && (
+                              <button
+                                type="button"
+                                onClick={() => triggerAfterPhotoIndexCapture(idx)}
+                                className="absolute bottom-1.5 right-1.5 rounded-full bg-violet-600 text-white p-1 shadow hover:bg-violet-700 transition-colors"
+                              >
+                                <Camera className="h-2.5 w-2.5" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!tempBeforePhoto || selectedJob.status === 'completed'}
+                            onClick={() => triggerAfterPhotoIndexCapture(idx)}
+                            className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Camera className="h-4 w-4 text-slate-400" />
+                            <span className="text-[8px] font-bold text-slate-400 uppercase">Photo {idx + 1}</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>              </div>
 
               {/* Form Input fields (Visible only when in started/pending state for modifications) */}
               {selectedJob.status !== 'completed' && selectedJob.status !== 'cancelled' ? (
@@ -624,7 +656,7 @@ const WorkerJobs: React.FC = () => {
                   {/* Submission */}
                   <button
                     type="submit"
-                    disabled={!tempBeforePhoto || !tempAfterPhoto || submittingReport}
+                    disabled={!tempBeforePhoto || tempAfterPhotos.some(p => !p) || submittingReport}
                     className="w-full bg-gradient-to-r from-success to-emerald-600 text-white rounded-custom py-3.5 text-xs font-bold shadow transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {submittingReport ? 'Submitting Work...' : 'Submit Completed Cleanup'}
