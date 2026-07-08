@@ -371,6 +371,7 @@ const WorkerJobs: React.FC = () => {
                         <th className="px-6 py-4">Job Details</th>
                         <th className="px-6 py-4">Client Info</th>
                         <th className="px-6 py-4">Clean Date & Time</th>
+                        <th className="px-6 py-4">Amount</th>
                         <th className="px-6 py-4">Address / Location</th>
                         <th className="px-6 py-4 text-center">Status</th>
                         <th className="px-6 py-4 text-center">Action</th>
@@ -388,15 +389,10 @@ const WorkerJobs: React.FC = () => {
                             <div className="space-y-2">
                               <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
                               
-                              <div className="flex flex-wrap gap-1.5 items-center">
+                              <div className="flex flex-col gap-1.5 items-start">
                                 <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
                                   {job.company}
                                 </span>
-                                {job.price !== undefined && (
-                                  <span className="inline-block text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded uppercase tracking-wider">
-                                    Price: ₹{job.price}
-                                  </span>
-                                )}
 
                                 {job.fuelKmsTravelled > 0 && (
                                   <div className="flex items-center space-x-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold text-[10px] tracking-wide uppercase mt-0.5">
@@ -439,6 +435,11 @@ const WorkerJobs: React.FC = () => {
                                 <span className="text-[10px] font-bold uppercase tracking-wider">{job.timeSlot || 'N/A'}</span>
                               </div>
                             </div>
+                          </td>
+
+                          {/* Amount */}
+                          <td className="px-6 py-5 font-extrabold whitespace-nowrap text-emerald-500 dark:text-emerald-450 text-sm">
+                            {job.price !== undefined ? `₹${job.price}` : '—'}
                           </td>
 
                           {/* Address / Location */}
