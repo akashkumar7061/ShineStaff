@@ -84,7 +84,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [manualFuelKms, setManualFuelKms] = useState('');
 
   const pickerMapRef = useRef<any>(null);
   const startMarkerRef = useRef<any>(null);
@@ -418,7 +417,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         date,
         timeSlot,
         location: latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : undefined,
-        fuelKmsTravelled: Number(manualFuelKms) || calculatedDistance || 0
+        fuelKmsTravelled: calculatedDistance || 0
       };
 
       if (isEditMode && editingJobId) {
@@ -451,7 +450,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setPrice(job.price ? String(job.price) : '');
     setDate(job.date || '');
     setTimeSlot(job.timeSlot || '');
-    setManualFuelKms(job.fuelKmsTravelled ? String(job.fuelKmsTravelled) : '');
     
     if (job.timeSlot) {
       const parts = job.timeSlot.split(' - ');
@@ -535,7 +533,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setCalculationReason('');
     setIsEditMode(false);
     setEditingJobId(null);
-    setManualFuelKms('');
   };
 
   const handleOpenPhotoComparison = (job: any) => {
@@ -920,35 +917,23 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Fuel KMs (Manual Override)</label>
-                  <input type="number" value={manualFuelKms} onChange={(e) => setManualFuelKms(e.target.value)} placeholder="E.g. 15 (Optional)" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary" />
-                </div>
-                <div className="flex flex-col justify-end">
-                  <span className="block text-[8px] text-slate-400 leading-normal mb-1">
-                    Entering a value here overrides the automatic coordinates geocoding distance.
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
                   <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Client Name</label>
                   <input type="text" required value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Client Phone</label>
+                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Client Phone</label>
                   <input type="text" required value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Site Address</label>
-                <textarea required rows={2} value={address} onChange={(e) => setAddress(e.target.value)} onBlur={handleResolveGPS} placeholder="Full street location details..." className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
+                <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} onBlur={handleResolveGPS} placeholder="Full street location details (Optional)..." className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">GPS Location Name (Area / Landmark)</label>
-                <input type="text" required value={locationName} onChange={(e) => setLocationName(e.target.value)} onBlur={handleResolveGPS} placeholder="E.g., Connaught Place, Mumbai Airport" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+                <input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} onBlur={handleResolveGPS} placeholder="E.g., Connaught Place (Optional)" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
               {/* Distance calculation display */}

@@ -45,7 +45,7 @@ const JobSchema = new Schema<IJob>({
   workerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   clientName: { type: String, required: true },
   clientPhone: { type: String, required: true },
-  address: { type: String, required: true },
+  address: { type: String, default: '' },
   locationName: { type: String, default: '' },
   price: { type: Number, default: 0 },
   date: { type: String, default: '' },
