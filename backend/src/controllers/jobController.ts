@@ -85,7 +85,8 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     price,
     date,
     timeSlot,
-    location
+    location,
+    fuelKmsTravelled
   } = req.body;
 
   try {
@@ -107,6 +108,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       date,
       timeSlot,
       location,
+      fuelKmsTravelled: Number(fuelKmsTravelled) || 0,
       status: 'pending'
     });
 
@@ -263,8 +265,9 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Use manual input if provided, otherwise default to calculated distance
-    const finalKms = manualFuelKms !== undefined ? Number(manualFuelKms) : (calculatedKms || 0);
+    // Use pre-calculated job fuel KMs if set by admin, otherwise default to site travel calculated KMs
+    const preCalculatedKms = job.fuelKmsTravelled || 0;
+    const finalKms = preCalculatedKms > 0 ? preCalculatedKms : (calculatedKms || 0);
     const fuelRate = settings.fuelAllowanceRate || 5; // e.g. ₹5/KM
     const fuelAllowance = finalKms * fuelRate;
 

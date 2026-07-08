@@ -72,6 +72,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [timeSlot, setTimeSlot] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+  const [calculationReason, setCalculationReason] = useState('');
+  const [calculatingDistance, setCalculatingDistance] = useState(false);
 
   useEffect(() => {
     if (startTime && endTime) {
@@ -80,6 +85,75 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setTimeSlot(formatTimeTo12Hour(startTime));
     }
   }, [startTime, endTime]);
+
+  useEffect(() => {
+    const calculateDistance = async () => {
+      if (!workerId || !latitude || !longitude || !date) {
+        setCalculatedDistance(null);
+        setCalculationReason('');
+        return;
+      }
+
+      setCalculatingDistance(true);
+      try {
+        // Fetch worker details (contains current location and jobs)
+        const res = await api.get(`/workers/${workerId}`);
+        const workerData = res.data.worker;
+        const workerJobs = res.data.jobs || [];
+
+        // Find worker's last worked job location for the selected date
+        // workerJobs are sorted by createdAt: -1, so let's find the latest completed/assigned job today
+        const prevJob = workerJobs.find((j: any) => {
+          return j.date === date && j.location && j.location.lat && j.location.lng;
+        });
+
+        let startLat = 0;
+        let startLng = 0;
+        let reason = '';
+
+        if (prevJob) {
+          startLat = prevJob.location.lat;
+          startLng = prevJob.location.lng;
+          reason = `Calculated from worker's previous job today: "${prevJob.title}" at ${prevJob.locationName || 'site'}`;
+        } else if (workerData.currentLocation && workerData.currentLocation.lat && workerData.currentLocation.lng) {
+          startLat = workerData.currentLocation.lat;
+          startLng = workerData.currentLocation.lng;
+          reason = `Calculated from worker's live GPS location`;
+        }
+
+        if (startLat && startLng) {
+          const lat1 = startLat;
+          const lon1 = startLng;
+          const lat2 = Number(latitude);
+          const lon2 = Number(longitude);
+
+          const R = 6371; // km
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+          const d = R * c; // distance in km
+          
+          setCalculatedDistance(Number(d.toFixed(2)));
+          setCalculationReason(reason);
+        } else {
+          setCalculatedDistance(null);
+          setCalculationReason('No previous job today or live GPS coordinates found for this worker.');
+        }
+      } catch (err) {
+        console.error('Failed to calculate distance:', err);
+        setCalculatedDistance(null);
+        setCalculationReason('Error fetching worker location data.');
+      } finally {
+        setCalculatingDistance(false);
+      }
+    };
+
+    calculateDistance();
+  }, [workerId, latitude, longitude, date]);
 
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
@@ -131,7 +205,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         locationName,
         price: Number(price) || 0,
         date,
-        timeSlot
+        timeSlot,
+        location: latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : undefined,
+        fuelKmsTravelled: calculatedDistance || 0
       });
       alert('Cleanup job created and worker notified!');
       setCreateModalOpen(false);
@@ -178,6 +254,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setTimeSlot('');
     setStartTime('');
     setEndTime('');
+    setLatitude('');
+    setLongitude('');
+    setCalculatedDistance(null);
+    setCalculationReason('');
   };
 
   const handleOpenPhotoComparison = (job: any) => {
@@ -561,9 +641,54 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">GPS Location Name (Area / Landmark)</label>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">GPS Location Name (Area / Landmark)</label>
                 <input type="text" required value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="E.g., Connaught Place, Mumbai Airport" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Site Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                    placeholder="E.g., 19.0760"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Site Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                    placeholder="E.g., 72.8777"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              {/* Distance calculation display */}
+              {(latitude && longitude && workerId) && (
+                <div className="rounded-xl border border-violet-100 dark:border-violet-950/30 bg-violet-50/20 dark:bg-violet-950/10 p-4 space-y-2">
+                  <span className="block text-[9px] font-bold text-violet-500 uppercase tracking-widest text-left">Automatic Fuel KM Calculation</span>
+                  {calculatingDistance ? (
+                    <div className="text-xs text-slate-400 animate-pulse text-left">Calculating commute distance...</div>
+                  ) : calculatedDistance !== null ? (
+                    <div className="space-y-1 text-left">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{calculatedDistance} KM</span>
+                        <span className="text-[10px] bg-violet-500/10 text-violet-500 px-2 py-0.5 rounded-full font-bold">Estimated</span>
+                      </div>
+                      <p className="text-[10px] text-slate-450 leading-relaxed">{calculationReason}</p>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-amber-500 leading-relaxed font-semibold text-left">⚠️ {calculationReason}</div>
+                  )}
+                </div>
+              )}
 
               {/* Schedule and Worker Slot */}
               <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 p-4 space-y-3.5">

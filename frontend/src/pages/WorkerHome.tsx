@@ -38,7 +38,6 @@ const WorkerHome: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [homeKms, setHomeKms] = useState('');
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
 
   const fetchData = async () => {
@@ -109,11 +108,9 @@ const WorkerHome: React.FC = () => {
         });
         alert('Job started successfully! Do work.');
       } else if (cameraType === 'after' && selectedJobId) {
-        const kms = prompt('Enter approximate KM travelled for this job (for fuel calculation):', '5');
         await api.put(`/jobs/${selectedJobId}/complete`, {
           afterPhotoDataUrl: dataUrl,
-          location: coords,
-          manualFuelKms: kms ? Number(kms) : 0
+          location: coords
         });
         alert('Job completed successfully! Admin notified.');
       }
@@ -123,22 +120,7 @@ const WorkerHome: React.FC = () => {
     }
   };
 
-  const handleReportHomeTravel = async () => {
-    if (!homeKms || Number(homeKms) <= 0) {
-      alert('Please enter a valid commute distance.');
-      return;
-    }
-    try {
-      await api.post('/travel/submit', {
-        type: 'home',
-        kms: Number(homeKms)
-      });
-      alert('Commute distance logged successfully! Admin will assign traveling allowance.');
-      setHomeKms('');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to log commute.');
-    }
-  };
+
 
   const triggerAttendanceCamera = () => {
     setCameraType('attendance');
@@ -232,43 +214,10 @@ const WorkerHome: React.FC = () => {
         {/* RESPONSIVE LAYOUT COLS GRID */}
         <div className="space-y-6">
           
-          {/* Row 1: Report Home Travel & Active Cleanup Tracker */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-            {/* Home Travel Commute Logging Card */}
-            <div className="glass-card p-6 relative overflow-hidden border-t-4 border-t-indigo-500 shadow-xl flex flex-col justify-between h-full">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-indigo-500/10 blur-xl" />
-              <div>
-                <h3 className="text-xs font-extrabold text-slate-455 uppercase tracking-widest mb-4 flex items-center space-x-1.5">
-                  <MapPin className="h-4 w-4 text-indigo-500" />
-                  <span>Report Home Travel</span>
-                </h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed mb-4">
-                  Log your commute distance (KM) from your last clean job site back to your home. Admin will assign traveling allowance.
-                </p>
-              </div>
-              
-              <div className="space-y-3 mt-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 mb-1 uppercase">Commute Distance (KM)</label>
-                  <input
-                    type="number"
-                    value={homeKms}
-                    onChange={(e) => setHomeKms(e.target.value)}
-                    placeholder="E.g., 12"
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2.5 outline-none focus:border-secondary"
-                  />
-                </div>
-                <button
-                    onClick={handleReportHomeTravel}
-                    className="w-full py-2.5 bg-indigo-500 text-white rounded-lg text-xs font-bold hover:bg-indigo-650 transition-colors"
-                >
-                    Submit Commute
-                </button>
-              </div>
-            </div>
-
+          {/* Row 1: Active Cleanup Tracker */}
+          <div className="grid grid-cols-1 gap-6 items-stretch">
             {/* Active Cleanup with visual step mapping */}
-            <div className="glass-card p-6 border-t-4 border-t-amber-500 shadow-xl md:col-span-2 flex flex-col justify-between h-full space-y-5">
+            <div className="glass-card p-6 border-t-4 border-t-amber-500 shadow-xl flex flex-col justify-between h-full space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest">Active Cleanup Tracker</h3>
                 <Link to="/worker/jobs" className="text-xs font-bold text-secondary hover:underline">
