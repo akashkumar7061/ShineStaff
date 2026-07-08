@@ -388,10 +388,15 @@ const WorkerJobs: React.FC = () => {
                             <div className="space-y-2">
                               <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
                               
-                              <div className="flex flex-col gap-1.5 items-start">
+                              <div className="flex flex-wrap gap-1.5 items-center">
                                 <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
                                   {job.company}
                                 </span>
+                                {job.price !== undefined && (
+                                  <span className="inline-block text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded uppercase tracking-wider">
+                                    Price: ₹{job.price}
+                                  </span>
+                                )}
 
                                 {job.fuelKmsTravelled > 0 && (
                                   <div className="flex items-center space-x-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold text-[10px] tracking-wide uppercase mt-0.5">
