@@ -7,7 +7,8 @@ import { uploadToCloudinary } from '../config/cloudinary';
 import { sendWhatsAppAlert } from '../utils/whatsapp';
 import { sendMail } from '../config/mailer';
 import { AuthRequest } from '../middleware/auth';
-import { getIO } from '../index'; // we'll export getIO from entry point
+import { getIO } from '../index';
+import { sendPushNotification, sendPushToAdmins } from '../utils/push';
 
 // Calculate distance between two GPS coordinates in KM (Haversine formula)
 const calculateDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -114,6 +115,14 @@ export const createJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
+    // Send push notification to worker
+    sendPushNotification(
+      workerId.toString(),
+      'New Job Assigned! 🧹',
+      `You have been assigned to: "${title}" (${company})`,
+      '/worker/jobs'
+    );
+
     // Send notifications
     // 1. Socket.io
     const io = getIO();
@@ -190,6 +199,13 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     job.startedAt = new Date();
 
     await job.save();
+
+    // Send push notification to admins
+    sendPushToAdmins(
+      'Job Started! 🚗',
+      `Worker ${workerName} has started: "${job.title}" (${job.company})`,
+      '/admin/jobs'
+    );
 
     // Send real-time notifications
     try {
@@ -340,6 +356,13 @@ Completed At: ${job.completedAt.toLocaleTimeString()}
 Before/After photos uploaded successfully.`;
 
     await sendWhatsAppAlert(adminPhone, alertMsg);
+
+    // Send push notification to admins
+    sendPushToAdmins(
+      'Job Completed! ✅',
+      `Worker ${workerName} completed: "${job.title}" (${job.company})`,
+      '/admin/jobs'
+    );
 
     // Socket alert to admins and worker
     const io = getIO();

@@ -209,6 +209,59 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       }, 1000);
     }
 
+    // Register Web Push Service Worker and subscribe
+    const subscribeUserToPush = async (registration: ServiceWorkerRegistration) => {
+      try {
+        const publicVapidKey = 'BLL0kEmxeZDDOkzWOtmNCSsZR1eW-CTSue6BcqWgNTrhkeOsOinhAVyDbBfdw3ff9cLoD5rUGlZ-Qx_7CPQOBaI';
+        
+        const urlBase64ToUint8Array = (base64String: string) => {
+          const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+          const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        };
+
+        const subscribeOptions = {
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+        };
+
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe(subscribeOptions);
+        }
+
+        await api.post('/auth/subscribe-push', { subscription });
+        console.log('Registered push subscription endpoint successfully.');
+      } catch (err) {
+        console.error('Failed to subscribe user to Web Push:', err);
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+              subscribeUserToPush(registration);
+            } else if (Notification.permission !== 'denied') {
+              Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                  subscribeUserToPush(registration);
+                }
+              });
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('Service Worker registration failed:', err);
+        });
+    }
+
     return () => {
       socket.disconnect();
       if (locationInterval) {
@@ -221,9 +274,15 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }, [user]);
 
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NAVIGATE') {
+        window.location.href = event.data.url;
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage);
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
+    };
   }, []);
 
   useEffect(() => {

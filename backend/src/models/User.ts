@@ -19,6 +19,13 @@ export interface IUser extends Document {
     lng: number;
   };
   lastActive?: Date;
+  pushSubscriptions?: Array<{
+    endpoint: string;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  }>;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -39,7 +46,17 @@ const UserSchema = new Schema<IUser>({
     lat: { type: Number },
     lng: { type: Number }
   },
-  lastActive: { type: Date }
+  lastActive: { type: Date },
+  pushSubscriptions: {
+    type: [{
+      endpoint: { type: String, required: true },
+      keys: {
+        p256dh: { type: String, required: true },
+        auth: { type: String, required: true }
+      }
+    }],
+    default: []
+  }
 }, {
   timestamps: true
 });

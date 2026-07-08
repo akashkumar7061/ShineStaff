@@ -303,3 +303,34 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const subscribePush = async (req: AuthRequest, res: Response) => {
+  const { subscription } = req.body;
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.pushSubscriptions) {
+      user.pushSubscriptions = [];
+    }
+
+    const exists = user.pushSubscriptions.some(
+      (sub: any) => sub.endpoint === subscription.endpoint
+    );
+
+    if (!exists) {
+      user.pushSubscriptions.push(subscription);
+      await user.save();
+    }
+
+    res.status(200).json({ message: 'Push subscription registered successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
