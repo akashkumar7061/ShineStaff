@@ -21,6 +21,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
   const [workerId, setWorkerId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState<'present' | 'late' | 'absent' | 'half-day'>('present');
+  const [lateReason, setLateReason] = useState('');
 
   // Edit attendance modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -58,11 +59,13 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
       await api.post('/attendance/manual', {
         workerId,
         date,
-        status
+        status,
+        lateReason: lateReason.trim() || undefined
       });
       alert('Attendance marked successfully!');
       setMarkModalOpen(false);
       setWorkerId('');
+      setLateReason('');
       fetchLogsAndWorkers();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to record attendance');
@@ -353,6 +356,17 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                   <option value="half-day">Half-Day (Half Time)</option>
                   <option value="absent">Absent</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Reason (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={lateReason}
+                  onChange={(e) => setLateReason(e.target.value)}
+                  placeholder="e.g. Late due to traffic congestion / approved leave"
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary resize-none"
+                />
               </div>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">

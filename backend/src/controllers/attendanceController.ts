@@ -127,7 +127,7 @@ export const editAttendance = async (req: Request, res: Response) => {
 
 // Admin can create direct manual attendance logs for a worker
 export const createManualAttendance = async (req: Request, res: Response) => {
-  const { workerId, date, status } = req.body;
+  const { workerId, date, status, lateReason } = req.body;
   try {
     const existing = await Attendance.findOne({ workerId, date });
     if (existing) {
@@ -142,6 +142,7 @@ export const createManualAttendance = async (req: Request, res: Response) => {
       location: { lat: 0, lng: 0 },
       deviceInfo: 'Admin Manual Entry',
       status,
+      lateReason: lateReason || undefined,
       editedByAdmin: true
     });
 
