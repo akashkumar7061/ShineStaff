@@ -23,6 +23,14 @@ import {
   Calendar
 } from 'lucide-react';
 
+const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const WorkerJobs: React.FC = () => {
   const navigate = useNavigate();
 
@@ -44,7 +52,8 @@ const WorkerJobs: React.FC = () => {
   const [tempKms, setTempKms] = useState('5');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [filterDate, setFilterDate] = useState('');
+  const [startDate, setStartDate] = useState(getTodayString);
+  const [endDate, setEndDate] = useState(getTodayString);
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchJobs = async () => {
@@ -185,12 +194,12 @@ const WorkerJobs: React.FC = () => {
       return false;
     }
 
-    // 2. Single Date Filter
-    if (filterDate && job.date) {
-      const jobDateOnly = job.date.substring(0, 10);
-      if (jobDateOnly !== filterDate) {
-        return false;
-      }
+    // 2. Date Range Filter
+    if (startDate && job.date && job.date < startDate) {
+      return false;
+    }
+    if (endDate && job.date && job.date > endDate) {
+      return false;
     }
 
     // 3. Search Query Filter (Job Title or Client Name)
@@ -270,18 +279,25 @@ const WorkerJobs: React.FC = () => {
                   </div>
                 </div>
 
-                 {/* Single Date Filter */}
+                 {/* Date Range Selector */}
                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                   <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Filter by Date:</span>
+                   <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Date Range:</span>
                    <input
                      type="date"
-                     value={filterDate}
-                     onChange={(e) => setFilterDate(e.target.value)}
-                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                     value={startDate}
+                     onChange={(e) => setStartDate(e.target.value)}
+                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
                    />
-                   {filterDate && (
+                   <span className="text-slate-400 font-bold">➔</span>
+                   <input
+                     type="date"
+                     value={endDate}
+                     onChange={(e) => setEndDate(e.target.value)}
+                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                   />
+                   {(startDate || endDate) && (
                      <button
-                       onClick={() => setFilterDate('')}
+                       onClick={() => { setStartDate(''); setEndDate(''); }}
                        className="text-xs text-danger font-semibold hover:underline px-2"
                      >
                        Clear

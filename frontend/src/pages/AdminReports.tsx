@@ -8,18 +8,27 @@ import {
   Camera
 } from 'lucide-react';
 
+const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const AdminReports: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     return new Date().toISOString().substring(0, 7); // YYYY-MM
   });
-  const [filterDate, setFilterDate] = useState('');
+  const [startDate, setStartDate] = useState(getTodayString);
+  const [endDate, setEndDate] = useState(getTodayString);
 
   const triggerDownload = (reportType: 'attendance' | 'workers' | 'salary' | 'photos') => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     let url = `/api/reports/${reportType}?token=${token}`;
 
-    if (reportType === 'attendance' && filterDate) {
-      url += `&startDate=${filterDate}&endDate=${filterDate}`;
+    if (reportType === 'attendance' && startDate && endDate) {
+      url += `&startDate=${startDate}&endDate=${endDate}`;
     }
     if (reportType === 'salary') {
       url += `&month=${selectedMonth}`;
@@ -52,14 +61,25 @@ const AdminReports: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select Date</label>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none text-slate-700 dark:text-slate-200"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none text-slate-700 dark:text-slate-200"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none text-slate-700 dark:text-slate-200"
+              />
+            </div>
           </div>
 
           <button
