@@ -262,6 +262,12 @@ const WorkerHome: React.FC = () => {
                       </a>
                       )
                     </p>
+                    {jobsSummary.active.price !== undefined && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center text-xs">
+                        <span className="text-slate-450 font-bold uppercase tracking-wider text-[9px]">Collect from Client:</span>
+                        <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm">₹{jobsSummary.active.price}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Visual Tracker map */}

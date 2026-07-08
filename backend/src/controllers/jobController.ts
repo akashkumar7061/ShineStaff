@@ -269,9 +269,8 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Use pre-calculated job fuel KMs if set by admin, otherwise default to site travel calculated KMs
-    const preCalculatedKms = job.fuelKmsTravelled || 0;
-    const finalKms = preCalculatedKms > 0 ? preCalculatedKms : (calculatedKms || 0);
+    // Use manual KMs entered by worker, otherwise pre-calculated, otherwise GPS distance
+    const finalKms = Number(manualFuelKms) >= 0 ? Number(manualFuelKms) : (job.fuelKmsTravelled || calculatedKms || 0);
     const fuelRate = settings.fuelAllowanceRate || 5; // e.g. ₹5/KM
     const fuelAllowance = finalKms * fuelRate;
 
@@ -509,6 +508,38 @@ export const updateJob = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ message: 'Job updated successfully', job });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const updateJobFuel = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { fuelKmsTravelled } = req.body;
+
+  try {
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    if (req.user?.role === 'worker' && job.workerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'This job is not assigned to you' });
+    }
+
+    job.fuelKmsTravelled = Number(fuelKmsTravelled) || 0;
+
+    let settings = await Settings.findOne({ settingsId: 'global' });
+    if (!settings) {
+      settings = new Settings({ settingsId: 'global' });
+      await settings.save();
+    }
+    const fuelRate = settings.fuelAllowanceRate || 5;
+    job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
+
+    await job.save();
+
+    res.status(200).json({ message: 'Fuel KMs updated successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
