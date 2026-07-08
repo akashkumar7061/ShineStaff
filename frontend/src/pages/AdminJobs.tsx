@@ -51,8 +51,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'started' | 'completed' | 'cancelled'>('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
   const [searchWorkerName, setSearchWorkerName] = useState('');
 
   // Modals visibility
@@ -518,7 +518,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setAddress('');
     setLocationName('');
     setPrice('');
-    setDate('');
+    setDate(getTodayString());
     setTimeSlot('');
     setStartTime('');
     setEndTime('');

@@ -54,8 +54,8 @@ const WorkerJobs: React.FC = () => {
   const [tempKms, setTempKms] = useState('');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(getTodayString());
+  const [endDate, setEndDate] = useState(getTodayString());
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchJobs = async () => {
