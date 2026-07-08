@@ -41,8 +41,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'started' | 'completed' | 'cancelled'>('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const [searchWorkerName, setSearchWorkerName] = useState('');
 
   // Modals visibility
@@ -183,12 +182,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       return false;
     }
 
-    // 2. Date Range Filter
-    if (startDate && job.date && job.date < startDate) {
-      return false;
-    }
-    if (endDate && job.date && job.date > endDate) {
-      return false;
+    // 2. Single Date Filter
+    if (filterDate && job.date) {
+      const jobDateOnly = job.date.substring(0, 10);
+      if (jobDateOnly !== filterDate) {
+        return false;
+      }
     }
 
     // 3. Worker Name Search
@@ -254,25 +253,18 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </div>
         </div>
 
-        {/* Date Range Selectors */}
+        {/* Single Date Filter */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-          <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Date Range:</span>
+          <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Filter by Date:</span>
           <input
             type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
           />
-          <span className="text-slate-400 font-bold">➔</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
-          />
-          {(startDate || endDate) && (
+          {filterDate && (
             <button
-              onClick={() => { setStartDate(''); setEndDate(''); }}
+              onClick={() => setFilterDate('')}
               className="text-xs text-danger font-semibold hover:underline px-2"
             >
               Clear

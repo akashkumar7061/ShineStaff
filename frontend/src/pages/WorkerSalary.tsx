@@ -43,7 +43,7 @@ const WorkerSalary: React.FC = () => {
   const handleDownloadPayslip = () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
-    window.open(`http://localhost:5000/api/salary/payslip?month=${selectedMonth}&token=${token}`);
+    window.open(`/api/salary/payslip?month=${selectedMonth}&token=${token}`);
   };
 
   if (!user) return null;

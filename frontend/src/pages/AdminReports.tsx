@@ -12,15 +12,14 @@ const AdminReports: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     return new Date().toISOString().substring(0, 7); // YYYY-MM
   });
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [filterDate, setFilterDate] = useState('');
 
   const triggerDownload = (reportType: 'attendance' | 'workers' | 'salary' | 'photos') => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    let url = `http://localhost:5000/api/reports/${reportType}?token=${token}`;
+    let url = `/api/reports/${reportType}?token=${token}`;
 
-    if (reportType === 'attendance' && startDate && endDate) {
-      url += `&startDate=${startDate}&endDate=${endDate}`;
+    if (reportType === 'attendance' && filterDate) {
+      url += `&startDate=${filterDate}&endDate=${filterDate}`;
     }
     if (reportType === 'salary') {
       url += `&month=${selectedMonth}`;
@@ -53,25 +52,14 @@ const AdminReports: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none text-slate-700 dark:text-slate-200"
-              />
-            </div>
-            <div>
-              <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none text-slate-700 dark:text-slate-200"
-              />
-            </div>
+          <div>
+            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select Date</label>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none text-slate-700 dark:text-slate-200"
+            />
           </div>
 
           <button
