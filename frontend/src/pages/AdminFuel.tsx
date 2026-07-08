@@ -37,7 +37,7 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
 
   const fetchWorkers = async () => {
     try {
-      const res = await api.get('/auth/workers');
+      const res = await api.get(`/workers?company=${companyFilter}`);
       setWorkers(res.data);
     } catch (err) {
       console.error('Failed to load workers:', err);
