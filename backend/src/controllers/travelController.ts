@@ -167,3 +167,49 @@ export const updateTravelLog = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const adminSubmitTravelLog = async (req: AuthRequest, res: Response) => {
+  const { workerId, date, type, kms, allowance, fromLocation, toLocation } = req.body;
+
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can add logs manually' });
+  }
+
+  if (!workerId || !kms) {
+    return res.status(400).json({ message: 'Worker and KMs are required' });
+  }
+
+  try {
+    const travel = new TravelLog({
+      workerId,
+      date: date || new Date().toISOString().split('T')[0],
+      type: type || 'home',
+      kms: Number(kms) || 0,
+      allowance: Number(allowance) || 0,
+      status: 'approved', // Auto-approved since admin created it
+      fromLocation: fromLocation || 'Work Site',
+      toLocation: toLocation || 'Home'
+    });
+
+    await travel.save();
+
+    // Emit Socket alert
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'TRAVEL_LOG_UPDATED',
+        message: `Admin logged travel log.`,
+        travelId: travel._id
+      });
+      io.to(workerId.toString()).emit('notification', {
+        type: 'TRAVEL_LOG_APPROVED',
+        message: `Admin logged travel allowance of ₹${allowance || 0} for you.`,
+        travelId: travel._id
+      });
+    }
+
+    res.status(201).json({ message: 'Travel commute logged successfully', travel });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

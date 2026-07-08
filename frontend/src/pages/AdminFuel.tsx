@@ -24,6 +24,26 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
   const [editFromLocation, setEditFromLocation] = useState('');
   const [editToLocation, setEditToLocation] = useState('');
 
+  // Create Modal State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [createWorkerId, setCreateWorkerId] = useState('');
+  const [createDate, setCreateDate] = useState(new Date().toISOString().split('T')[0]);
+  const [createType, setCreateType] = useState<'job' | 'home'>('home');
+  const [createKms, setCreateKms] = useState('');
+  const [createAllowance, setCreateAllowance] = useState('100');
+  const [createFromLocation, setCreateFromLocation] = useState('Last Work Site');
+  const [createToLocation, setCreateToLocation] = useState('Home');
+
+  const fetchWorkers = async () => {
+    try {
+      const res = await api.get('/auth/workers');
+      setWorkers(res.data);
+    } catch (err) {
+      console.error('Failed to load workers:', err);
+    }
+  };
+
   const fetchTravelLogs = async () => {
     setLoading(true);
     try {
@@ -38,6 +58,7 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
 
   useEffect(() => {
     fetchTravelLogs();
+    fetchWorkers();
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -48,6 +69,35 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [companyFilter]);
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createWorkerId || !createKms) {
+      alert('Worker and KMs are required!');
+      return;
+    }
+    try {
+      await api.post('/travel/admin-submit', {
+        workerId: createWorkerId,
+        date: createDate,
+        type: createType,
+        kms: Number(createKms),
+        allowance: Number(createAllowance),
+        fromLocation: createFromLocation,
+        toLocation: createToLocation
+      });
+      alert('Travel log logged successfully!');
+      setCreateModalOpen(false);
+      setCreateWorkerId('');
+      setCreateKms('');
+      setCreateAllowance('100');
+      setCreateFromLocation('Last Work Site');
+      setCreateToLocation('Home');
+      fetchTravelLogs();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to submit travel log');
+    }
+  };
 
   const handleOpenApproveModal = (log: any) => {
     setSelectedLog(log);
@@ -112,9 +162,21 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
     <div className="space-y-6">
       
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Fuel & Commute Logs Dashboard</h2>
-        <p className="text-xs text-slate-400 mt-0.5">Audit travel distance logged by workers (including commutes back home) and approve payouts</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Fuel & Commute Logs Dashboard</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Audit travel distance logged by workers (including commutes back home) and approve payouts</p>
+        </div>
+        <button
+          onClick={() => {
+            fetchWorkers();
+            setCreateModalOpen(true);
+          }}
+          className="rounded-xl bg-secondary px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-secondary/20 hover:bg-secondary/90 transition-all flex items-center space-x-1.5 self-start"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Travel Log</span>
+        </button>
       </div>
 
       {/* Logs Table */}
@@ -376,6 +438,127 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
                 <button type="button" onClick={() => setEditModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2 text-xs font-semibold">Cancel</button>
                 <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2 text-xs font-bold">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Travel Log Modal */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-205 dark:border-slate-800">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-855 dark:text-white text-base">Add New Travel Log</h3>
+              <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-650">✕</button>
+            </div>
+            
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-left">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Choose Worker</label>
+                <select
+                  required
+                  value={createWorkerId}
+                  onChange={(e) => setCreateWorkerId(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2.5 outline-none focus:border-secondary"
+                >
+                  <option value="">-- Choose Worker --</option>
+                  {workers.map((w) => (
+                    <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={createDate}
+                    onChange={(e) => setCreateDate(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Travel Type</label>
+                  <select
+                    value={createType}
+                    onChange={(e: any) => {
+                      setCreateType(e.target.value);
+                      if (e.target.value === 'home') {
+                        setCreateFromLocation('Last Work Site');
+                        setCreateToLocation('Home');
+                      } else {
+                        setCreateFromLocation('Home');
+                        setCreateToLocation('Work Site');
+                      }
+                    }}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  >
+                    <option value="home">Home Travel (Shift End)</option>
+                    <option value="job">Job Commute</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">From Location</label>
+                  <input
+                    type="text"
+                    required
+                    value={createFromLocation}
+                    onChange={(e) => setCreateFromLocation(e.target.value)}
+                    placeholder="e.g. Site"
+                    className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">To Location</label>
+                  <input
+                    type="text"
+                    required
+                    value={createToLocation}
+                    onChange={(e) => setCreateToLocation(e.target.value)}
+                    placeholder="e.g. Home"
+                    className="w-full text-xs rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Distance (KM)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={createKms}
+                    onChange={(e) => {
+                      setCreateKms(e.target.value);
+                      setCreateAllowance((Number(e.target.value) * 10).toString());
+                    }}
+                    placeholder="Distance back home"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-405 mb-1.5 uppercase">Allowance (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={createAllowance}
+                    onChange={(e) => setCreateAllowance(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
+                <button type="button" onClick={() => setCreateModalOpen(false)} className="rounded-lg border border-slate-205 px-4 py-2 text-xs font-semibold">Cancel</button>
+                <button type="submit" className="btn-blue-gradient rounded-lg px-5 py-2 text-xs font-bold">Save Log</button>
               </div>
             </form>
           </div>
