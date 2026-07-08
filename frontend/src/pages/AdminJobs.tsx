@@ -928,12 +928,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Site Address</label>
-                <textarea required rows={2} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full street location details..." className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
+                <textarea required rows={2} value={address} onChange={(e) => setAddress(e.target.value)} onBlur={handleResolveGPS} placeholder="Full street location details..." className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">GPS Location Name (Area / Landmark)</label>
-                <input type="text" required value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="E.g., Connaught Place, Mumbai Airport" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+                <input type="text" required value={locationName} onChange={(e) => setLocationName(e.target.value)} onBlur={handleResolveGPS} placeholder="E.g., Connaught Place, Mumbai Airport" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
               {/* Distance calculation display */}
@@ -955,23 +955,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   )}
                 </div>
               )}
-
-              {/* Map Location Picker */}
-              <div className="space-y-1.5 text-left">
-                <div className="flex items-center justify-between">
-                  <span className="block text-[10px] font-bold text-slate-455 uppercase">Map Location Picker (Click to Select Site)</span>
-                  <button
-                    type="button"
-                    onClick={handleResolveGPS}
-                    disabled={resolvingGPS}
-                    className="text-[9px] text-violet-500 font-extrabold hover:underline"
-                  >
-                    {resolvingGPS ? 'Finding...' : '🔍 Auto-Find from Address'}
-                  </button>
-                </div>
-                <div id="picker-map" className="h-48 w-full rounded-lg border border-slate-200 dark:border-slate-800 z-10" />
-                <span className="block text-[9px] text-slate-400">Click anywhere on the map to automatically pin the Site Latitude and Longitude.</span>
-              </div>
 
               {/* Schedule and Worker Slot */}
               <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 p-4 space-y-3.5">
