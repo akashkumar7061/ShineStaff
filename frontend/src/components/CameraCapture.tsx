@@ -2,15 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Camera, RefreshCw, AlertCircle, MapPin, Calendar } from 'lucide-react';
 
 interface CameraCaptureProps {
-  onCapture: (dataUrl: string, location: { lat: number; lng: number }) => void;
+  onCapture: (dataUrl: any, location: { lat: number; lng: number }) => void;
   onClose: () => void;
   facingMode?: 'user' | 'environment';
+  multiCaptureCount?: number;
 }
 
 const CameraCapture: React.FC<CameraCaptureProps> = ({
   onCapture,
   onClose,
-  facingMode = 'user'
+  facingMode = 'user',
+  multiCaptureCount = 1
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,6 +23,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: 0, lng: 0 });
   const [gpsStatus, setGpsStatus] = useState<'resolving' | 'connected' | 'failed'>('resolving');
+  const [capturedList, setCapturedList] = useState<string[]>([]);
 
   // Retrieve GPS coordinates
   useEffect(() => {
@@ -157,12 +160,25 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     // Capture base64 string
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-    // Stop streams
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+    if (multiCaptureCount > 1) {
+      const newList = [...capturedList, dataUrl];
+      if (newList.length < multiCaptureCount) {
+        setCapturedList(newList);
+        alert(`Photo ${newList.length} of ${multiCaptureCount} captured successfully! Take next photo.`);
+      } else {
+        // Stop streams
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        onCapture(newList, coords);
+      }
+    } else {
+      // Stop streams
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      onCapture(dataUrl, coords);
     }
-
-    onCapture(dataUrl, coords);
   };
 
   return (
@@ -212,6 +228,14 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           />
 
           <canvas ref={canvasRef} className="hidden" />
+
+          {/* Multi-photo Counter HUD */}
+          {multiCaptureCount > 1 && (
+            <div className="absolute top-4 right-4 flex items-center space-x-1.5 rounded-full bg-violet-600/90 backdrop-blur px-3 py-1.5 text-xs font-bold text-white shadow z-20">
+              <Camera className="h-3.5 w-3.5" />
+              <span>Captured: {capturedList.length} / {multiCaptureCount}</span>
+            </div>
+          )}
 
           {/* GPS Status HUD */}
           {gpsStatus === 'connected' && (

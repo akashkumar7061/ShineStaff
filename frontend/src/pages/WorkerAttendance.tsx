@@ -123,9 +123,18 @@ const WorkerAttendance: React.FC = () => {
                       </div>
                     </div>
                     
-                    <span className="rounded-full bg-success/15 px-3 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-success">
-                      {attendanceToday.status}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`rounded-full px-3 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${
+                        attendanceToday.status === 'present' ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'
+                      }`}>
+                        {attendanceToday.status}
+                      </span>
+                      {attendanceToday.status === 'late' && attendanceToday.lateReason && (
+                        <span className="text-[9px] text-amber-500 font-bold max-w-[150px] text-right truncate" title={attendanceToday.lateReason}>
+                          Reason: {attendanceToday.lateReason}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl text-center">
@@ -155,13 +164,20 @@ const WorkerAttendance: React.FC = () => {
                             Clocked: {new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
-                          att.status === 'present' ? 'bg-success/15 text-success' :
-                          att.status === 'late' ? 'bg-warning/15 text-warning' :
-                          'bg-slate-200 text-slate-500'
-                        }`}>
-                          {att.status}
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
+                            att.status === 'present' ? 'bg-success/15 text-success' :
+                            att.status === 'late' ? 'bg-warning/15 text-warning' :
+                            'bg-slate-200 text-slate-500'
+                          }`}>
+                            {att.status}
+                          </span>
+                          {att.status === 'late' && att.lateReason && (
+                            <span className="text-[9px] text-amber-500 font-bold max-w-[150px] text-right truncate" title={att.lateReason}>
+                              Reason: {att.lateReason}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}

@@ -220,7 +220,7 @@ export const startJob = async (req: AuthRequest, res: Response) => {
 
 export const completeJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { afterPhotoDataUrl, location, manualFuelKms, workerNotes } = req.body;
+  const { afterPhotoDataUrl, afterPhotoDataUrls, location, manualFuelKms, workerNotes } = req.body;
 
   if (!req.user || req.user.role !== 'worker') {
     return res.status(403).json({ message: 'Only workers can complete jobs' });
@@ -240,12 +240,16 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Job cannot be completed in its current state (Must be Started)' });
     }
 
-    if (!afterPhotoDataUrl) {
-      return res.status(400).json({ message: 'Live After Photo is mandatory to complete a job' });
+    // Enforce exactly/minimum 5 after photos
+    if (!afterPhotoDataUrls || !Array.isArray(afterPhotoDataUrls) || afterPhotoDataUrls.length < 5) {
+      return res.status(400).json({ message: 'Live After Photos are mandatory (Minimum 5 photos required) to complete the job.' });
     }
 
-    // Upload after photo
-    const afterPhotoUrl = await uploadToCloudinary(afterPhotoDataUrl, 'job_after_photos');
+    // Upload after photos concurrently
+    const afterPhotoUrls = await Promise.all(
+      afterPhotoDataUrls.map((dataUrl: string) => uploadToCloudinary(dataUrl, 'job_after_photos'))
+    );
+    const afterPhotoUrl = afterPhotoUrls[0];
 
     // Fetch settings for fuel allowance rate
     let settings = await Settings.findOne({ settingsId: 'global' });
@@ -273,6 +277,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
 
     job.status = 'completed';
     job.afterPhoto = afterPhotoUrl;
+    job.afterPhotos = afterPhotoUrls;
     job.afterPhotoTime = new Date();
     if (location) {
       job.afterPhotoGPS = {
@@ -360,6 +365,7 @@ Before/After photos uploaded successfully.`;
 
 export const cancelJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
+  const { reason } = req.body;
   try {
     const job = await Job.findById(id);
     if (!job) {
@@ -367,6 +373,7 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
     }
 
     job.status = 'cancelled';
+    job.cancelReason = reason || 'No reason specified';
     await job.save();
 
     try {
@@ -420,6 +427,88 @@ export const deleteJob = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ message: 'Job deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const updateJob = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const {
+    title,
+    description,
+    company,
+    workerId,
+    clientName,
+    clientPhone,
+    address,
+    locationName,
+    price,
+    date,
+    timeSlot,
+    location,
+    fuelKmsTravelled
+  } = req.body;
+
+  try {
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    // Check worker eligibility
+    if (workerId && workerId !== job.workerId.toString()) {
+      const worker = await User.findById(workerId);
+      if (!worker || worker.role !== 'worker') {
+        return res.status(404).json({ message: 'Worker not found' });
+      }
+      job.workerId = workerId;
+    }
+
+    job.title = title || job.title;
+    job.description = description !== undefined ? description : job.description;
+    job.company = company || job.company;
+    job.clientName = clientName || job.clientName;
+    job.clientPhone = clientPhone || job.clientPhone;
+    job.address = address || job.address;
+    job.locationName = locationName !== undefined ? locationName : job.locationName;
+    job.price = price !== undefined ? Number(price) : job.price;
+    job.date = date !== undefined ? date : job.date;
+    job.timeSlot = timeSlot !== undefined ? timeSlot : job.timeSlot;
+    if (location) {
+      job.location = {
+        lat: Number(location.lat),
+        lng: Number(location.lng)
+      };
+    }
+    if (fuelKmsTravelled !== undefined) {
+      job.fuelKmsTravelled = Number(fuelKmsTravelled);
+      // Re-calculate fuel allowance
+      const fuelAllowanceRate = 5; // standard rate
+      job.fuelAllowance = job.fuelKmsTravelled * fuelAllowanceRate;
+    }
+
+    await job.save();
+
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit('adminNotification', {
+          type: 'JOB_UPDATED',
+          message: `Job "${job.title}" has been updated.`,
+          jobId: job._id
+        });
+        io.to(job.workerId.toString()).emit('notification', {
+          type: 'JOB_UPDATED',
+          message: `Job "${job.title}" has been updated.`,
+          jobId: job._id
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send job updated socket notification:', err);
+    }
+
+    res.status(200).json({ message: 'Job updated successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

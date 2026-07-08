@@ -88,16 +88,34 @@ const WorkerHome: React.FC = () => {
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, [user]);
 
-  const handleCameraCapture = async (dataUrl: string, coords: { lat: number; lng: number }) => {
+  const handleCameraCapture = async (dataUrl: any, coords: { lat: number; lng: number }) => {
     setCameraActive(false);
     const deviceInfo = `${navigator.userAgent} (${navigator.platform})`;
 
     try {
       if (cameraType === 'attendance') {
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        let lateReason = '';
+
+        if (hour > 9 || (hour === 9 && minute > 15)) {
+          const reasonInput = prompt('Aap late hain. Kripya late aane ka karan (Reason) batayein:');
+          if (reasonInput === null) {
+            return; // Worker cancelled
+          }
+          if (!reasonInput.trim()) {
+            alert('Late aane ka reason dena anivaryah hai.');
+            return;
+          }
+          lateReason = reasonInput.trim();
+        }
+
         const res = await api.post('/attendance/checkin', {
           selfieDataUrl: dataUrl,
           location: coords,
-          deviceInfo
+          deviceInfo,
+          lateReason
         });
         setAttendanceToday(res.data.attendance);
         alert('Attendance marked successfully!');
@@ -109,7 +127,7 @@ const WorkerHome: React.FC = () => {
         alert('Job started successfully! Do work.');
       } else if (cameraType === 'after' && selectedJobId) {
         await api.put(`/jobs/${selectedJobId}/complete`, {
-          afterPhotoDataUrl: dataUrl,
+          afterPhotoDataUrls: dataUrl, // list of 5 photos
           location: coords
         });
         alert('Job completed successfully! Admin notified.');
@@ -233,7 +251,17 @@ const WorkerHome: React.FC = () => {
                     </span>
                     <h4 className="text-base font-bold text-slate-800 dark:text-white">{jobsSummary.active.title}</h4>
                     <p className="text-xs text-slate-405 mt-1">📍 {jobsSummary.active.address}</p>
-                    <p className="text-xs text-slate-405 mt-1">👤 Client: {jobsSummary.active.clientName} ({jobsSummary.active.clientPhone})</p>
+                    <p className="text-xs text-slate-405 mt-1">
+                      👤 Client: {jobsSummary.active.clientName} (
+                      <a
+                        href={`tel:${jobsSummary.active.clientPhone}`}
+                        className="text-secondary hover:underline font-bold inline-flex items-center space-x-0.5"
+                      >
+                        <Phone className="h-3 w-3 inline" />
+                        <span>{jobsSummary.active.clientPhone}</span>
+                      </a>
+                      )
+                    </p>
                   </div>
 
                   {/* Visual Tracker map */}
@@ -451,6 +479,7 @@ const WorkerHome: React.FC = () => {
       {cameraActive && (
         <CameraCapture
           facingMode={cameraType === 'attendance' ? 'user' : 'environment'}
+          multiCaptureCount={cameraType === 'after' ? 5 : 1}
           onCapture={handleCameraCapture}
           onClose={() => setCameraActive(false)}
         />

@@ -27,14 +27,17 @@ export const getWorkerAttendance = async (req: Request, res: Response) => {
 };
 
 export const markAttendance = async (req: AuthRequest, res: Response) => {
-  const { selfieDataUrl, location, deviceInfo } = req.body;
+  const { selfieDataUrl, location, deviceInfo, lateReason } = req.body;
 
   if (!req.user || req.user.role !== 'worker') {
     return res.status(403).json({ message: 'Only workers can mark attendance' });
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // Convert current UTC date on server to Indian Standard Time (IST)
+    const now = new Date();
+    const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    const today = istNow.toISOString().split('T')[0]; // Format: YYYY-MM-DD in India
 
     // Check if already marked today
     const existing = await Attendance.findOne({ workerId: req.user.id, date: today });
@@ -56,9 +59,8 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
       await settings.save();
     }
 
-    const now = new Date();
-    const checkInHour = now.getHours();
-    const checkInMin = now.getMinutes();
+    const checkInHour = istNow.getUTCHours(); // Hour in IST
+    const checkInMin = istNow.getUTCMinutes(); // Minute in IST
 
     // Default target time is 09:00 AM.
     // If checkIn time is past 09:00 + graceMins (e.g. 09:15), then status is 'late'
@@ -80,7 +82,8 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
         lng: Number(location.lng)
       },
       deviceInfo,
-      status
+      status,
+      lateReason: status === 'late' ? (lateReason || 'No reason specified') : ''
     });
 
     await attendance.save();
@@ -134,7 +137,7 @@ export const createManualAttendance = async (req: Request, res: Response) => {
     const attendance = new Attendance({
       workerId,
       date,
-      checkInTime: new Date(`${date}T09:00:00.000Z`),
+      checkInTime: new Date(`${date}T03:30:00.000Z`), // 09:00 AM IST
       selfie: 'https://via.placeholder.com/150?text=Manual+Entry',
       location: { lat: 0, lng: 0 },
       deviceInfo: 'Admin Manual Entry',

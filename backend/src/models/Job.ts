@@ -24,6 +24,7 @@ export interface IJob extends Document {
     lng: number;
   };
   afterPhoto?: string;
+  afterPhotos?: string[];
   afterPhotoTime?: Date;
   afterPhotoGPS?: {
     lat: number;
@@ -34,6 +35,7 @@ export interface IJob extends Document {
   fuelKmsTravelled?: number;
   fuelAllowance?: number;
   workerNotes?: string;
+  cancelReason?: string;
 }
 
 const JobSchema = new Schema<IJob>({
@@ -60,6 +62,7 @@ const JobSchema = new Schema<IJob>({
     lng: { type: Number }
   },
   afterPhoto: { type: String, default: '' },
+  afterPhotos: { type: [String], default: [] },
   afterPhotoTime: { type: Date },
   afterPhotoGPS: {
     lat: { type: Number },
@@ -69,7 +72,8 @@ const JobSchema = new Schema<IJob>({
   completedAt: { type: Date },
   fuelKmsTravelled: { type: Number, default: 0 },
   fuelAllowance: { type: Number, default: 0 },
-  workerNotes: { type: String, default: '' }
+  workerNotes: { type: String, default: '' },
+  cancelReason: { type: String, default: '' }
 }, {
   timestamps: true
 });

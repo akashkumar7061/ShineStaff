@@ -18,7 +18,9 @@ import {
   Clock,
   DollarSign,
   Search,
-  Camera
+  Camera,
+  Download,
+  Edit
 } from 'lucide-react';
 
 interface AdminJobsProps {
@@ -80,11 +82,30 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [resolvingGPS, setResolvingGPS] = useState(false);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
 
   const pickerMapRef = useRef<any>(null);
   const startMarkerRef = useRef<any>(null);
   const endMarkerRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
+
+  const handleDownloadImage = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      window.open(url, '_blank');
+    }
+  };
 
   // Dynamic Leaflet Loader for AdminJobs
   useEffect(() => {
@@ -383,7 +404,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/jobs', {
+      const payload = {
         title,
         description,
         company,
@@ -397,14 +418,72 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         timeSlot,
         location: latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : undefined,
         fuelKmsTravelled: calculatedDistance || 0
-      });
-      alert('Cleanup job created and worker notified!');
+      };
+
+      if (isEditMode && editingJobId) {
+        await api.put(`/jobs/${editingJobId}`, payload);
+        alert('Cleanup job updated successfully!');
+      } else {
+        await api.post('/jobs', payload);
+        alert('Cleanup job created and worker notified!');
+      }
+
       setCreateModalOpen(false);
       resetForm();
       fetchJobsAndWorkers();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create job');
+      alert(err.response?.data?.message || 'Failed to save job');
     }
+  };
+
+  const handleOpenEditModal = (job: any) => {
+    setIsEditMode(true);
+    setEditingJobId(job._id);
+    setTitle(job.title || '');
+    setDescription(job.description || '');
+    setCompany(job.company || 'SofaShine');
+    setWorkerId(job.workerId?._id || job.workerId || '');
+    setClientName(job.clientName || '');
+    setClientPhone(job.clientPhone || '');
+    setAddress(job.address || '');
+    setLocationName(job.locationName || '');
+    setPrice(job.price ? String(job.price) : '');
+    setDate(job.date || '');
+    setTimeSlot(job.timeSlot || '');
+    
+    if (job.timeSlot) {
+      const parts = job.timeSlot.split(' - ');
+      if (parts.length === 2) {
+        const convertTo24Hour = (time12: string) => {
+          const [time, modifier] = time12.split(' ');
+          let [hours, minutes] = time.split(':');
+          if (hours === '12') {
+            hours = '00';
+          }
+          if (modifier === 'PM') {
+            hours = String(parseInt(hours, 10) + 12);
+          }
+          return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+        };
+        try {
+          setStartTime(convertTo24Hour(parts[0]));
+          setEndTime(convertTo24Hour(parts[1]));
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+    }
+    
+    if (job.location) {
+      setLatitude(job.location.lat ? String(job.location.lat) : '');
+      setLongitude(job.location.lng ? String(job.location.lng) : '');
+    } else {
+      setLatitude('');
+      setLongitude('');
+    }
+    
+    setCalculatedDistance(job.fuelKmsTravelled || null);
+    setCreateModalOpen(true);
   };
 
   const handleDeleteJob = async (id: string) => {
@@ -419,9 +498,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   };
 
   const handleCancelJob = async (id: string) => {
-    if (!window.confirm('Are you sure you want to cancel this job?')) return;
+    const reason = prompt('Please enter the reason for cancelling this job:');
+    if (reason === null) return; // User pressed Cancel
+    if (!reason.trim()) {
+      alert('Cancellation reason is required.');
+      return;
+    }
     try {
-      await api.put(`/jobs/${id}/cancel`);
+      await api.put(`/jobs/${id}/cancel`, { reason: reason.trim() });
       alert('Job cancelled successfully');
       fetchJobsAndWorkers();
     } catch (err) {
@@ -447,6 +531,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setLongitude('');
     setCalculatedDistance(null);
     setCalculationReason('');
+    setIsEditMode(false);
+    setEditingJobId(null);
   };
 
   const handleOpenPhotoComparison = (job: any) => {
@@ -608,6 +694,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               <span>Allowance: ₹{job.fuelAllowance}</span>
                             </div>
                           )}
+
+                          {job.status === 'cancelled' && job.cancelReason && (
+                            <div className="flex items-start space-x-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-450 px-3 py-2 rounded-xl border border-rose-500/20 font-semibold text-[10px] mt-1 max-w-xs text-left leading-relaxed">
+                              <span className="font-extrabold">🚫 Cancel Reason:</span>
+                              <span>{job.cancelReason}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -747,6 +840,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     {/* Actions */}
                     <td className="px-6 py-5 text-center">
                       <div className="flex items-center justify-center space-x-2">
+                        {job.status !== 'completed' && job.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleOpenEditModal(job)}
+                            className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 hover:text-secondary hover:bg-secondary/10 transition-colors"
+                            title="Edit Job Details"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         {job.status !== 'completed' && job.status !== 'cancelled' && (
                           <button
                             onClick={() => handleCancelJob(job._id)}
@@ -973,11 +1075,21 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 {/* Before Photo */}
-                <div className="glass-card overflow-hidden">
+                <div className="glass-card overflow-hidden relative">
                   <span className="block bg-warning/10 text-warning text-[10px] font-bold text-center py-2 uppercase tracking-wider">Before Cleaning</span>
-                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-955 flex items-center justify-center">
+                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-955 flex items-center justify-center relative">
                     {selectedJobPhotos.beforePhoto ? (
-                      <img src={selectedJobPhotos.beforePhoto} alt="Before" className="h-full w-full object-cover" />
+                      <>
+                        <img src={selectedJobPhotos.beforePhoto} alt="Before" className="h-full w-full object-cover" />
+                        <button
+                          onClick={() => handleDownloadImage(selectedJobPhotos.beforePhoto, `before_${selectedJobPhotos._id}.jpg`)}
+                          className="absolute bottom-2 right-2 rounded-xl bg-slate-900/80 backdrop-blur text-white px-2.5 py-1.5 hover:bg-slate-800 transition-colors z-20 flex items-center space-x-1 text-[9px] font-bold shadow-md animate-fade-in"
+                          title="Download Before Photo"
+                        >
+                          <Download className="h-3 w-3" />
+                          <span>Download</span>
+                        </button>
+                      </>
                     ) : (
                       <span className="text-xs text-slate-405">No photo logged</span>
                     )}
@@ -998,13 +1110,45 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 {/* After Photo */}
                 <div className="glass-card overflow-hidden">
                   <span className="block bg-success/10 text-success text-[10px] font-bold text-center py-2 uppercase tracking-wider">After Cleaning</span>
-                  <div className="aspect-video w-full bg-slate-100 dark:bg-slate-955 flex items-center justify-center">
-                    {selectedJobPhotos.afterPhoto ? (
-                      <img src={selectedJobPhotos.afterPhoto} alt="After" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-xs text-slate-405">No photo logged</span>
-                    )}
-                  </div>
+                  
+                  {selectedJobPhotos.afterPhotos && selectedJobPhotos.afterPhotos.length > 0 ? (
+                    <div className="p-4 space-y-3">
+                      <span className="block text-[10px] font-extrabold text-slate-450 uppercase tracking-wider">Captured Images ({selectedJobPhotos.afterPhotos.length} Photos)</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedJobPhotos.afterPhotos.map((url: string, idx: number) => (
+                          <div key={idx} className="relative group/photo aspect-video rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-205 dark:border-slate-800">
+                            <img src={url} alt={`After ${idx+1}`} className="h-full w-full object-cover" />
+                            <button
+                              onClick={() => handleDownloadImage(url, `after_${selectedJobPhotos._id}_${idx+1}.jpg`)}
+                              className="absolute bottom-1 right-1 rounded bg-slate-900/90 backdrop-blur text-white p-1 hover:bg-slate-800 transition-colors shadow flex items-center justify-center opacity-90 sm:opacity-0 group-hover/photo:opacity-100 transition-opacity z-20"
+                              title={`Download Photo ${idx+1}`}
+                            >
+                              <Download className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-video w-full bg-slate-100 dark:bg-slate-955 flex items-center justify-center relative">
+                      {selectedJobPhotos.afterPhoto ? (
+                        <>
+                          <img src={selectedJobPhotos.afterPhoto} alt="After" className="h-full w-full object-cover" />
+                          <button
+                            onClick={() => handleDownloadImage(selectedJobPhotos.afterPhoto, `after_${selectedJobPhotos._id}.jpg`)}
+                            className="absolute bottom-2 right-2 rounded-xl bg-slate-900/80 backdrop-blur text-white px-2.5 py-1.5 hover:bg-slate-800 transition-colors z-20 flex items-center space-x-1 text-[9px] font-bold shadow-md animate-fade-in"
+                            title="Download After Photo"
+                          >
+                            <Download className="h-3 w-3" />
+                            <span>Download</span>
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-405">No photo logged</span>
+                      )}
+                    </div>
+                  )}
+
                   {selectedJobPhotos.afterPhotoTime && (
                     <div className="p-3 text-[10px] text-slate-400 space-y-0.5 border-t border-slate-100 dark:border-slate-800">
                       <div>🕒 Time: {new Date(selectedJobPhotos.afterPhotoTime).toLocaleString()}</div>

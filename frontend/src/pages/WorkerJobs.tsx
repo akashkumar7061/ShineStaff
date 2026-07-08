@@ -20,7 +20,8 @@ import {
   CheckCircle2,
   X,
   Search,
-  Calendar
+  Calendar,
+  Phone
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -361,11 +362,20 @@ const WorkerJobs: React.FC = () => {
                             </div>
                           </td>
 
-                          {/* Client Info */}
                           <td className="px-6 py-5">
                             <div className="space-y-1">
                               <span className="block font-semibold text-slate-750 dark:text-slate-205">{job.clientName}</span>
-                              <span className="block text-[10px] text-slate-400 mt-0.5">{job.clientPhone || '—'}</span>
+                              {job.clientPhone ? (
+                                <a
+                                  href={`tel:${job.clientPhone}`}
+                                  className="block text-[10px] text-secondary hover:underline font-bold mt-0.5 inline-flex items-center space-x-0.5"
+                                >
+                                  <Phone className="h-2.5 w-2.5 inline" />
+                                  <span>{job.clientPhone}</span>
+                                </a>
+                              ) : (
+                                <span className="block text-[10px] text-slate-400 mt-0.5">—</span>
+                              )}
                             </div>
                           </td>
 
@@ -472,10 +482,20 @@ const WorkerJobs: React.FC = () => {
             {/* Modal Body */}
             <form onSubmit={handleCompleteWorkSheetSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
               
-              {/* Job Details Card */}
               <div className="rounded-2xl bg-slate-50 dark:bg-slate-950 p-4 border border-slate-150/40 dark:border-slate-850/40 space-y-2">
                 <div>📍 Address: <span className="font-semibold text-slate-700 dark:text-slate-250">{selectedJob.address}</span></div>
-                <div>👤 Client: <span className="font-semibold text-slate-700 dark:text-slate-250">{selectedJob.clientName} ({selectedJob.clientPhone})</span></div>
+                <div>
+                  👤 Client: <span className="font-semibold text-slate-700 dark:text-slate-250">{selectedJob.clientName}</span>{' '}
+                  {selectedJob.clientPhone && (
+                    <a
+                      href={`tel:${selectedJob.clientPhone}`}
+                      className="text-secondary hover:underline font-bold inline-flex items-center space-x-0.5 ml-1"
+                    >
+                      <Phone className="h-3 w-3 inline" />
+                      <span>({selectedJob.clientPhone})</span>
+                    </a>
+                  )}
+                </div>
                 {selectedJob.description && <div>📝 Client Instructions: <span className="text-slate-455">{selectedJob.description}</span></div>}
               </div>
 

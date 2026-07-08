@@ -244,14 +244,22 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
                       </td>
 
                       <td className="px-6 py-5">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                          log?.status === 'present' ? 'bg-success/15 text-success' :
-                          log?.status === 'late' ? 'bg-warning/15 text-warning' :
-                          log?.status === 'half-day' ? 'bg-indigo-500/15 text-indigo-500' :
-                          'bg-danger/15 text-danger'
-                        }`}>
-                          {log ? (log.status === 'half-day' ? 'Half-Day' : log.status) : 'Absent'}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                            log?.status === 'present' ? 'bg-success/15 text-success' :
+                            log?.status === 'late' ? 'bg-warning/15 text-warning' :
+                            log?.status === 'half-day' ? 'bg-indigo-500/15 text-indigo-500' :
+                            'bg-danger/15 text-danger'
+                          }`}>
+                            {log ? (log.status === 'half-day' ? 'Half-Day' : log.status) : 'Absent'}
+                          </span>
+                          {log?.status === 'late' && log.lateReason && (
+                            <div className="flex flex-col bg-amber-500/10 text-amber-600 dark:text-amber-450 px-2.5 py-1 rounded-lg border border-amber-500/20 font-semibold text-[9px] mt-0.5 max-w-[150px] text-left leading-normal whitespace-pre-line">
+                              <span className="font-extrabold text-[8px] uppercase text-amber-500">Reason:</span>
+                              <span>{log.lateReason}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       <td className="px-6 py-5 text-center flex items-center justify-center space-x-3.5">

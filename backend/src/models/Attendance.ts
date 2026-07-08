@@ -12,6 +12,7 @@ export interface IAttendance extends Document {
   deviceInfo: string;
   status: 'present' | 'late' | 'absent' | 'half-day';
   editedByAdmin: boolean;
+  lateReason?: string;
 }
 
 const AttendanceSchema = new Schema<IAttendance>({
@@ -25,7 +26,8 @@ const AttendanceSchema = new Schema<IAttendance>({
   },
   deviceInfo: { type: String, required: true },
   status: { type: String, enum: ['present', 'late', 'absent', 'half-day'], default: 'present' },
-  editedByAdmin: { type: Boolean, default: false }
+  editedByAdmin: { type: Boolean, default: false },
+  lateReason: { type: String, default: '' }
 }, {
   timestamps: true
 });

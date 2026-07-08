@@ -6,7 +6,8 @@ import {
   startJob,
   completeJob,
   cancelJob,
-  deleteJob
+  deleteJob,
+  updateJob
 } from '../controllers/jobController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -23,6 +24,7 @@ router.put('/:id/complete', authorizeRoles('worker'), completeJob);
 
 // Admin-only endpoints for CRUD
 router.post('/', authorizeRoles('admin'), createJob);
+router.put('/:id', authorizeRoles('admin'), updateJob);
 router.delete('/:id', authorizeRoles('admin'), deleteJob);
 
 // Shared status edit (e.g. cancellation)
