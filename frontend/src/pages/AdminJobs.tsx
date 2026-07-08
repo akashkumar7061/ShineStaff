@@ -936,41 +936,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <input type="text" required value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="E.g., Connaught Place, Mumbai Airport" className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-[10px] font-bold text-slate-455 uppercase">Site Latitude</label>
-                    <button
-                      type="button"
-                      onClick={handleResolveGPS}
-                      disabled={resolvingGPS}
-                      className="text-[9px] text-violet-500 font-extrabold hover:underline"
-                    >
-                      {resolvingGPS ? 'Finding...' : '🔍 Get from Address'}
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    step="any"
-                    value={latitude}
-                    onChange={(e) => setLatitude(e.target.value)}
-                    placeholder="E.g., 19.0760"
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Site Longitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={longitude}
-                    onChange={(e) => setLongitude(e.target.value)}
-                    placeholder="E.g., 72.8777"
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
-                  />
-                </div>
-              </div>
-
               {/* Distance calculation display */}
               {(latitude && longitude && workerId) && (
                 <div className="rounded-xl border border-violet-100 dark:border-violet-950/30 bg-violet-50/20 dark:bg-violet-950/10 p-4 space-y-2">
@@ -993,7 +958,17 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
               {/* Map Location Picker */}
               <div className="space-y-1.5 text-left">
-                <span className="block text-[10px] font-bold text-slate-455 uppercase">Map Location Picker (Click to Select Site)</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-[10px] font-bold text-slate-455 uppercase">Map Location Picker (Click to Select Site)</span>
+                  <button
+                    type="button"
+                    onClick={handleResolveGPS}
+                    disabled={resolvingGPS}
+                    className="text-[9px] text-violet-500 font-extrabold hover:underline"
+                  >
+                    {resolvingGPS ? 'Finding...' : '🔍 Auto-Find from Address'}
+                  </button>
+                </div>
                 <div id="picker-map" className="h-48 w-full rounded-lg border border-slate-200 dark:border-slate-800 z-10" />
                 <span className="block text-[9px] text-slate-400">Click anywhere on the map to automatically pin the Site Latitude and Longitude.</span>
               </div>
