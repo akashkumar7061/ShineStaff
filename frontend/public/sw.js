@@ -16,9 +16,15 @@ self.addEventListener('push', (event) => {
     data: {
       url: data.url || '/'
     },
-    vibrate: [100, 50, 100],
+    // Swiggy/Zomato Alert System Configuration
+    vibrate: [300, 110, 300, 110, 300, 110, 500],
+    sound: '/alert.wav',
+    tag: 'shinestaff-job-alert',
+    renotify: true,
+    requireInteraction: true,
     actions: [
-      { action: 'open', title: 'Open App' }
+      { action: 'view_job', title: '⚡ View Job details' },
+      { action: 'dismiss', title: 'Dismiss' }
     ]
   };
 
@@ -29,6 +35,10 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  
+  if (event.action === 'dismiss') {
+    return;
+  }
   
   const targetUrl = event.notification.data?.url || '/';
 
