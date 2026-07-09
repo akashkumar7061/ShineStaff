@@ -228,14 +228,7 @@ const AdminAttendanceLogs: React.FC<AdminAttendanceLogsProps> = ({ companyFilter
 
                       <td className="px-6 py-5 text-slate-500">
                         {log?.location?.lat && log?.location?.lng ? (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center space-x-1 hover:text-secondary"
-                          >
-                            <GPSAddress lat={log.location.lat} lng={log.location.lng} />
-                          </a>
+                          <GPSAddress lat={log.location.lat} lng={log.location.lng} />
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}
