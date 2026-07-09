@@ -462,7 +462,9 @@ const WorkerJobs: React.FC = () => {
                               {job.locationName && (
                                 <a
                                   href={
-                                    job.location?.lat && job.location?.lng
+                                    job.locationName.startsWith('http://') || job.locationName.startsWith('https://')
+                                      ? job.locationName
+                                      : job.location?.lat && job.location?.lng
                                       ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
                                       : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.locationName)}`
                                   }
@@ -470,7 +472,7 @@ const WorkerJobs: React.FC = () => {
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
                                   className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
-                                  title="Click to view on Google Maps"
+                                  title="Click to open link"
                                 >
                                   GPS: {job.locationName}
                                 </a>
@@ -578,13 +580,28 @@ const WorkerJobs: React.FC = () => {
                     </a>
                     {selectedJob.locationName && (
                       <span className="block text-[10px] font-bold text-violet-500 mt-1">
-                        GPS/Landmark: {selectedJob.locationName}
+                        GPS/Landmark: {
+                          selectedJob.locationName.startsWith('http://') || selectedJob.locationName.startsWith('https://') ? (
+                            <a
+                              href={selectedJob.locationName}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-secondary hover:underline break-all font-semibold"
+                            >
+                              {selectedJob.locationName}
+                            </a>
+                          ) : (
+                            selectedJob.locationName
+                          )
+                        }
                       </span>
                     )}
                   </div>
                   <a
                     href={
-                      selectedJob.location?.lat && selectedJob.location?.lng
+                      selectedJob.locationName && (selectedJob.locationName.startsWith('http://') || selectedJob.locationName.startsWith('https://'))
+                        ? selectedJob.locationName
+                        : selectedJob.location?.lat && selectedJob.location?.lng
                         ? `https://www.google.com/maps/dir/?api=1&destination=${selectedJob.location.lat},${selectedJob.location.lng}`
                         : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedJob.address)}`
                     }

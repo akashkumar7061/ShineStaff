@@ -753,14 +753,16 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                         {job.locationName && (
                           <a
                             href={
-                              job.location?.lat && job.location?.lng
+                              job.locationName.startsWith('http://') || job.locationName.startsWith('https://')
+                                ? job.locationName
+                                : job.location?.lat && job.location?.lng
                                 ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
                                 : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.locationName)}`
                             }
                             target="_blank"
                             rel="noreferrer"
                             className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
-                            title="Click to view on Google Maps"
+                            title="Click to open link"
                           >
                             GPS: {job.locationName}
                           </a>
