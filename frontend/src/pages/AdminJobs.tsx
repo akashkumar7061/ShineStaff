@@ -737,9 +737,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     {/* Address / GPS Position */}
                     <td className="px-6 py-5 max-w-[200px]">
                       <div className="space-y-1.5">
-                        <span className="block text-slate-650 dark:text-slate-300 truncate font-medium" title={job.address}>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium cursor-pointer transition-colors"
+                          title="Click to view on Google Maps"
+                        >
                           📍 {job.address}
-                        </span>
+                        </a>
                         {job.locationName && (
                           job.locationName.startsWith('http://') || job.locationName.startsWith('https://') ? (
                             <a
