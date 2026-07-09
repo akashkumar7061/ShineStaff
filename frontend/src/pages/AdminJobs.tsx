@@ -737,35 +737,25 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     {/* Address / GPS Position */}
                     <td className="px-6 py-5 max-w-[200px]">
                       <div className="space-y-1.5">
-                        <a
-                          href={
-                            job.location?.lat && job.location?.lng
-                              ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
-                              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}`
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium"
-                          title="Click to view on Google Maps"
-                        >
+                        <span className="block text-slate-650 dark:text-slate-300 truncate font-medium" title={job.address}>
                           📍 {job.address}
-                        </a>
+                        </span>
                         {job.locationName && (
-                          <a
-                            href={
-                              job.locationName.startsWith('http://') || job.locationName.startsWith('https://')
-                                ? job.locationName
-                                : job.location?.lat && job.location?.lng
-                                ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
-                                : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.locationName)}`
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
-                            title="Click to open link"
-                          >
-                            GPS: {job.locationName}
-                          </a>
+                          job.locationName.startsWith('http://') || job.locationName.startsWith('https://') ? (
+                            <a
+                              href={job.locationName}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
+                              title="Click to open link"
+                            >
+                              GPS Link: {job.locationName}
+                            </a>
+                          ) : (
+                            <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
+                              GPS: {job.locationName}
+                            </span>
+                          )
                         )}
                       </div>
                     </td>
