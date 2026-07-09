@@ -737,25 +737,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     {/* Address / GPS Position */}
                     <td className="px-6 py-5 max-w-[200px]">
                       <div className="space-y-1.5">
-                        {job.location?.lat && job.location?.lng ? (
+                        <a
+                          href={
+                            job.location?.lat && job.location?.lng
+                              ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium"
+                          title="Click to view on Google Maps"
+                        >
+                          📍 {job.address}
+                        </a>
+                        {job.locationName && (
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`}
+                            href={
+                              job.location?.lat && job.location?.lng
+                                ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
+                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.locationName)}`
+                            }
                             target="_blank"
                             rel="noreferrer"
-                            className="block text-slate-600 dark:text-slate-350 hover:text-secondary underline truncate font-medium"
-                            title={job.address}
+                            className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
+                            title="Click to view on Google Maps"
                           >
-                            📍 {job.address}
-                          </a>
-                        ) : (
-                          <span className="block text-slate-600 dark:text-slate-350 truncate font-medium" title={job.address}>
-                            📍 {job.address}
-                          </span>
-                        )}
-                        {job.locationName && (
-                          <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
                             GPS: {job.locationName}
-                          </span>
+                          </a>
                         )}
                       </div>
                     </td>

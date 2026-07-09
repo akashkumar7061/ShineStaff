@@ -445,13 +445,35 @@ const WorkerJobs: React.FC = () => {
                           {/* Address / Location */}
                           <td className="px-6 py-5 max-w-[200px]">
                             <div className="space-y-1">
-                              <span className="block text-slate-600 dark:text-slate-350 truncate" title={job.address}>
+                              <a
+                                href={
+                                  job.location?.lat && job.location?.lng
+                                    ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
+                                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium"
+                                title="Click to view on Google Maps"
+                              >
                                 📍 {job.address}
-                              </span>
+                              </a>
                               {job.locationName && (
-                                <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
+                                <a
+                                  href={
+                                    job.location?.lat && job.location?.lng
+                                      ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
+                                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.locationName)}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
+                                  title="Click to view on Google Maps"
+                                >
                                   GPS: {job.locationName}
-                                </span>
+                                </a>
                               )}
                             </div>
                           </td>
@@ -538,7 +560,41 @@ const WorkerJobs: React.FC = () => {
                     <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm bg-emerald-500/10 px-2 py-0.5 rounded">₹{selectedJob.price}</span>
                   </div>
                 )}
-                <div>📍 Address: <span className="font-semibold text-slate-700 dark:text-slate-250">{selectedJob.address}</span></div>
+                <div className="pb-1 border-b border-slate-200 dark:border-slate-800 flex justify-between items-start pt-1.5">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">📍 Address & Location:</span>
+                    <a
+                      href={
+                        selectedJob.location?.lat && selectedJob.location?.lng
+                          ? `https://www.google.com/maps/search/?api=1&query=${selectedJob.location.lat},${selectedJob.location.lng}`
+                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJob.address)}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-secondary hover:underline text-xs block leading-snug"
+                      title="Click to view on Google Maps"
+                    >
+                      {selectedJob.address}
+                    </a>
+                    {selectedJob.locationName && (
+                      <span className="block text-[10px] font-bold text-violet-500 mt-1">
+                        GPS/Landmark: {selectedJob.locationName}
+                      </span>
+                    )}
+                  </div>
+                  <a
+                    href={
+                      selectedJob.location?.lat && selectedJob.location?.lng
+                        ? `https://www.google.com/maps/search/?api=1&query=${selectedJob.location.lat},${selectedJob.location.lng}`
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJob.address)}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-blue-gradient text-[10px] font-bold text-white px-3 py-2 rounded-xl flex items-center space-x-1 shadow-md hover:shadow-lg transition-all"
+                  >
+                    <span>Open Maps 🗺️</span>
+                  </a>
+                </div>
                 <div>
                   👤 Client: <span className="font-semibold text-slate-700 dark:text-slate-250">{selectedJob.clientName}</span>{' '}
                   {selectedJob.clientPhone && (
