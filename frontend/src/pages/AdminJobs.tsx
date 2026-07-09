@@ -740,8 +740,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                         <a
                           href={
                             job.location?.lat && job.location?.lng
-                              ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
-                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`
+                              ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
+                              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}`
                           }
                           target="_blank"
                           rel="noreferrer"
@@ -754,8 +754,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           <a
                             href={
                               job.location?.lat && job.location?.lng
-                                ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
-                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.locationName)}`
+                                ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
+                                : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.locationName)}`
                             }
                             target="_blank"
                             rel="noreferrer"

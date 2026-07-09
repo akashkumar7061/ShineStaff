@@ -448,8 +448,8 @@ const WorkerJobs: React.FC = () => {
                               <a
                                 href={
                                   job.location?.lat && job.location?.lng
-                                    ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
-                                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`
+                                    ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
+                                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}`
                                 }
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -463,8 +463,8 @@ const WorkerJobs: React.FC = () => {
                                 <a
                                   href={
                                     job.location?.lat && job.location?.lng
-                                      ? `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`
-                                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.locationName)}`
+                                      ? `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`
+                                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.locationName)}`
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"
@@ -566,8 +566,8 @@ const WorkerJobs: React.FC = () => {
                     <a
                       href={
                         selectedJob.location?.lat && selectedJob.location?.lng
-                          ? `https://www.google.com/maps/search/?api=1&query=${selectedJob.location.lat},${selectedJob.location.lng}`
-                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJob.address)}`
+                          ? `https://www.google.com/maps/dir/?api=1&destination=${selectedJob.location.lat},${selectedJob.location.lng}`
+                          : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedJob.address)}`
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -585,8 +585,8 @@ const WorkerJobs: React.FC = () => {
                   <a
                     href={
                       selectedJob.location?.lat && selectedJob.location?.lng
-                        ? `https://www.google.com/maps/search/?api=1&query=${selectedJob.location.lat},${selectedJob.location.lng}`
-                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJob.address)}`
+                        ? `https://www.google.com/maps/dir/?api=1&destination=${selectedJob.location.lat},${selectedJob.location.lng}`
+                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedJob.address)}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
