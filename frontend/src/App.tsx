@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { io as socketIO } from 'socket.io-client';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, AlertTriangle, Volume2 } from 'lucide-react';
 import api from './utils/api';
 
 // Pages
@@ -105,6 +105,9 @@ const AdminRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }
 const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [toast, setToast] = useState<{ message: string; visible: boolean } | null>(null);
+  const [alarmJob, setAlarmJob] = useState<{ title: string; message: string; jobId: string } | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const vibrateIntervalRef = React.useRef<any>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -126,6 +129,14 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       console.log('Received worker notification:', data);
       setToast({ message: data.message, visible: true });
       window.dispatchEvent(new CustomEvent('socket-update', { detail: data }));
+
+      if (data.type === 'NEW_JOB') {
+        setAlarmJob({
+          title: data.jobTitle || 'New Cleanup Job',
+          message: data.message,
+          jobId: data.jobId
+        });
+      }
 
       if ('Notification' in window) {
         if (Notification.permission === 'granted') {
@@ -294,9 +305,102 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
     }
   }, [toast]);
 
+  useEffect(() => {
+    if (alarmJob) {
+      // 1. Play looping alarm WAV chime
+      const audio = new Audio('/alert.wav');
+      audio.loop = true;
+      audio.play().catch((err) => console.log('Audio autoplay blocked:', err));
+      audioRef.current = audio;
+
+      // 2. Loop swiggy-style vibration pattern
+      if ('vibrate' in navigator) {
+        navigator.vibrate([400, 200, 400, 200, 400]);
+        vibrateIntervalRef.current = setInterval(() => {
+          navigator.vibrate([400, 200, 400, 200, 400]);
+        }, 2000);
+      }
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (vibrateIntervalRef.current) {
+        clearInterval(vibrateIntervalRef.current);
+        vibrateIntervalRef.current = null;
+      }
+      if ('vibrate' in navigator) {
+        navigator.vibrate(0);
+      }
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (vibrateIntervalRef.current) {
+        clearInterval(vibrateIntervalRef.current);
+      }
+    };
+  }, [alarmJob]);
+
   return (
     <>
       {children}
+      
+      {/* FULL-SCREEN GLOWING NEON ALARM OVERLAY */}
+      {alarmJob && (
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-red-650/90 dark:bg-red-950/95 backdrop-blur-md p-4 animate-pulse-slow">
+          <div className="w-full max-w-md bg-slate-900 text-white rounded-3xl border-4 border-amber-500 shadow-2xl p-6 text-center space-y-6 animate-scale-up relative">
+            
+            {/* Flashing Alert Header */}
+            <div className="flex flex-col items-center space-y-3">
+              <div className="rounded-full bg-amber-500/20 p-4 border-2 border-amber-500 animate-bounce">
+                <AlertTriangle className="h-12 w-12 text-amber-500" />
+              </div>
+              <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-amber-500/10 px-3 py-1 rounded-full animate-pulse">
+                🚨 INCOMING JOB ASSIGNED 🚨
+              </span>
+            </div>
+
+            {/* Job Details Card */}
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-3 text-left">
+              <h3 className="text-lg font-black text-white leading-tight">
+                {alarmJob.title}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {alarmJob.message}
+              </p>
+              <div className="flex items-center space-x-1.5 text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded w-fit">
+                <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                <span>ALARM RINGTONE ACTIVE</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col space-y-2.5 pt-2">
+              <button
+                onClick={() => {
+                  setAlarmJob(null);
+                  window.location.href = '/worker/jobs';
+                }}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-955 text-xs font-black uppercase tracking-wider shadow-lg hover:shadow-xl active:scale-[0.98] transition-all cursor-pointer"
+              >
+                ⚡ Open Job Sheet & Start Work
+              </button>
+              
+              <button
+                onClick={() => setAlarmJob(null)}
+                className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Mute & Dismiss Alarm
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
       {toast?.visible && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-full max-w-sm px-4 pointer-events-none">
           <div className="glass-panel border border-secondary/35 dark:border-secondary/20 shadow-2xl p-4 rounded-2xl flex items-center space-x-3 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md pointer-events-auto">

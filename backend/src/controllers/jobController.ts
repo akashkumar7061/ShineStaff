@@ -123,13 +123,13 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       '/worker/jobs'
     );
 
-    // Send notifications
-    // 1. Socket.io
     const io = getIO();
     if (io) {
       io.to(workerId.toString()).emit('notification', {
         type: 'NEW_JOB',
         message: `New job "${title}" assigned to you for ${company}.`,
+        jobTitle: title,
+        company: company,
         jobId: job._id
       });
     }
