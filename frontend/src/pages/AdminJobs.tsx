@@ -838,18 +838,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       </span>
                     </td>
 
-                    {/* Actions */}
                     <td className="px-6 py-5 text-center">
                       <div className="flex items-center justify-center space-x-2">
-                        {job.status !== 'completed' && job.status !== 'cancelled' && (
-                          <button
-                            onClick={() => handleOpenEditModal(job)}
-                            className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 hover:text-secondary hover:bg-secondary/10 transition-colors"
-                            title="Edit Job Details"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleOpenEditModal(job)}
+                          className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 hover:text-secondary hover:bg-secondary/10 transition-colors"
+                          title="Edit Job Details"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
                         {job.status !== 'completed' && job.status !== 'cancelled' && (
                           <button
                             onClick={() => handleCancelJob(job._id)}
