@@ -136,9 +136,9 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
       {activeJob && (
         <div className="sticky top-[72px] z-30 w-full px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-md transition-all duration-300">
           <div className="max-w-7xl mx-auto flex items-center justify-between bg-slate-50/50 dark:bg-slate-955/30 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3.5 space-x-3 text-left relative overflow-hidden">
-            {/* Green Left Accent Box */}
-            <div className="relative h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-md">
-              <Briefcase className="h-6 w-6" />
+            {/* Green Left Accent Box with Company Logo */}
+            <div className="relative h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0 shadow-md p-1 bg-white border border-slate-200 dark:border-slate-800">
+              <img src="/logo.png" alt="Company Logo" className="h-full w-full object-contain" />
               {/* Orange NEW Badge */}
               <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white font-extrabold text-[7.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow animate-pulse">
                 NEW
@@ -146,18 +146,25 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
             </div>
 
             {/* Info Text */}
-            <div className="flex-1 min-w-0 text-xs pl-1">
+            <div className="flex-1 min-w-0 text-xs pl-1 text-left">
               <h4 className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wide flex items-center space-x-1.5">
-                <span>New Job Assigned</span>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                <span>🟢 New Job Assigned</span>
               </h4>
-              <div className="font-extrabold text-slate-850 dark:text-white truncate text-[11px] mt-0.5">
-                {activeJob.title} • Job #{activeJob._id.slice(-4).toUpperCase()}
+              <div className="font-black text-slate-850 dark:text-white truncate text-[11.5px] mt-0.5">
+                {activeJob.company} Services
               </div>
-              <p className="text-[10px] text-slate-455 mt-1 leading-tight truncate">
-                👤 {activeJob.clientName} | 📍 {activeJob.address || 'N/A'}
+              <p className="text-[10px] text-slate-700 dark:text-slate-205 font-bold truncate mt-0.5">
+                Service: {activeJob.title} • Job #{activeJob._id.slice(-4).toUpperCase()}
               </p>
-              <p className="text-[9.5px] text-slate-400 mt-0.5 font-bold">
-                ⏰ Scheduled: {activeJob.date} {activeJob.timeSlot}
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate mt-0.5">
+                Customer: {activeJob.clientName}
+              </p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate mt-0.5">
+                Location: 📍 {activeJob.address || 'N/A'}
+              </p>
+              <p className="text-[9.5px] text-slate-450 mt-0.5 font-bold">
+                Time: {activeJob.date} • {activeJob.timeSlot}
               </p>
             </div>
 
@@ -183,9 +190,6 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
 const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [toast, setToast] = useState<{ message: string; visible: boolean } | null>(null);
-  const [alarmJob, setAlarmJob] = useState<{ title: string; message: string; jobId: string; company?: string; job?: any } | null>(null);
-  const audioRef = React.useRef<any>(null);
-  const vibrateIntervalRef = React.useRef<any>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -209,13 +213,34 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       window.dispatchEvent(new CustomEvent('socket-update', { detail: data }));
 
       if (data.type === 'NEW_JOB') {
-        setAlarmJob({
-          title: data.jobTitle || 'New Cleanup Job',
-          message: data.message,
-          jobId: data.jobId,
-          company: data.company,
-          job: data.job
-        });
+        // Play premium arpeggio sound once when app is open in foreground
+        try {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContext) {
+            const ctx = new AudioContext();
+            const playNote = (freq: number, start: number, duration: number) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, start);
+              gain.gain.setValueAtTime(0, start);
+              gain.gain.linearRampToValueAtTime(0.4, start + 0.05); // volume
+              gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(start);
+              osc.stop(start + duration);
+            };
+            const now = ctx.currentTime;
+            // E5, G#5, B5, E6 sweet chimes arpeggio sweep
+            playNote(659.25, now, 0.4);
+            playNote(830.61, now + 0.12, 0.4);
+            playNote(987.77, now + 0.24, 0.6);
+            playNote(1318.51, now + 0.36, 0.8);
+          }
+        } catch (err) {
+          console.log('Web Audio failed arpeggio:', err);
+        }
       }
 
       if ('Notification' in window) {
@@ -427,179 +452,11 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }, [toast]);
 
   useEffect(() => {
-    if (alarmJob) {
-      // 0. Log notification delivery receipt to database
-      api.put(`/jobs/${alarmJob.jobId}/delivered`).catch((err) =>
-        console.error('Failed to log notification delivery receipt:', err)
-      );
-
-      // 1. Play looping unique arpeggio alert chime
-      const playUniqueSound = () => {
-        try {
-          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-          if (!AudioContext) return;
-          const ctx = new AudioContext();
-          const playNote = (freq: number, start: number, duration: number) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, start);
-            gain.gain.setValueAtTime(0, start);
-            gain.gain.linearRampToValueAtTime(0.4, start + 0.05); // volume
-            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(start);
-            osc.stop(start + duration);
-          };
-          const now = ctx.currentTime;
-          // E5, G#5, B5, E6 sweet chimes arpeggio sweep
-          playNote(659.25, now, 0.4);
-          playNote(830.61, now + 0.12, 0.4);
-          playNote(987.77, now + 0.24, 0.6);
-          playNote(1318.51, now + 0.36, 0.8);
-        } catch (err) {
-          console.log('Web Audio failed arpeggio:', err);
-        }
-      };
-
-      playUniqueSound();
-      const soundInterval = setInterval(playUniqueSound, 2500);
-      audioRef.current = { pause: () => clearInterval(soundInterval) };
-
-      // 2. Loop swiggy-style vibration pattern
-      if ('vibrate' in navigator) {
-        navigator.vibrate([400, 200, 400, 200, 400]);
-        vibrateIntervalRef.current = setInterval(() => {
-          navigator.vibrate([400, 200, 400, 200, 400]);
-        }, 2000);
-      }
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      if (vibrateIntervalRef.current) {
-        clearInterval(vibrateIntervalRef.current);
-        vibrateIntervalRef.current = null;
-      }
-      if ('vibrate' in navigator) {
-        navigator.vibrate(0);
-      }
-    }
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      if (vibrateIntervalRef.current) {
-        clearInterval(vibrateIntervalRef.current);
-      }
-    };
-  }, [alarmJob]);
+  }, []);
 
   return (
     <>
       {children}
-      
-      {/* MOBILE PUSH NOTIFICATION ALARM OVERLAY */}
-      {alarmJob && (
-        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-955/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-[#182232] text-[#e2e8f0] rounded-3xl shadow-2xl p-5 space-y-4 border border-slate-800 animate-scale-up text-left">
-            
-            {/* Header: App icon, Title info, time, dropdown and large branch icon */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-3">
-                {/* Red circular app icon containing quick lightning bolt symbol */}
-                <div className="h-9 w-9 rounded-full bg-red-650 flex items-center justify-center text-white font-black shadow-md shrink-0 text-sm">
-                  ⚡
-                </div>
-                <div>
-                  <div className="flex items-center space-x-1.5 text-xs text-slate-400">
-                    <span className="font-bold text-slate-300">ShineStaff</span>
-                    <span>•</span>
-                    <span>Just Now</span>
-                  </div>
-                  <h4 className="text-xs font-black text-white mt-0.5 uppercase tracking-wide">
-                    {alarmJob.job?.company || alarmJob.company || 'SHINESTAFF'}
-                  </h4>
-                </div>
-              </div>
-
-              {/* Large logo on the right (like the T-Series box in the image) */}
-              <div className="h-10 w-10 bg-white rounded-xl p-1 flex items-center justify-center shadow-md shrink-0 border border-slate-700">
-                <img src="/logo.png" alt="Logo" className="h-full w-full object-contain" />
-              </div>
-            </div>
-
-            {/* Notification content title and text */}
-            <div className="space-y-1">
-              <h3 className="text-sm font-extrabold text-white leading-tight">
-                {alarmJob.title}
-              </h3>
-              <p className="text-[11px] text-slate-350 leading-normal">
-                📍 {alarmJob.job?.address || 'N/A'} <br />
-                👤 Client: {alarmJob.job?.clientName || 'Valued Client'} ({alarmJob.job?.clientPhone || 'N/A'})
-              </p>
-            </div>
-
-            {/* Large thumbnail image in the middle (just like the image thumbnail) */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-955 aspect-[16/9] shadow-inner">
-              <img src="/cleaning_banner.png" alt="Cleaning Preview" className="h-full w-full object-cover" />
-              {/* Flashing priority tag */}
-              <span className="absolute top-3 right-3 bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-full shadow animate-pulse">
-                🔥 High Priority
-              </span>
-            </div>
-
-            {/* Action buttons at the bottom (Accept, Reject, View Details links) */}
-            <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-[11px] font-bold px-1">
-              <button
-                onClick={async () => {
-                  try {
-                    await api.put(`/jobs/${alarmJob.jobId}/accept`);
-                    setAlarmJob(null);
-                    setToast({ message: 'Job accepted successfully! 🧹', visible: true });
-                    window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_ACCEPTED', jobId: alarmJob.jobId } }));
-                  } catch (err) {
-                    console.error('Failed to accept job:', err);
-                  }
-                }}
-                className="text-emerald-400 hover:text-emerald-350 transition-colors uppercase tracking-wider cursor-pointer py-1"
-              >
-                ✓ Accept
-              </button>
-
-              <button
-                onClick={async () => {
-                  try {
-                    await api.put(`/jobs/${alarmJob.jobId}/reject`);
-                    setAlarmJob(null);
-                    setToast({ message: 'Job rejected.', visible: true });
-                    window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_REJECTED', jobId: alarmJob.jobId } }));
-                  } catch (err) {
-                    console.error('Failed to reject job:', err);
-                  }
-                }}
-                className="text-rose-455 hover:text-rose-400 transition-colors uppercase tracking-wider cursor-pointer py-1"
-              >
-                ✕ Reject
-              </button>
-
-              <button
-                onClick={() => {
-                  setAlarmJob(null);
-                  window.location.href = `/worker/jobs?startJobId=${alarmJob.jobId}`;
-                }}
-                className="text-slate-350 hover:text-white transition-colors uppercase tracking-wider cursor-pointer py-1"
-              >
-                🔍 View Details
-              </button>
-            </div>
-            
-          </div>
-        </div>
-      )}
 
       {toast?.visible && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-full max-w-sm px-4 pointer-events-none">

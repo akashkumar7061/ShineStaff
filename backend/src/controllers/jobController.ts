@@ -126,15 +126,16 @@ export const createJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
-    // Send detailed push notification to worker
+    const jobShortId = job._id.toString().slice(-4).toUpperCase();
+    const companyLabel = `${company} Services`;
+    const jobCode = `Job #${company === 'SofaShine' ? 'SS' : 'CC'}${jobShortId}`;
+    const scheduledTime = `${date || 'Today'} • ${timeSlot || 'ASAP'}`;
+
+    // Send detailed push notification to worker matching specification layout
     sendPushNotification(
       workerId.toString(),
-      `${company} Job Alert! 🧹`,
-      `Job: ${title}
-Client: ${clientName}
-Address: 📍 ${address || 'N/A'}
-Slot: ⏰ ${timeSlot || 'N/A'}
-Priority: 🔥 High Priority`,
+      '🔔 New Job Assigned',
+      `${companyLabel}\n${title}\n${jobCode}\nCustomer:\n${clientName}\nLocation:\n${address || 'N/A'}\nTime:\n${scheduledTime}`,
       `/worker/jobs?startJobId=${job._id}`
     );
 
@@ -217,12 +218,16 @@ export const startJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
-    // Send detailed push notification to admins
+    const startedTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    // Send detailed push notification to admins matching specification layout
     sendPushToAdmins(
-      `🟢 Clean In Progress: ${job.company}`,
+      '🟢 Job Started',
       `Worker: ${workerName}
-Client: ${job.clientName}
-Job: ${job.title}`,
+Company: ${job.company} Services
+Customer: ${job.clientName}
+Service: ${job.title}
+Started: ${startedTime}`,
       '/admin'
     );
 
@@ -379,7 +384,7 @@ Before/After photos uploaded successfully.`;
 
     await sendWhatsAppAlert(adminPhone, alertMsg);
 
-    // Calculate total duration and send detailed completed push notification to admins
+    // Calculate total duration and send detailed completed push notification to admins matching specification layout
     const diffMs = new Date().getTime() - new Date(job.startedAt || new Date()).getTime();
     const mins = Math.floor(diffMs / 60000);
     const hrs = Math.floor(mins / 60);
@@ -388,11 +393,12 @@ Before/After photos uploaded successfully.`;
     const endTimeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
     sendPushToAdmins(
-      `✅ Cleanup Completed: ${job.company}`,
+      '✅ Job Completed',
       `Worker: ${workerName}
-Client: ${job.clientName}
-Time: ${endTimeStr} (Took ${durationStr})
-Job: ${job.title}`,
+Customer: ${job.clientName}
+Service: ${job.title}
+Completed: ${endTimeStr}
+Duration: ${durationStr}`,
       '/admin'
     );
 
