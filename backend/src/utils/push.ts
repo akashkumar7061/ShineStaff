@@ -10,25 +10,28 @@ webpush.setVapidDetails(
   VAPID_PRIVATE_KEY
 );
 
+// Returns true if the push was successfully delivered to at least one subscription
 export const sendPushNotification = async (
   userId: string,
   title: string,
   body: string,
   url: string = '/'
-) => {
+): Promise<boolean> => {
   try {
     const user = await User.findById(userId);
     if (!user || !user.pushSubscriptions || user.pushSubscriptions.length === 0) {
-      return;
+      return false;
     }
 
     const payload = JSON.stringify({ title, body, url });
     const failedSubscriptions: string[] = [];
+    let deliveredCount = 0;
 
     await Promise.all(
       user.pushSubscriptions.map(async (subscription: any) => {
         try {
           await webpush.sendNotification(subscription, payload);
+          deliveredCount++;
         } catch (error: any) {
           // If subscription is expired or inactive (404 or 410), flag it for removal
           if (error.statusCode === 410 || error.statusCode === 404) {
@@ -50,8 +53,11 @@ export const sendPushNotification = async (
         }
       });
     }
+
+    return deliveredCount > 0;
   } catch (err: any) {
     console.error('Push notification trigger error:', err.message);
+    return false;
   }
 };
 

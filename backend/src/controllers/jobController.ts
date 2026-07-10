@@ -5,6 +5,7 @@ import Settings from '../models/Settings';
 import TravelLog from '../models/TravelLog';
 import { uploadToCloudinary } from '../config/cloudinary';
 import { sendWhatsAppAlert } from '../utils/whatsapp';
+import { sendSMSAlert } from '../utils/sms';
 import { sendMail } from '../config/mailer';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
@@ -131,13 +132,22 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     const jobCode = `Job #${company === 'SofaShine' ? 'SS' : 'CC'}${jobShortId}`;
     const scheduledTime = `${date || 'Today'} • ${timeSlot || 'ASAP'}`;
 
-    // Send detailed push notification to worker matching specification layout
-    sendPushNotification(
+    // Send detailed push notification to worker matching specification layout.
+    // If it can't be delivered (no active push subscription, e.g. app not installed
+    // or notifications never granted), fall back to an SMS so the worker still finds out.
+    const pushDelivered = await sendPushNotification(
       workerId.toString(),
       '🔔 New Job Assigned',
       `${companyLabel}\n${title}\n${jobCode}\nCustomer:\n${clientName}\nLocation:\n${address || 'N/A'}\nTime:\n${scheduledTime}`,
       `/worker/jobs?startJobId=${job._id}`
     );
+
+    if (!pushDelivered && worker.phone) {
+      sendSMSAlert(
+        worker.phone,
+        `ShineStaff: New job assigned - ${jobCode}\n${title}\nClient: ${clientName}\nAddress: ${address || 'N/A'}\nTime: ${scheduledTime}\nOpen the app to accept.`
+      );
+    }
 
     const populatedJob = await Job.findById(job._id).populate('workerId');
     const io = getIO();
