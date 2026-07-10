@@ -520,9 +520,10 @@ export const updateJob = async (req: Request, res: Response) => {
     }
     if (fuelKmsTravelled !== undefined) {
       job.fuelKmsTravelled = Number(fuelKmsTravelled);
-      // Re-calculate fuel allowance
-      const fuelAllowanceRate = 5; // standard rate
-      job.fuelAllowance = job.fuelKmsTravelled * fuelAllowanceRate;
+      // Re-calculate fuel allowance using configured rate
+      const settings = await Settings.findOne({ settingsId: 'global' });
+      const fuelRate = settings ? (settings.fuelAllowanceRate || 5) : 5;
+      job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
     }
 
     await job.save();
