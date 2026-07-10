@@ -416,16 +416,16 @@ const WorkerJobs: React.FC = () => {
                               </div>
                             </div>
                           </td>
-
-                          {/* Fuel Allowance */}
                           <td className="px-6 py-5">
                             {job.fuelKmsTravelled !== undefined && job.fuelKmsTravelled > 0 ? (
-                              <div className="flex flex-col space-y-1.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-3 py-2 rounded-xl border border-violet-500/20 font-extrabold text-[10px] tracking-wide uppercase w-fit text-left">
-                                <div className="flex items-center space-x-1.5">
-                                  <span>⛽</span>
+                              <div className="space-y-2.5 text-left">
+                                <div className="flex items-center space-x-1 font-black text-slate-800 dark:text-white text-xs">
+                                  <span className="text-violet-500">⛽</span>
                                   <span>{job.fuelKmsTravelled} KM</span>
                                 </div>
-                                <span className="text-[9px] text-slate-400 font-medium lowercase">Allowance: ₹{job.fuelAllowance || 0}</span>
+                                <div className="text-[9px] font-extrabold text-violet-600 dark:text-violet-400 tracking-wide uppercase bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20 w-fit">
+                                  ₹{job.fuelAllowance || 0} allowance
+                                </div>
                               </div>
                             ) : (
                               <span className="text-slate-400">—</span>
