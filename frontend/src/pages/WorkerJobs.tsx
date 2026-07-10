@@ -90,6 +90,25 @@ const WorkerJobs: React.FC = () => {
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
   }, []);
 
+  useEffect(() => {
+    if (loading || jobs.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const startJobId = params.get('startJobId');
+    const autoCamera = params.get('autoCamera');
+    if (startJobId) {
+      const targetJob = jobs.find(j => j._id === startJobId);
+      if (targetJob) {
+        openWorkSheet(targetJob);
+        if (autoCamera === 'true' && targetJob.status === 'pending') {
+          setCameraType('before');
+          setCameraActive(true);
+        }
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    }
+  }, [jobs, loading]);
+
   const openWorkSheet = (job: any) => {
     setSelectedJob(job);
     setTempBeforePhoto(job.beforePhoto || null);

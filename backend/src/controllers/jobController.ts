@@ -123,6 +123,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       '/worker/jobs'
     );
 
+    const populatedJob = await Job.findById(job._id).populate('workerId');
     const io = getIO();
     if (io) {
       io.to(workerId.toString()).emit('notification', {
@@ -130,7 +131,8 @@ export const createJob = async (req: AuthRequest, res: Response) => {
         message: `New job "${title}" assigned to you for ${company}.`,
         jobTitle: title,
         company: company,
-        jobId: job._id
+        jobId: job._id,
+        job: populatedJob
       });
     }
 
@@ -209,19 +211,22 @@ export const startJob = async (req: AuthRequest, res: Response) => {
 
     // Send real-time notifications
     try {
+      const populatedJob = await Job.findById(job._id).populate('workerId');
       const io = getIO();
       if (io) {
         // Notify admin
         io.emit('adminNotification', {
           type: 'JOB_STARTED',
           message: `${workerName} started job "${job.title}" for ${job.company}.`,
-          jobId: job._id
+          jobId: job._id,
+          job: populatedJob
         });
         // Notify worker room
         io.to(job.workerId.toString()).emit('notification', {
           type: 'JOB_STARTED',
           message: `Job "${job.title}" has been successfully started.`,
-          jobId: job._id
+          jobId: job._id,
+          job: populatedJob
         });
       }
     } catch (err) {
@@ -365,18 +370,25 @@ Before/After photos uploaded successfully.`;
     );
 
     // Socket alert to admins and worker
-    const io = getIO();
-    if (io) {
-      io.emit('adminNotification', {
-        type: 'JOB_COMPLETED',
-        message: `${workerName} completed job "${job.title}" for ${job.company}.`,
-        jobId: job._id
-      });
-      io.to(job.workerId.toString()).emit('notification', {
-        type: 'JOB_COMPLETED',
-        message: `Job "${job.title}" has been successfully completed.`,
-        jobId: job._id
-      });
+    try {
+      const populatedJob = await Job.findById(job._id).populate('workerId');
+      const io = getIO();
+      if (io) {
+        io.emit('adminNotification', {
+          type: 'JOB_COMPLETED',
+          message: `${workerName} completed job "${job.title}" for ${job.company}.`,
+          jobId: job._id,
+          job: populatedJob
+        });
+        io.to(job.workerId.toString()).emit('notification', {
+          type: 'JOB_COMPLETED',
+          message: `Job "${job.title}" has been successfully completed.`,
+          jobId: job._id,
+          job: populatedJob
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send job completed socket notification:', err);
     }
 
     res.status(200).json({ message: 'Job completed successfully and admin notified', job });
@@ -399,17 +411,20 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
     await job.save();
 
     try {
+      const populatedJob = await Job.findById(job._id).populate('workerId');
       const io = getIO();
       if (io) {
         io.emit('adminNotification', {
           type: 'JOB_CANCELLED',
           message: `Job "${job.title}" has been cancelled.`,
-          jobId: job._id
+          jobId: job._id,
+          job: populatedJob
         });
         io.to(job.workerId.toString()).emit('notification', {
           type: 'JOB_CANCELLED',
           message: `Job "${job.title}" has been cancelled.`,
-          jobId: job._id
+          jobId: job._id,
+          job: populatedJob
         });
       }
     } catch (err) {

@@ -23,6 +23,39 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
+const ActiveJobTimer: React.FC<{ startedAt?: string | Date }> = ({ startedAt }) => {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!startedAt) return;
+    const startTime = new Date(startedAt).getTime();
+    
+    const update = () => {
+      setSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+    };
+    
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  const format = (sec: number) => {
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="flex flex-col items-center bg-slate-900 dark:bg-slate-950 text-white px-3.5 py-2 rounded-xl border border-slate-800 shadow-md">
+      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Elapsed Time</span>
+      <span className="text-sm font-mono font-black text-amber-500 tracking-wider mt-0.5 animate-pulse-slow">
+        ⏱️ {format(seconds)}
+      </span>
+    </div>
+  );
+};
+
 const WorkerHome: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -245,30 +278,37 @@ const WorkerHome: React.FC = () => {
 
               {jobsSummary.active ? (
                 <div className="space-y-5 flex-1 flex flex-col justify-between">
-                  <div className="bg-slate-55 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-150/40 dark:border-slate-855/40">
-                    <span className="inline-block text-[9px] font-extrabold bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2.5 py-0.5 rounded-full uppercase mb-2">
-                      {jobsSummary.active.company}
-                    </span>
-                    <h4 className="text-base font-bold text-slate-800 dark:text-white">{jobsSummary.active.title}</h4>
-                    <p className="text-xs text-slate-405 mt-1">📍 {jobsSummary.active.address}</p>
-                    <p className="text-xs text-slate-405 mt-1">
-                      👤 Client: {jobsSummary.active.clientName} (
-                      <a
-                        href={`tel:${jobsSummary.active.clientPhone}`}
-                        className="text-secondary hover:underline font-bold inline-flex items-center space-x-0.5"
-                      >
-                        <Phone className="h-3 w-3 inline" />
-                        <span>{jobsSummary.active.clientPhone}</span>
-                      </a>
-                      )
-                    </p>
-                    {jobsSummary.active.price !== undefined && (
+                  <div className="bg-slate-55 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-150/40 dark:border-slate-855/40 flex justify-between items-start gap-4 text-left">
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block text-[9px] font-extrabold bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2.5 py-0.5 rounded-full uppercase mb-2">
+                        {jobsSummary.active.company}
+                      </span>
+                      <h4 className="text-base font-bold text-slate-800 dark:text-white truncate">{jobsSummary.active.title}</h4>
+                      <p className="text-xs text-slate-405 mt-1 truncate">📍 {jobsSummary.active.address}</p>
+                      <p className="text-xs text-slate-405 mt-1">
+                        👤 Client: {jobsSummary.active.clientName} (
+                        <a
+                          href={`tel:${jobsSummary.active.clientPhone}`}
+                          className="text-secondary hover:underline font-bold inline-flex items-center space-x-0.5"
+                        >
+                          <Phone className="h-3 w-3 inline" />
+                          <span>{jobsSummary.active.clientPhone}</span>
+                        </a>
+                        )
+                      </p>
+                    </div>
+                    {jobsSummary.active.startedAt && (
+                      <div className="shrink-0">
+                        <ActiveJobTimer startedAt={jobsSummary.active.startedAt} />
+                      </div>
+                    )}
+                  </div>
+                  {jobsSummary.active.price !== undefined && (
                       <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center text-xs">
                         <span className="text-slate-450 font-bold uppercase tracking-wider text-[9px]">Collect from Client:</span>
                         <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm">₹{jobsSummary.active.price}</span>
                       </div>
-                    )}
-                  </div>
+                  )}
 
                   {/* Visual Tracker map */}
                   <div className="relative flex items-center justify-between px-4 py-2 border-t border-slate-100 dark:border-slate-800/60 pt-4">

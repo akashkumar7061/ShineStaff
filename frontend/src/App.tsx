@@ -105,7 +105,7 @@ const AdminRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }
 const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [toast, setToast] = useState<{ message: string; visible: boolean } | null>(null);
-  const [alarmJob, setAlarmJob] = useState<{ title: string; message: string; jobId: string } | null>(null);
+  const [alarmJob, setAlarmJob] = useState<{ title: string; message: string; jobId: string; company?: string; job?: any } | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const vibrateIntervalRef = React.useRef<any>(null);
 
@@ -134,7 +134,9 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
         setAlarmJob({
           title: data.jobTitle || 'New Cleanup Job',
           message: data.message,
-          jobId: data.jobId
+          jobId: data.jobId,
+          company: data.company,
+          job: data.job
         });
       }
 
@@ -156,6 +158,10 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       if (user.role === 'admin') {
         setToast({ message: data.message, visible: true });
         window.dispatchEvent(new CustomEvent('socket-update', { detail: data }));
+        
+        // Play admin notification sound
+        const audio = new Audio('/alert.wav');
+        audio.play().catch((err) => console.log('Admin alert autoplay blocked:', err));
       }
     });
 
@@ -351,50 +357,100 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       {/* FULL-SCREEN GLOWING NEON ALARM OVERLAY */}
       {alarmJob && (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-red-650/90 dark:bg-red-950/95 backdrop-blur-md p-4 animate-pulse-slow">
-          <div className="w-full max-w-md bg-slate-900 text-white rounded-3xl border-4 border-amber-500 shadow-2xl p-6 text-center space-y-6 animate-scale-up relative">
+          <div className="w-full max-w-md bg-slate-900 text-white rounded-3xl border-4 border-amber-500 shadow-2xl p-6 text-center space-y-5 animate-scale-up relative">
             
-            {/* Flashing Alert Header */}
-            <div className="flex flex-col items-center space-y-3">
-              <div className="rounded-full bg-amber-500/20 p-4 border-2 border-amber-500 animate-bounce">
-                <AlertTriangle className="h-12 w-12 text-amber-500" />
+            {/* Logo and Flashing Alert Header */}
+            <div className="flex flex-col items-center space-y-2">
+              <div className="flex items-center space-x-3 bg-slate-950/60 px-4 py-2.5 rounded-2xl border border-slate-800 shadow-inner">
+                <img src="/logo.png" alt="Logo" className="h-7 w-7 object-contain animate-pulse" />
+                <span className="text-sm font-black tracking-wide text-white uppercase">
+                  {alarmJob.job?.company || alarmJob.company || 'SHINESTAFF'}
+                </span>
               </div>
-              <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-amber-500/10 px-3 py-1 rounded-full animate-pulse">
-                🚨 INCOMING JOB ASSIGNED 🚨
+              <span className="text-[9px] font-black tracking-widest text-amber-400 uppercase bg-amber-500/10 px-3 py-1 rounded-full animate-pulse mt-2">
+                🚨 NEW JOB AUTOMATICALLY ASSIGNED 🚨
               </span>
             </div>
 
-            {/* Job Details Card */}
-            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-3 text-left">
-              <h3 className="text-lg font-black text-white leading-tight">
-                {alarmJob.title}
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                {alarmJob.message}
-              </p>
-              <div className="flex items-center space-x-1.5 text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded w-fit">
-                <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                <span>ALARM RINGTONE ACTIVE</span>
+            {/* Rich Swiggy/Zomato Job Details Card */}
+            <div className="bg-slate-955/90 border border-slate-800 rounded-2xl p-4.5 space-y-3.5 text-left text-xs">
+              <div className="pb-2 border-b border-slate-800">
+                <span className="text-[9px] font-bold text-slate-450 uppercase tracking-widest block">Job Title:</span>
+                <span className="text-sm font-black text-white">{alarmJob.title}</span>
+              </div>
+
+              {alarmJob.job?.description && (
+                <div>
+                  <span className="text-[8px] font-bold text-slate-450 uppercase tracking-widest block">Service Details:</span>
+                  <span className="text-slate-300 font-semibold">{alarmJob.job.description}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3.5 pt-1">
+                <div>
+                  <span className="text-[8px] font-bold text-slate-450 uppercase tracking-widest block">Customer Name:</span>
+                  <span className="text-white font-bold">{alarmJob.job?.clientName || 'Valued Client'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-slate-455 uppercase tracking-widest block">Contact Number:</span>
+                  <span className="text-secondary font-extrabold">{alarmJob.job?.clientPhone || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <span className="text-[8px] font-bold text-slate-450 uppercase tracking-widest block">Customer Address:</span>
+                <span className="text-slate-350 font-bold block leading-snug">📍 {alarmJob.job?.address || 'N/A'}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5 pt-1 border-t border-slate-800/60 pt-2">
+                <div>
+                  <span className="text-[8px] font-bold text-slate-450 uppercase tracking-widest block">Scheduled Time:</span>
+                  <span className="text-amber-400 font-bold block">{alarmJob.job?.date || 'Today'}</span>
+                  <span className="text-[10px] text-amber-400/90 font-medium block">{alarmJob.job?.timeSlot || 'As Scheduled'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-slate-450 uppercase tracking-widest block">Job Priority & ETA:</span>
+                  <span className="text-red-400 font-black block uppercase tracking-wider">🔥 HIGH PRIORITY</span>
+                  <span className="text-[10px] text-slate-400 font-medium block">Duration: ~2 Hours</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-1.5 text-[9px] text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded w-fit mt-1">
+                <Volume2 className="h-3 w-3 animate-pulse" />
+                <span>SOUND ALERT PLAYING</span>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col space-y-2.5 pt-2">
+            {/* Action Buttons (Start Job and View Details ONLY) */}
+            <div className="flex flex-col space-y-2.5 pt-1.5">
               <button
                 onClick={() => {
                   setAlarmJob(null);
-                  window.location.href = '/worker/jobs';
+                  window.location.href = `/worker/jobs?startJobId=${alarmJob.jobId}&autoCamera=true`;
                 }}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-955 text-xs font-black uppercase tracking-wider shadow-lg hover:shadow-xl active:scale-[0.98] transition-all cursor-pointer"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-955 text-xs font-black uppercase tracking-wider shadow-lg hover:shadow-xl active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center space-x-2"
               >
-                ⚡ Open Job Sheet & Start Work
+                <span>⚡ START JOB NOW</span>
               </button>
-              
-              <button
-                onClick={() => setAlarmJob(null)}
-                className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white text-xs font-bold transition-all cursor-pointer"
-              >
-                Mute & Dismiss Alarm
-              </button>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={() => {
+                    setAlarmJob(null);
+                    window.location.href = `/worker/jobs?startJobId=${alarmJob.jobId}`;
+                  }}
+                  className="py-3 rounded-2xl bg-slate-800 hover:bg-slate-750 text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  🔍 View Details
+                </button>
+                
+                <button
+                  onClick={() => setAlarmJob(null)}
+                  className="py-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition-all cursor-pointer"
+                >
+                  Mute Alarm
+                </button>
+              </div>
             </div>
             
           </div>
