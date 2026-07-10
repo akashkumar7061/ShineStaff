@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { io as socketIO } from 'socket.io-client';
-import { Sparkles, AlertTriangle, Volume2 } from 'lucide-react';
+import { Sparkles, AlertTriangle, Volume2, Briefcase } from 'lucide-react';
 import api from './utils/api';
 
 // Pages
@@ -99,6 +99,84 @@ const AdminRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }
     <AdminLayout selectedCompany={selectedCompany} setSelectedCompany={setSelectedCompany}>
       {childrenWithProps}
     </AdminLayout>
+  );
+};
+
+// Wrapper to attach the persistent prominent New Job Assigned banner for workers
+const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const [pendingJobs, setPendingJobs] = useState<any[]>([]);
+
+  const fetchPending = async () => {
+    if (!user || user.role !== 'worker') return;
+    try {
+      const res = await api.get('/jobs');
+      const unread = res.data.filter((j: any) => j.status === 'pending' || j.status === 'accepted');
+      setPendingJobs(unread);
+    } catch (err) {
+      console.error('Failed to fetch pending jobs:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPending();
+
+    const handleSocketUpdate = (e: Event) => {
+      fetchPending();
+    };
+
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => window.removeEventListener('socket-update', handleSocketUpdate);
+  }, [user]);
+
+  const activeJob = pendingJobs[0];
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+      {activeJob && (
+        <div className="sticky top-[72px] z-30 w-full px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-md transition-all duration-300">
+          <div className="max-w-7xl mx-auto flex items-center justify-between bg-slate-50/50 dark:bg-slate-955/30 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3.5 space-x-3 text-left relative overflow-hidden">
+            {/* Green Left Accent Box */}
+            <div className="relative h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-md">
+              <Briefcase className="h-6 w-6" />
+              {/* Orange NEW Badge */}
+              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white font-extrabold text-[7.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow animate-pulse">
+                NEW
+              </span>
+            </div>
+
+            {/* Info Text */}
+            <div className="flex-1 min-w-0 text-xs pl-1">
+              <h4 className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wide flex items-center space-x-1.5">
+                <span>New Job Assigned</span>
+              </h4>
+              <div className="font-extrabold text-slate-850 dark:text-white truncate text-[11px] mt-0.5">
+                {activeJob.title} • Job #{activeJob._id.slice(-4).toUpperCase()}
+              </div>
+              <p className="text-[10px] text-slate-455 mt-1 leading-tight truncate">
+                👤 {activeJob.clientName} | 📍 {activeJob.address || 'N/A'}
+              </p>
+              <p className="text-[9.5px] text-slate-400 mt-0.5 font-bold">
+                ⏰ Scheduled: {activeJob.date} {activeJob.timeSlot}
+              </p>
+            </div>
+
+            {/* View Job Action Button */}
+            <button
+              onClick={() => {
+                window.location.href = `/worker/jobs?startJobId=${activeJob._id}`;
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider px-4 py-2.5 shadow transition-all active:scale-95 shrink-0 cursor-pointer"
+            >
+              View Job
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="w-full">
+        {children}
+      </div>
+    </div>
   );
 };
 
@@ -564,7 +642,9 @@ const App: React.FC = () => {
                 path="/worker"
                 element={
                   <ProtectedRoute allowedRole="worker">
-                    <WorkerHome />
+                    <WorkerPortalWrapper>
+                      <WorkerHome />
+                    </WorkerPortalWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -572,7 +652,9 @@ const App: React.FC = () => {
                 path="/worker/jobs"
                 element={
                   <ProtectedRoute allowedRole="worker">
-                    <WorkerJobs />
+                    <WorkerPortalWrapper>
+                      <WorkerJobs />
+                    </WorkerPortalWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -580,7 +662,9 @@ const App: React.FC = () => {
                 path="/worker/attendance"
                 element={
                   <ProtectedRoute allowedRole="worker">
-                    <WorkerAttendance />
+                    <WorkerPortalWrapper>
+                      <WorkerAttendance />
+                    </WorkerPortalWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -588,7 +672,9 @@ const App: React.FC = () => {
                 path="/worker/salary"
                 element={
                   <ProtectedRoute allowedRole="worker">
-                    <WorkerSalary />
+                    <WorkerPortalWrapper>
+                      <WorkerSalary />
+                    </WorkerPortalWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -596,7 +682,9 @@ const App: React.FC = () => {
                 path="/worker/profile"
                 element={
                   <ProtectedRoute allowedRole="worker">
-                    <WorkerProfile />
+                    <WorkerPortalWrapper>
+                      <WorkerProfile />
+                    </WorkerPortalWrapper>
                   </ProtectedRoute>
                 }
               />
