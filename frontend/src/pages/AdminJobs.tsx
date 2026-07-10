@@ -653,7 +653,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 md:px-6 lg:px-8">
       
       {/* Header */}
       <div className="flex items-center justify-between">
