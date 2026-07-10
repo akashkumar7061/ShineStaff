@@ -126,12 +126,16 @@ export const createJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
-    // Send push notification to worker
+    // Send detailed push notification to worker
     sendPushNotification(
       workerId.toString(),
-      'New Job Assigned! 🧹',
-      `You have been assigned to: "${title}" (${company})`,
-      '/worker/jobs'
+      `${company} Job Alert! 🧹`,
+      `Job: ${title}
+Client: ${clientName}
+Address: 📍 ${address || 'N/A'}
+Slot: ⏰ ${timeSlot || 'N/A'}
+Priority: 🔥 High Priority`,
+      `/worker/jobs?startJobId=${job._id}`
     );
 
     const populatedJob = await Job.findById(job._id).populate('workerId');
@@ -213,11 +217,13 @@ export const startJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
-    // Send push notification to admins
+    // Send detailed push notification to admins
     sendPushToAdmins(
-      'Job Started! 🚗',
-      `Worker ${workerName} has started: "${job.title}" (${job.company})`,
-      '/admin/jobs'
+      `🟢 Clean In Progress: ${job.company}`,
+      `Worker: ${workerName}
+Client: ${job.clientName}
+Job: ${job.title}`,
+      '/admin'
     );
 
     // Send real-time notifications
@@ -373,11 +379,21 @@ Before/After photos uploaded successfully.`;
 
     await sendWhatsAppAlert(adminPhone, alertMsg);
 
-    // Send push notification to admins
+    // Calculate total duration and send detailed completed push notification to admins
+    const diffMs = new Date().getTime() - new Date(job.startedAt || new Date()).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    const durationStr = hrs > 0 ? `${hrs}h ${remainingMins}m` : `${mins}m`;
+    const endTimeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
     sendPushToAdmins(
-      'Job Completed! ✅',
-      `Worker ${workerName} completed: "${job.title}" (${job.company})`,
-      '/admin/jobs'
+      `✅ Cleanup Completed: ${job.company}`,
+      `Worker: ${workerName}
+Client: ${job.clientName}
+Time: ${endTimeStr} (Took ${durationStr})
+Job: ${job.title}`,
+      '/admin'
     );
 
     // Socket alert to admins and worker
@@ -626,6 +642,12 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    sendPushToAdmins(
+      `🟡 Job Accepted: ${job.company}`,
+      `Worker ${worker.name} accepted job "${job.title}" for client ${job.clientName}.`,
+      '/admin'
+    );
+
     res.status(200).json({ message: 'Job accepted successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -662,6 +684,12 @@ export const rejectJob = async (req: AuthRequest, res: Response) => {
         job
       });
     }
+
+    sendPushToAdmins(
+      `🚨 Job Rejected: ${job.company}`,
+      `Worker ${worker.name} rejected job "${job.title}" for client ${job.clientName}.`,
+      '/admin'
+    );
 
     res.status(200).json({ message: 'Job rejected successfully', job });
   } catch (error: any) {
