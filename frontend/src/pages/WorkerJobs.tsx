@@ -393,15 +393,14 @@ const WorkerJobs: React.FC = () => {
                                 <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
                                   {job.company}
                                 </span>
-
-                                {job.fuelKmsTravelled > 0 && (
-                                  <div className="flex items-center space-x-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold text-[10px] tracking-wide uppercase mt-0.5">
-                                    <span>⛽</span>
-                                    <span>{job.fuelKmsTravelled} KM Travel</span>
-                                    <span className="text-emerald-300 dark:text-emerald-700">|</span>
-                                    <span>Allowance: ₹{job.fuelAllowance}</span>
-                                  </div>
-                                )}
+                                {job.fuelKmsTravelled !== undefined && (
+                                   <div className="flex items-center space-x-1.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2.5 py-1 rounded-xl border border-violet-500/20 font-extrabold text-[9px] tracking-wide uppercase mt-1 w-fit">
+                                     <span>⛽</span>
+                                     <span>{job.fuelKmsTravelled} KM Fuel</span>
+                                     <span className="text-violet-300 dark:text-violet-750">|</span>
+                                     <span>₹{job.fuelAllowance || 0}</span>
+                                   </div>
+                                 )}
                               </div>
                             </div>
                           </td>
@@ -556,6 +555,14 @@ const WorkerJobs: React.FC = () => {
                   <div className="pb-1.5 mb-1.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Collect from Client:</span>
                     <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm bg-emerald-500/10 px-2 py-0.5 rounded">₹{selectedJob.price}</span>
+                  </div>
+                )}
+                {selectedJob.fuelKmsTravelled !== undefined && (
+                  <div className="pb-1.5 mb-1.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">⛽ Fuel Allowance KMs:</span>
+                    <span className="font-extrabold text-violet-500 dark:text-violet-400 text-xs bg-violet-500/10 px-2.5 py-1 rounded-lg">
+                      {selectedJob.fuelKmsTravelled} KM (₹{selectedJob.fuelAllowance || 0})
+                    </span>
                   </div>
                 )}
                 <div className="pb-1 border-b border-slate-200 dark:border-slate-800 flex flex-col pt-1.5 space-y-1">
