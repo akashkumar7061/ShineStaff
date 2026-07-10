@@ -24,6 +24,36 @@ import {
 import { useTheme } from '../context/ThemeContext';
 
 
+const ActiveJobTimer: React.FC<{ startedAt?: string | Date }> = ({ startedAt }) => {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!startedAt) return;
+    const startTime = new Date(startedAt).getTime();
+    
+    const update = () => {
+      setSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+    };
+    
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  const format = (sec: number) => {
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <span className="font-mono font-black text-amber-500 text-sm animate-pulse">
+      ⏱️ {format(seconds)}
+    </span>
+  );
+};
+
 const WorkerHome: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -271,6 +301,19 @@ const WorkerHome: React.FC = () => {
                         <span className="text-slate-450 font-bold uppercase tracking-wider text-[9px]">Collect from Client:</span>
                         <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm">₹{jobsSummary.active.price}</span>
                       </div>
+                  )}
+
+                  {/* Separate section for live elapsed time taken */}
+                  {jobsSummary.active.startedAt && (
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-150/40 dark:border-slate-855/40 text-left flex justify-between items-center mt-2.5">
+                      <div className="space-y-0.5">
+                        <span className="block text-[8px] font-black text-violet-500 uppercase tracking-widest">
+                          ⏱️ Elapsed Work Duration
+                        </span>
+                        <span className="text-[10px] text-slate-450">Active clean time counter:</span>
+                      </div>
+                      <ActiveJobTimer startedAt={jobsSummary.active.startedAt} />
+                    </div>
                   )}
 
                   {/* Visual Tracker map */}

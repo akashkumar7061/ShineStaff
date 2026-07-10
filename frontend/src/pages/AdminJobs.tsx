@@ -47,6 +47,28 @@ const getTodayString = () => {
 };
 
 const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!job.startedAt) return;
+    const startTime = new Date(job.startedAt).getTime();
+    
+    const update = () => {
+      setSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+    };
+    
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [job.startedAt]);
+
+  const format = (sec: number) => {
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   const startTimeStr = job.startedAt 
     ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : 'N/A';
@@ -75,9 +97,22 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-600 dark:text-slate-350">
+      {/* Separate section for live elapsed time taken */}
+      <div className="bg-slate-900 text-white p-3 rounded-xl border border-slate-800 flex justify-between items-center shadow-inner mt-2">
+        <div className="space-y-0.5 text-left">
+          <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+            ⏱️ WORK TIMELINE COUNTER
+          </span>
+          <span className="text-[9.5px] text-slate-400 font-medium">Time elapsed since start:</span>
+        </div>
+        <span className="text-sm font-mono font-black text-emerald-400 tracking-wider animate-pulse-slow shrink-0">
+          {format(seconds)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-650 dark:text-slate-350">
         <div className="flex items-center space-x-2">
-          <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
+          <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-750 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
             {job.workerId?.avatar ? (
               <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
@@ -116,7 +151,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedJobPhotos, setSelectedJobPhotos] = useState<any>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -448,9 +482,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         type === 'JOB_DELETED'
       ) {
         fetchJobsAndWorkers();
-        if (type === 'JOB_STARTED' || type === 'JOB_COMPLETED') {
-          setShowNotifications(true);
-        }
       }
     };
     window.addEventListener('socket-update', handleSocketUpdate);
@@ -625,67 +656,19 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex items-center justify-between relative">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Job Scheduling Board</h2>
           <p className="text-xs text-slate-400 mt-0.5">Assign tasks, track status timelines, and review photo compliance logs</p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          {/* Real-time Notifications Bell */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className={`p-3 rounded-custom border transition-all cursor-pointer relative ${
-                showNotifications
-                  ? 'bg-secondary/10 border-secondary text-secondary'
-                  : 'bg-white dark:bg-slate-900 border-slate-205 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850'
-              }`}
-              title="Real-time Job Activities"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {jobs.filter((j) => j.status === 'started').length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[9px] font-bold text-white animate-pulse">
-                  {jobs.filter((j) => j.status === 'started').length}
-                </span>
-              )}
-            </button>
-
-            {/* FLOATING REAL-TIME NOTIFICATIONS PANEL */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-2xl shadow-2xl z-[9999] overflow-hidden text-left animate-scale-up">
-                <div className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-850 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    🔔 Live Job Activities ({jobs.filter((j) => j.status === 'started').length})
-                  </span>
-                  <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
-                </div>
-                
-                <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
-                  {jobs.filter((j) => j.status === 'started').length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-xs">
-                      No active cleanup jobs running currently.
-                    </div>
-                  ) : (
-                    jobs.filter((j) => j.status === 'started').map((activeJob) => (
-                      <LiveActiveJobBanner key={activeJob._id} job={activeJob} />
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => { resetForm(); setCreateModalOpen(true); }}
-            className="btn-blue-gradient flex items-center space-x-2 rounded-custom px-4 py-3.5 text-xs font-bold"
-          >
-            <Plus className="h-4.5 w-4.5" />
-            <span>Assign New Cleanup</span>
-          </button>
-        </div>
+        <button
+          onClick={() => { resetForm(); setCreateModalOpen(true); }}
+          className="btn-blue-gradient flex items-center space-x-2 rounded-custom px-4 py-3.5 text-xs font-bold"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          <span>Assign New Cleanup</span>
+        </button>
       </div>
 
       {/* Tabs */}
