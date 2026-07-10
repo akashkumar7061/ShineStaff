@@ -120,7 +120,8 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       location,
       fuelKmsTravelled: kms,
       fuelAllowance: fuelAllowance,
-      status: 'pending'
+      status: 'pending',
+      notificationSentAt: new Date()
     });
 
     await job.save();
@@ -188,7 +189,7 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     const worker = await User.findById(req.user.id);
     const workerName = worker ? worker.name : 'Worker';
 
-    if (job.status !== 'pending') {
+    if (job.status !== 'pending' && job.status !== 'accepted') {
       return res.status(400).json({ message: 'Job has already been started or processed' });
     }
 
@@ -589,6 +590,97 @@ export const updateJobFuel = async (req: AuthRequest, res: Response) => {
     await job.save();
 
     res.status(200).json({ message: 'Fuel KMs updated successfully', job });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const acceptJob = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  try {
+    const job = await Job.findById(id).populate('workerId');
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+    const worker: any = job.workerId;
+    if (worker._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'This job is not assigned to you' });
+    }
+    job.status = 'accepted';
+    job.acceptedAt = new Date();
+    await job.save();
+
+    // Notify admin
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'JOB_ACCEPTED',
+        message: `Job "${job.title}" accepted by worker ${worker.name}.`,
+        jobId: job._id,
+        workerName: worker.name,
+        acceptedAt: job.acceptedAt,
+        job
+      });
+    }
+
+    res.status(200).json({ message: 'Job accepted successfully', job });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const rejectJob = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  try {
+    const job = await Job.findById(id).populate('workerId');
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+    const worker: any = job.workerId;
+    if (worker._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'This job is not assigned to you' });
+    }
+    job.status = 'rejected';
+    job.rejectedAt = new Date();
+    await job.save();
+
+    // Notify admin
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'JOB_REJECTED',
+        message: `Job "${job.title}" rejected by worker ${worker.name}.`,
+        jobId: job._id,
+        workerName: worker.name,
+        rejectedAt: job.rejectedAt,
+        job
+      });
+    }
+
+    res.status(200).json({ message: 'Job rejected successfully', job });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const logNotificationDelivered = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+    if (!job.notificationDeliveredAt) {
+      job.notificationDeliveredAt = new Date();
+      await job.save();
+    }
+    res.status(200).json({ message: 'Notification delivery timestamp logged', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

@@ -36,8 +36,11 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
   };
 
   const startTimeStr = job.startedAt 
-    ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     : 'N/A';
+
+  const lat = job.workerId?.currentLocation?.lat;
+  const lng = job.workerId?.currentLocation?.lng;
 
   return (
     <div className="rounded-2xl border border-emerald-500/30 bg-white dark:bg-slate-900/60 p-4 space-y-3.5 shadow-md relative overflow-hidden text-slate-800 dark:text-white text-xs">
@@ -45,21 +48,21 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
       
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center space-x-2.5">
-          <div className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-500 text-white animate-pulse shadow-sm text-xs shrink-0">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-500 text-white animate-pulse shadow-sm text-sm shrink-0">
             🟢
           </div>
           <div className="text-left min-w-0">
             <span className="text-[8px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest block">
-              ⚡ JOB STARTED
+              ⚡ LIVE CLEAN IN PROGRESS
             </span>
-            <span className="font-bold text-slate-800 dark:text-white truncate block">
-              {job.title} ({job.company})
+            <span className="font-extrabold text-slate-800 dark:text-white truncate block">
+              {job.title}
             </span>
           </div>
         </div>
 
-        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl px-2.5 py-1 font-black text-[9px] uppercase tracking-wider shrink-0">
-          In Progress
+        <div className="bg-emerald-550/10 text-emerald-600 dark:text-emerald-405 border border-emerald-555/20 rounded-xl px-2.5 py-1 font-black text-[9px] uppercase tracking-wider shrink-0 animate-pulse">
+          Work In Progress
         </div>
       </div>
 
@@ -76,9 +79,9 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-600 dark:text-slate-350">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-650 dark:text-slate-350">
         <div className="flex items-center space-x-2">
-          <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
+          <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-805 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
             {job.workerId?.avatar ? (
               <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
@@ -91,14 +94,172 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
         </div>
 
         <div>
-          <span className="text-slate-455 block text-[9px]">Client: <strong className="text-slate-700 dark:text-slate-205">{job.clientName || 'N/A'}</strong></span>
-          <span className="text-slate-455 block text-[9px] truncate mt-0.5">Address: <strong className="text-slate-700 dark:text-slate-205">📍 {job.address || 'N/A'}</strong></span>
+          <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Client Customer</span>
+          <span className="font-bold text-slate-850 dark:text-slate-150 truncate block">
+            👤 {job.clientName || 'N/A'}
+          </span>
         </div>
       </div>
 
+      <div className="text-[11px] text-slate-655 dark:text-slate-350 space-y-1 pt-1 text-left">
+        <div>
+          <span className="block text-[8px] text-slate-400 uppercase tracking-widest text-left">Service Address</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 block text-left truncate leading-tight">📍 {job.address || 'N/A'}</span>
+        </div>
+        
+        {lat && lng ? (
+          <div className="pt-1.5 flex items-center space-x-1.5 text-blue-500 font-extrabold text-[9.5px]">
+            <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping shrink-0" />
+            <span>Live Location: {lat.toFixed(5)}, {lng.toFixed(5)}</span>
+          </div>
+        ) : (
+          <div className="pt-1.5 text-slate-450 text-[9px] font-medium text-left">
+            🛰️ Live GPS tracking inactive
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 mt-1">
-        <span className="text-slate-455">Slot: <strong className="text-slate-700 dark:text-slate-200">{job.timeSlot || 'N/A'}</strong></span>
-        <span className="text-emerald-500 font-extrabold">Start: {startTimeStr}</span>
+        <span className="text-slate-455">Slot: <strong className="text-slate-750 dark:text-slate-200">{job.timeSlot || 'N/A'}</strong></span>
+        <span className="text-emerald-500 font-extrabold">Started At: {startTimeStr}</span>
+      </div>
+    </div>
+  );
+};
+
+const AcceptedJobBanner: React.FC<{ job: any }> = ({ job }) => {
+  const acceptTimeStr = job.acceptedAt 
+    ? new Date(job.acceptedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    : 'N/A';
+
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-white dark:bg-slate-900/60 p-4 space-y-3.5 shadow-md relative overflow-hidden text-slate-800 dark:text-white text-xs">
+      <div className="absolute top-0 right-0 h-24 w-24 bg-amber-550/5 rounded-full blur-2xl" />
+      
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center space-x-2.5">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-500 text-white animate-pulse shadow-sm text-sm shrink-0">
+            🟡
+          </div>
+          <div className="text-left min-w-0">
+            <span className="text-[8px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest block">
+              ⚡ WORKER ACCEPTED
+            </span>
+            <span className="font-extrabold text-slate-850 dark:text-white truncate block">
+              {job.title} ({job.company})
+            </span>
+          </div>
+        </div>
+        <div className="bg-amber-500/10 text-amber-600 dark:text-amber-450 border border-amber-500/20 rounded-xl px-2.5 py-1 font-black text-[9px] uppercase tracking-wider shrink-0 animate-pulse">
+          Accepted
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-650 dark:text-slate-350">
+        <div className="flex items-center space-x-2.5">
+          <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
+            {job.workerId?.avatar ? (
+              <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
+            )}
+          </div>
+          <div>
+            <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Assigned Worker</span>
+            <span className="font-bold text-slate-850 dark:text-slate-150 truncate">
+              {job.workerId?.name || 'Unassigned'}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Client Customer</span>
+          <span className="font-bold text-slate-850 dark:text-slate-150 truncate block">
+            👤 {job.clientName || 'N/A'}
+          </span>
+        </div>
+      </div>
+
+      <div className="text-[11px] text-slate-655 dark:text-slate-350 text-left">
+        <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Service Address</span>
+        <span className="font-bold text-slate-800 dark:text-slate-200 block truncate leading-tight">📍 {job.address || 'N/A'}</span>
+      </div>
+
+      <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 mt-1">
+        <span className="text-slate-450">Scheduled Slot: <strong className="text-slate-750 dark:text-slate-200">{job.timeSlot || 'N/A'}</strong></span>
+        <span className="text-amber-500 font-extrabold">Accepted At: {acceptTimeStr}</span>
+      </div>
+    </div>
+  );
+};
+
+const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
+  const completeTimeStr = job.completedAt 
+    ? new Date(job.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    : 'N/A';
+
+  const formatDuration = () => {
+    if (!job.startedAt || !job.completedAt) return 'N/A';
+    const diffMs = new Date(job.completedAt).getTime() - new Date(job.startedAt).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    
+    if (hrs > 0) {
+      return `${hrs} hr ${remainingMins} min`;
+    }
+    return `${mins} min`;
+  };
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/25 bg-white dark:bg-slate-900/60 p-4 space-y-3.5 shadow-sm relative overflow-hidden text-slate-800 dark:text-white text-xs">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center space-x-2.5">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-450 shadow-sm text-sm shrink-0">
+            ✓
+          </div>
+          <div className="text-left min-w-0">
+            <span className="text-[8px] font-black text-emerald-650 dark:text-emerald-400 uppercase tracking-widest block">
+              ✅ CLEANUP COMPLETED
+            </span>
+            <span className="font-extrabold text-slate-800 dark:text-white truncate block">
+              {job.title}
+            </span>
+          </div>
+        </div>
+        <div className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 rounded-xl px-2.5 py-1 font-black text-[9px] uppercase tracking-wider shrink-0">
+          Completed
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-650 dark:text-slate-350">
+        <div className="flex items-center space-x-2.5">
+          <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
+            {job.workerId?.avatar ? (
+              <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
+            )}
+          </div>
+          <div>
+            <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Worker</span>
+            <span className="font-bold text-slate-850 dark:text-slate-150 truncate">
+              {job.workerId?.name || 'Worker'}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Total Time Taken</span>
+          <span className="font-bold text-emerald-500 dark:text-emerald-400 block mt-0.5">
+            ⏱️ {formatDuration()}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 mt-1">
+        <span className="text-slate-450">Completed At: <strong className="text-slate-755 dark:text-slate-200">{completeTimeStr}</strong></span>
+        <span className="text-slate-450">Client: <strong className="text-slate-755 dark:text-slate-200">{job.clientName}</strong></span>
       </div>
     </div>
   );
@@ -172,7 +333,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
         type === 'JOB_STARTED' || 
         type === 'JOB_CREATED' || 
         type === 'JOB_CANCELLED' || 
-        type === 'JOB_DELETED'
+        type === 'JOB_DELETED' ||
+        type === 'JOB_ACCEPTED' ||
+        type === 'JOB_REJECTED'
       ) {
         fetchDashboardData();
       }
@@ -210,17 +373,64 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   return (
     <div className="space-y-8">
       
-      {/* Real-time Live Jobs Notification Section */}
-      {jobsList.filter((j: any) => j.status === 'started').length > 0 && (
-        <div className="glass-card p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-violet-500 dark:text-violet-400 font-black text-xs uppercase tracking-widest">
-            <span className="animate-pulse">🔔 Live Active Cleans In Progress ({jobsList.filter((j: any) => j.status === 'started').length})</span>
+      {/* Real-Time Operations HUD */}
+      {(jobsList.filter((j: any) => j.status === 'started' || j.status === 'accepted' || j.status === 'completed').length > 0) && (
+        <div className="glass-card p-5 space-y-6 bg-gradient-to-tr from-slate-50 to-white dark:from-slate-900/30 dark:to-slate-950/20 border border-slate-200 dark:border-slate-800 shadow-xl rounded-3xl">
+          
+          <div className="flex items-center justify-between pb-3 border-b border-slate-105 dark:border-slate-850">
+            <div className="text-left">
+              <h3 className="text-sm font-black tracking-tight text-slate-800 dark:text-white uppercase">🚀 Real-Time Operations HUD</h3>
+              <p className="text-[10px] text-slate-400">Live arpeggiating alerts, worker acceptance logs, and active stopwatch trackers</p>
+            </div>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {jobsList.filter((j: any) => j.status === 'started').map((activeJob: any) => (
-              <LiveActiveJobBanner key={activeJob._id} job={activeJob} />
-            ))}
-          </div>
+
+          {/* 1. Live active cleans in progress */}
+          {jobsList.filter((j: any) => j.status === 'started').length > 0 && (
+            <div className="space-y-3">
+              <span className="block text-[10px] font-black text-emerald-500 uppercase tracking-widest text-left">
+                🟢 Live Cleans In Progress ({jobsList.filter((j: any) => j.status === 'started').length})
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {jobsList.filter((j: any) => j.status === 'started').map((activeJob: any) => (
+                  <LiveActiveJobBanner key={activeJob._id} job={activeJob} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Worker accepted cleans awaiting start */}
+          {jobsList.filter((j: any) => j.status === 'accepted').length > 0 && (
+            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+              <span className="block text-[10px] font-black text-amber-500 uppercase tracking-widest text-left">
+                🟡 Worker Accepted & Awaiting Start ({jobsList.filter((j: any) => j.status === 'accepted').length})
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {jobsList.filter((j: any) => j.status === 'accepted').map((accJob: any) => (
+                  <AcceptedJobBanner key={accJob._id} job={accJob} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. Recently completed cleans */}
+          {jobsList.filter((j: any) => j.status === 'completed' && j.completedAt).length > 0 && (
+            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+              <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest text-left">
+                ✅ Recently Completed Cleans (Last 2)
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {jobsList
+                  .filter((j: any) => j.status === 'completed' && j.completedAt)
+                  .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+                  .slice(0, 2)
+                  .map((compJob: any) => (
+                    <RecentlyCompletedJobBanner key={compJob._id} job={compJob} />
+                  ))}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
       

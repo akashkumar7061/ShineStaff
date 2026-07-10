@@ -90,7 +90,7 @@ const WorkerHome: React.FC = () => {
       setSalaryToday(salRes.data.earnings.todayEarnings);
 
       const jobs = jobsRes.data;
-      const pendingJobs = jobs.filter((j: any) => j.status === 'pending');
+      const pendingJobs = jobs.filter((j: any) => j.status === 'pending' || j.status === 'accepted');
       const completedJobs = jobs.filter((j: any) => j.status === 'completed');
       const activeJob = jobs.find((j: any) => j.status === 'started');
 

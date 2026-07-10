@@ -159,9 +159,46 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
         setToast({ message: data.message, visible: true });
         window.dispatchEvent(new CustomEvent('socket-update', { detail: data }));
         
-        // Play admin notification sound
-        const audio = new Audio('/alert.wav');
-        audio.play().catch((err) => console.log('Admin alert autoplay blocked:', err));
+        // Play admin arpeggio notification sound
+        try {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContext) {
+            const ctx = new AudioContext();
+            const playNote = (freq: number, start: number, duration: number) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, start);
+              gain.gain.setValueAtTime(0, start);
+              gain.gain.linearRampToValueAtTime(0.35, start + 0.04);
+              gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(start);
+              osc.stop(start + duration);
+            };
+            const now = ctx.currentTime;
+            const eventType = data.type;
+            if (eventType === 'JOB_ACCEPTED') {
+              playNote(659.25, now, 0.3); // E5
+              playNote(830.61, now + 0.08, 0.3); // G#5
+              playNote(987.77, now + 0.16, 0.5); // B5
+            } else if (eventType === 'JOB_STARTED') {
+              playNote(659.25, now, 0.3); // E5
+              playNote(987.77, now + 0.12, 0.6); // B5
+            } else if (eventType === 'JOB_COMPLETED') {
+              playNote(659.25, now, 0.25);
+              playNote(830.61, now + 0.08, 0.25);
+              playNote(987.77, now + 0.16, 0.25);
+              playNote(1318.51, now + 0.24, 0.5);
+            } else {
+              // Standard alert arpeggio
+              playNote(587.33, now, 0.3);
+            }
+          }
+        } catch (err) {
+          console.log('Admin sound synthesis failed:', err);
+        }
       }
     });
 
@@ -313,6 +350,11 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   useEffect(() => {
     if (alarmJob) {
+      // 0. Log notification delivery receipt to database
+      api.put(`/jobs/${alarmJob.jobId}/delivered`).catch((err) =>
+        console.error('Failed to log notification delivery receipt:', err)
+      );
+
       // 1. Play looping unique arpeggio alert chime
       const playUniqueSound = () => {
         try {
@@ -384,7 +426,7 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
       
       {/* MOBILE PUSH NOTIFICATION ALARM OVERLAY */}
       {alarmJob && (
-        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-955/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm bg-[#182232] text-[#e2e8f0] rounded-3xl shadow-2xl p-5 space-y-4 border border-slate-800 animate-scale-up text-left">
             
             {/* Header: App icon, Title info, time, dropdown and large branch icon */}
@@ -432,16 +474,38 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
               </span>
             </div>
 
-            {/* Action buttons at the bottom (Play, Turn Off, Watch Later style links) */}
+            {/* Action buttons at the bottom (Accept, Reject, View Details links) */}
             <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-[11px] font-bold px-1">
               <button
-                onClick={() => {
-                  setAlarmJob(null);
-                  window.location.href = `/worker/jobs?startJobId=${alarmJob.jobId}&autoCamera=true`;
+                onClick={async () => {
+                  try {
+                    await api.put(`/jobs/${alarmJob.jobId}/accept`);
+                    setAlarmJob(null);
+                    setToast({ message: 'Job accepted successfully! 🧹', visible: true });
+                    window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_ACCEPTED', jobId: alarmJob.jobId } }));
+                  } catch (err) {
+                    console.error('Failed to accept job:', err);
+                  }
                 }}
                 className="text-emerald-400 hover:text-emerald-350 transition-colors uppercase tracking-wider cursor-pointer py-1"
               >
-                ⚡ Start Job
+                ✓ Accept
+              </button>
+
+              <button
+                onClick={async () => {
+                  try {
+                    await api.put(`/jobs/${alarmJob.jobId}/reject`);
+                    setAlarmJob(null);
+                    setToast({ message: 'Job rejected.', visible: true });
+                    window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_REJECTED', jobId: alarmJob.jobId } }));
+                  } catch (err) {
+                    console.error('Failed to reject job:', err);
+                  }
+                }}
+                className="text-rose-455 hover:text-rose-400 transition-colors uppercase tracking-wider cursor-pointer py-1"
+              >
+                ✕ Reject
               </button>
 
               <button
@@ -449,16 +513,9 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
                   setAlarmJob(null);
                   window.location.href = `/worker/jobs?startJobId=${alarmJob.jobId}`;
                 }}
-                className="text-slate-300 hover:text-white transition-colors uppercase tracking-wider cursor-pointer py-1"
+                className="text-slate-350 hover:text-white transition-colors uppercase tracking-wider cursor-pointer py-1"
               >
                 🔍 View Details
-              </button>
-
-              <button
-                onClick={() => setAlarmJob(null)}
-                className="text-rose-450 hover:text-rose-400 transition-colors uppercase tracking-wider cursor-pointer py-1"
-              >
-                Mute Alert
               </button>
             </div>
             

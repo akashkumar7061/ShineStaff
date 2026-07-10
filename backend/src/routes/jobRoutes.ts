@@ -8,7 +8,10 @@ import {
   cancelJob,
   deleteJob,
   updateJob,
-  updateJobFuel
+  updateJobFuel,
+  acceptJob,
+  rejectJob,
+  logNotificationDelivered
 } from '../controllers/jobController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -20,6 +23,9 @@ router.get('/', getJobs);
 router.get('/:id', getJobById);
 
 // Worker job action triggers
+router.put('/:id/accept', authorizeRoles('worker'), acceptJob);
+router.put('/:id/reject', authorizeRoles('worker'), rejectJob);
+router.put('/:id/delivered', authorizeRoles('worker'), logNotificationDelivered);
 router.put('/:id/start', authorizeRoles('worker'), startJob);
 router.put('/:id/complete', authorizeRoles('worker'), completeJob);
 router.put('/:id/fuel', authorizeRoles('worker', 'admin'), updateJobFuel);

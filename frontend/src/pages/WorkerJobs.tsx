@@ -37,7 +37,7 @@ const WorkerJobs: React.FC = () => {
 
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'started' | 'completed'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'accepted' | 'started' | 'completed'>('all');
 
   // Interactive cleanup sheet modal state
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
@@ -311,17 +311,17 @@ const WorkerJobs: React.FC = () => {
             {/* Filter Tabs & Search Bar */}
             <div className="space-y-4">
               <div className="flex space-x-1 rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-1 border border-slate-200/20">
-                {['all', 'pending', 'started', 'completed'].map((filter) => (
+                {['all', 'pending', 'accepted', 'started', 'completed'].map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter as any)}
-                    className={`flex-1 rounded-lg py-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
+                    className={`flex-1 rounded-lg py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
                       activeFilter === filter
                         ? 'bg-gradient-to-r from-secondary to-blue-500 text-white shadow-sm'
                         : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-350'
                     }`}
                   >
-                    {filter}
+                    {filter === 'started' ? 'In Progress' : filter}
                   </button>
                 ))}
               </div>
@@ -640,22 +640,53 @@ const WorkerJobs: React.FC = () => {
                 {/* Before Photo Box */}
               <div className="space-y-2">
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Before Cleaning Photo</span>
-                {tempBeforePhoto ? (
+                {selectedJob.status === 'pending' ? (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3.5 text-center max-w-sm mx-auto shadow-inner">
+                    <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">🧹 Pending Assignment Alert</span>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">Please Accept or Reject this cleanup task to unlock the work worksheet checklist.</p>
+                    <div className="flex gap-2.5 justify-center">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api.put(`/jobs/${selectedJob._id}/accept`);
+                            setSelectedJob({ ...selectedJob, status: 'accepted' });
+                            // Trigger local socket update event
+                            window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_ACCEPTED', jobId: selectedJob._id } }));
+                            alert('Job accepted! You can now snap the arrival photo to start work.');
+                          } catch (err) {
+                            console.error('Accept job error:', err);
+                          }
+                        }}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95"
+                      >
+                        ✓ Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api.put(`/jobs/${selectedJob._id}/reject`);
+                            setSelectedJob(null);
+                            window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_REJECTED', jobId: selectedJob._id } }));
+                            alert('Job rejected.');
+                          } catch (err) {
+                            console.error('Reject job error:', err);
+                          }
+                        }}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95"
+                      >
+                        ✕ Reject
+                      </button>
+                    </div>
+                  </div>
+                ) : tempBeforePhoto ? (
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow max-w-sm mx-auto">
                     <img src={tempBeforePhoto} alt="Before snap" className="w-full h-full object-cover" />
                     {selectedJob.beforePhotoGPS?.lat && (
                       <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
                         <GPSAddress lat={selectedJob.beforePhotoGPS.lat} lng={selectedJob.beforePhotoGPS.lng} className="text-white/90 max-w-[110px]" />
                       </div>
-                    )}
-                    {selectedJob.status === 'pending' && (
-                      <button
-                        type="button"
-                        onClick={triggerBeforeCapture}
-                        className="absolute bottom-2 right-2 rounded-full bg-violet-600 text-white p-1.5 shadow"
-                      >
-                        <Camera className="h-3 w-3" />
-                      </button>
                     )}
                   </div>
                 ) : (

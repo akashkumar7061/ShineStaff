@@ -16,7 +16,7 @@ export interface IJob extends Document {
     lat: number;
     lng: number;
   };
-  status: 'pending' | 'started' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'started' | 'completed' | 'cancelled';
   beforePhoto?: string;
   beforePhotoTime?: Date;
   beforePhotoGPS?: {
@@ -32,6 +32,10 @@ export interface IJob extends Document {
   };
   startedAt?: Date;
   completedAt?: Date;
+  acceptedAt?: Date;
+  rejectedAt?: Date;
+  notificationSentAt?: Date;
+  notificationDeliveredAt?: Date;
   fuelKmsTravelled?: number;
   fuelAllowance?: number;
   workerNotes?: string;
@@ -54,7 +58,7 @@ const JobSchema = new Schema<IJob>({
     lat: { type: Number },
     lng: { type: Number }
   },
-  status: { type: String, enum: ['pending', 'started', 'completed', 'cancelled'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'accepted', 'rejected', 'started', 'completed', 'cancelled'], default: 'pending' },
   beforePhoto: { type: String, default: '' },
   beforePhotoTime: { type: Date },
   beforePhotoGPS: {
@@ -70,6 +74,10 @@ const JobSchema = new Schema<IJob>({
   },
   startedAt: { type: Date },
   completedAt: { type: Date },
+  acceptedAt: { type: Date },
+  rejectedAt: { type: Date },
+  notificationSentAt: { type: Date },
+  notificationDeliveredAt: { type: Date },
   fuelKmsTravelled: { type: Number, default: 0 },
   fuelAllowance: { type: Number, default: 0 },
   workerNotes: { type: String, default: '' },
