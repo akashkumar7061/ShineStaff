@@ -79,7 +79,7 @@ const AdminMapTracking: React.FC<AdminMapTrackingProps> = ({ companyFilter }) =>
       lat: w.currentLocation.lat,
       lng: w.currentLocation.lng,
       type: 'worker' as const,
-      info: `Status: ${w.status} | Last active: ${w.lastActive ? new Date(w.lastActive).toLocaleTimeString() : 'N/A'}`
+      info: `Status: ${w.status} | Last active: ${w.lastActive ? new Date(w.lastActive).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'medium' }) : 'N/A'}`
     }));
 
   return (
