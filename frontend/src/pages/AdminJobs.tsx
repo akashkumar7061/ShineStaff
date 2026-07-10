@@ -696,11 +696,19 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
+              list="scheduling-workers-list"
               placeholder="Search by worker name..."
               value={searchWorkerName}
               onChange={(e) => setSearchWorkerName(e.target.value)}
               className="rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 pl-9 pr-3 py-2 outline-none focus:border-secondary w-full text-xs font-semibold"
             />
+            <datalist id="scheduling-workers-list">
+              {workers.map((w: any) => (
+                <option key={w._id} value={w.name}>
+                  {w.company}
+                </option>
+              ))}
+            </datalist>
           </div>
         </div>
 

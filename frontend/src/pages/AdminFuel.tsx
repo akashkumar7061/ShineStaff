@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
-import { MapPin, Check, Plus, AlertCircle, Fuel, Compass, CheckCircle2, Edit } from 'lucide-react';
+import { MapPin, Check, Plus, AlertCircle, Fuel, Compass, CheckCircle2, Edit, Search, Calendar } from 'lucide-react';
 
 interface AdminFuelProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
@@ -12,6 +12,17 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [allowance, setAllowance] = useState('100'); // default allowance
+
+  const getTodayString = () => new Date().toISOString().split('T')[0];
+  const getPastDateString = (daysAgo: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return d.toISOString().split('T')[0];
+  };
+
+  const [searchWorker, setSearchWorker] = useState('');
+  const [startDate, setStartDate] = useState(getPastDateString(30));
+  const [endDate, setEndDate] = useState(getTodayString());
 
   // Edit Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -154,8 +165,19 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
   };
 
   const filteredLogs = logs.filter((log) => {
-    if (companyFilter === 'All') return true;
-    return log.workerId?.company === companyFilter;
+    // 1. Company Filter
+    if (companyFilter !== 'All' && log.workerId?.company !== companyFilter) return false;
+    
+    // 2. Worker Name Filter
+    if (searchWorker && !log.workerId?.name?.toLowerCase().includes(searchWorker.toLowerCase())) return false;
+    
+    // 3. Date Range Filter
+    if (log.date) {
+      if (startDate && log.date < startDate) return false;
+      if (endDate && log.date > endDate) return false;
+    }
+    
+    return true;
   });
 
   return (
@@ -177,6 +199,49 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
           <Plus className="h-4 w-4" />
           <span>Add Travel Log</span>
         </button>
+      </div>
+
+      {/* Search and Filters Bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs mt-2">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Worker Search */}
+          <div className="relative min-w-[200px] w-full md:w-auto text-left">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              list="fuel-workers-list"
+              placeholder="Search by worker name..."
+              value={searchWorker}
+              onChange={(e) => setSearchWorker(e.target.value)}
+              className="rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 pl-9 pr-3 py-2 outline-none focus:border-secondary w-full text-xs font-semibold"
+            />
+            <datalist id="fuel-workers-list">
+              {workers.map((w: any) => (
+                <option key={w._id} value={w.name}>
+                  {w.company}
+                </option>
+              ))}
+            </datalist>
+          </div>
+        </div>
+
+        {/* Date Range Selectors */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          <span className="text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Date Range:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+          />
+          <span className="text-slate-400 font-bold">➔</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+          />
+        </div>
       </div>
 
       {/* Logs Table */}
