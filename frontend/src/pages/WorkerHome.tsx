@@ -23,38 +23,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-const ActiveJobTimer: React.FC<{ startedAt?: string | Date }> = ({ startedAt }) => {
-  const [seconds, setSeconds] = useState(0);
-
-  useEffect(() => {
-    if (!startedAt) return;
-    const startTime = new Date(startedAt).getTime();
-    
-    const update = () => {
-      setSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
-    };
-    
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [startedAt]);
-
-  const format = (sec: number) => {
-    const hrs = Math.floor(sec / 3600);
-    const mins = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="flex flex-col items-center bg-slate-900 dark:bg-slate-950 text-white px-3.5 py-2 rounded-xl border border-slate-800 shadow-md">
-      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Elapsed Time</span>
-      <span className="text-sm font-mono font-black text-amber-500 tracking-wider mt-0.5 animate-pulse-slow">
-        ⏱️ {format(seconds)}
-      </span>
-    </div>
-  );
-};
 
 const WorkerHome: React.FC = () => {
   const { user, logout } = useAuth();
@@ -297,11 +265,6 @@ const WorkerHome: React.FC = () => {
                         )
                       </p>
                     </div>
-                    {jobsSummary.active.startedAt && (
-                      <div className="shrink-0">
-                        <ActiveJobTimer startedAt={jobsSummary.active.startedAt} />
-                      </div>
-                    )}
                   </div>
                   {jobsSummary.active.price !== undefined && (
                       <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center text-xs">

@@ -47,92 +47,57 @@ const getTodayString = () => {
 };
 
 const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
-  const [secondsElapsed, setSecondsElapsed] = useState(0);
-
-  useEffect(() => {
-    if (!job.startedAt) return;
-    const startTime = new Date(job.startedAt).getTime();
-    
-    const updateTimer = () => {
-      const now = Date.now();
-      const diff = Math.max(0, Math.floor((now - startTime) / 1000));
-      setSecondsElapsed(diff);
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [job.startedAt]);
-
-  const formatDuration = (totalSeconds: number) => {
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const startTimeStr = job.startedAt 
     ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : 'N/A';
 
   return (
-    <div className="rounded-3xl border-2 border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/15 backdrop-blur-md p-5 space-y-4 shadow-lg border-dashed relative overflow-hidden text-slate-800 dark:text-white">
-      <div className="absolute top-0 right-0 h-32 w-32 bg-emerald-500/10 rounded-full blur-3xl" />
+    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/5 backdrop-blur-md p-4 space-y-3 shadow-md relative overflow-hidden text-slate-800 dark:text-white text-xs">
+      <div className="absolute top-0 right-0 h-24 w-24 bg-emerald-500/5 rounded-full blur-2xl" />
       
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3.5">
-          <div className="flex items-center justify-center h-9 w-9 rounded-full bg-emerald-500 text-white animate-bounce shadow-md text-base">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center space-x-2.5">
+          <div className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-500 text-white animate-pulse shadow-sm text-xs shrink-0">
             🟢
           </div>
-          <div className="text-left">
-            <span className="text-[9px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest block animate-pulse">
-              ⚡ LIVE JOB IN PROGRESS
+          <div className="text-left min-w-0">
+            <span className="text-[8px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest block">
+              ⚡ JOB STARTED
             </span>
-            <span className="text-sm font-black text-slate-800 dark:text-white leading-tight">
-              {job.title} ({job.company})
+            <span className="font-bold text-slate-800 dark:text-white truncate block">
+              {job.title}
             </span>
           </div>
         </div>
 
-        <div className="bg-slate-900 text-white rounded-2xl px-5 py-3 shadow-md flex flex-col items-center border border-slate-800">
-          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Live Elapsed Timer</span>
-          <span className="text-xl font-mono font-black text-emerald-400 tracking-widest mt-0.5 animate-pulse-slow">
-            ⏱️ {formatDuration(secondsElapsed)}
-          </span>
+        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl px-2.5 py-1 font-black text-[9px] uppercase tracking-wider shrink-0">
+          In Progress
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-3 border-t border-slate-200 dark:border-slate-800/80 text-left text-xs text-slate-650 dark:text-slate-350">
-        <div className="flex items-center space-x-2.5">
-          <div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-750 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0">
+      <div className="grid grid-cols-1 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-600 dark:text-slate-350">
+        <div className="flex items-center space-x-2">
+          <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
             {job.workerId?.avatar ? (
               <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
               <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
             )}
           </div>
-          <div className="min-w-0">
-            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block">Assigned Worker</span>
-            <span className="font-bold text-slate-800 dark:text-slate-150 truncate block">{job.workerId?.name || 'Unassigned'}</span>
-          </div>
+          <span className="font-bold text-slate-850 dark:text-slate-150 truncate">
+            {job.workerId?.name || 'Unassigned'}
+          </span>
         </div>
 
         <div>
-          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block">Client Customer</span>
-          <span className="font-bold text-slate-800 dark:text-slate-150 block">{job.clientName || 'N/A'}</span>
-        </div>
-
-        <div className="md:col-span-2">
-          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block">Service Address</span>
-          <span className="font-bold text-slate-800 dark:text-slate-150 truncate block leading-snug" title={job.address}>
-            📍 {job.address || 'N/A'}
-          </span>
+          <span className="text-slate-450 block text-[9px]">Client: <strong className="text-slate-700 dark:text-slate-205">{job.clientName || 'N/A'}</strong></span>
+          <span className="text-slate-450 block text-[9px] truncate mt-0.5">Address: <strong className="text-slate-700 dark:text-slate-205">📍 {job.address || 'N/A'}</strong></span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] bg-white/50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-        <span className="text-slate-450 font-medium">Commence Time Slot: <strong className="text-slate-700 dark:text-slate-200">{job.timeSlot || 'N/A'}</strong></span>
-        <span className="text-emerald-500 font-extrabold">Start Time: {startTimeStr}</span>
+      <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 mt-1">
+        <span className="text-slate-455">Slot: <strong className="text-slate-700 dark:text-slate-200">{job.timeSlot || 'N/A'}</strong></span>
+        <span className="text-emerald-500 font-extrabold">Start: {startTimeStr}</span>
       </div>
     </div>
   );
@@ -151,6 +116,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedJobPhotos, setSelectedJobPhotos] = useState<any>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -482,6 +448,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         type === 'JOB_DELETED'
       ) {
         fetchJobsAndWorkers();
+        if (type === 'JOB_STARTED' || type === 'JOB_COMPLETED') {
+          setShowNotifications(true);
+        }
       }
     };
     window.addEventListener('socket-update', handleSocketUpdate);
@@ -656,29 +625,68 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Job Scheduling Board</h2>
           <p className="text-xs text-slate-400 mt-0.5">Assign tasks, track status timelines, and review photo compliance logs</p>
         </div>
 
-        <button
-          onClick={() => { resetForm(); setCreateModalOpen(true); }}
-          className="btn-blue-gradient flex items-center space-x-2 rounded-custom px-4 py-3.5 text-xs font-bold"
-        >
-          <Plus className="h-4.5 w-4.5" />
-          <span>Assign New Cleanup</span>
-        </button>
-      </div>
+        <div className="flex items-center space-x-3">
+          {/* Real-time Notifications Bell */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`p-3 rounded-custom border transition-all cursor-pointer relative ${
+                showNotifications
+                  ? 'bg-secondary/10 border-secondary text-secondary'
+                  : 'bg-white dark:bg-slate-900 border-slate-205 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850'
+              }`}
+              title="Real-time Job Activities"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {jobs.filter((j) => j.status === 'started').length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[9px] font-bold text-white animate-pulse">
+                  {jobs.filter((j) => j.status === 'started').length}
+                </span>
+              )}
+            </button>
 
-      {/* Live Active Job Progress Banners */}
-      {jobs.filter((j) => j.status === 'started').length > 0 && (
-        <div className="space-y-4 mb-4">
-          {jobs.filter((j) => j.status === 'started').map((activeJob) => (
-            <LiveActiveJobBanner key={activeJob._id} job={activeJob} />
-          ))}
+            {/* FLOATING REAL-TIME NOTIFICATIONS PANEL */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-2xl shadow-2xl z-[9999] overflow-hidden text-left animate-scale-up">
+                <div className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-850 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    🔔 Live Job Activities ({jobs.filter((j) => j.status === 'started').length})
+                  </span>
+                  <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+                </div>
+                
+                <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+                  {jobs.filter((j) => j.status === 'started').length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs">
+                      No active cleanup jobs running currently.
+                    </div>
+                  ) : (
+                    jobs.filter((j) => j.status === 'started').map((activeJob) => (
+                      <LiveActiveJobBanner key={activeJob._id} job={activeJob} />
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => { resetForm(); setCreateModalOpen(true); }}
+            className="btn-blue-gradient flex items-center space-x-2 rounded-custom px-4 py-3.5 text-xs font-bold"
+          >
+            <Plus className="h-4.5 w-4.5" />
+            <span>Assign New Cleanup</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Tabs */}
       <div className="flex space-x-1 border-b border-slate-200 dark:border-slate-800 pb-px">
