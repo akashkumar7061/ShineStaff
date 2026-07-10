@@ -288,7 +288,7 @@ const WorkerJobs: React.FC = () => {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 z-10 relative">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-4 md:px-6 lg:px-8 py-4 z-10 relative">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/worker')}
@@ -301,7 +301,7 @@ const WorkerJobs: React.FC = () => {
       </header>
 
       {/* Main Grid Container */}
-      <main className="p-6 max-w-7xl mx-auto space-y-6 z-10 relative">
+      <main className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-6 z-10 relative">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           

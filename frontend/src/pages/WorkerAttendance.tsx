@@ -65,7 +65,7 @@ const WorkerAttendance: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[250px] w-[250px] rounded-full bg-teal-400/10 dark:bg-teal-600/5 blur-[80px]" />
       </div>
 
-      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-205 dark:border-slate-805 bg-white dark:bg-slate-900 px-6 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-slate-205 dark:border-slate-805 bg-white dark:bg-slate-900 px-4 md:px-6 lg:px-8 py-4 box-border overflow-x-hidden transition-all duration-300 ${sidebarOpen ? 'left-64' : 'left-0'}`}>
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -92,7 +92,7 @@ const WorkerAttendance: React.FC = () => {
       {/* Main Content Shift Wrapper */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
         {/* Main Content */}
-        <main className="relative z-10 max-w-full px-6 py-8 pt-24 space-y-6">
+        <main className="relative z-10 max-w-full px-4 md:px-6 lg:px-8 py-8 pt-24 space-y-6">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">My Attendance Register</h2>
             <p className="text-xs text-slate-400 mt-1">Verify your daily present and late wage logs approved by admin</p>
