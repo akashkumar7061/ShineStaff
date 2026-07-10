@@ -34,6 +34,7 @@ const getTodayString = () => {
 
 const WorkerJobs: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +110,23 @@ const WorkerJobs: React.FC = () => {
     }
   }, [jobs, loading]);
 
+  const markJobViewed = (jobId: string) => {
+    if (!user) return;
+    try {
+      const key = `shinestaff_viewed_jobs_${user.id}`;
+      const viewed = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!viewed.includes(jobId)) {
+        localStorage.setItem(key, JSON.stringify([...viewed, jobId]));
+      }
+    } catch {
+      // ignore storage errors
+    }
+  };
+
   const openWorkSheet = (job: any) => {
+    if (job.status === 'pending' || job.status === 'accepted') {
+      markJobViewed(job._id);
+    }
     setSelectedJob(job);
     setTempBeforePhoto(job.beforePhoto || null);
     if (job.afterPhotos && job.afterPhotos.length > 0) {
@@ -640,47 +657,7 @@ const WorkerJobs: React.FC = () => {
                 {/* Before Photo Box */}
               <div className="space-y-2">
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Before Cleaning Photo</span>
-                {selectedJob.status === 'pending' ? (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3.5 text-center max-w-sm mx-auto shadow-inner">
-                    <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">🧹 Pending Assignment Alert</span>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">Please Accept or Reject this cleanup task to unlock the work worksheet checklist.</p>
-                    <div className="flex gap-2.5 justify-center">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await api.put(`/jobs/${selectedJob._id}/accept`);
-                            setSelectedJob({ ...selectedJob, status: 'accepted' });
-                            // Trigger local socket update event
-                            window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_ACCEPTED', jobId: selectedJob._id } }));
-                            alert('Job accepted! You can now snap the arrival photo to start work.');
-                          } catch (err) {
-                            console.error('Accept job error:', err);
-                          }
-                        }}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95"
-                      >
-                        ✓ Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await api.put(`/jobs/${selectedJob._id}/reject`);
-                            setSelectedJob(null);
-                            window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_REJECTED', jobId: selectedJob._id } }));
-                            alert('Job rejected.');
-                          } catch (err) {
-                            console.error('Reject job error:', err);
-                          }
-                        }}
-                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95"
-                      >
-                        ✕ Reject
-                      </button>
-                    </div>
-                  </div>
-                ) : tempBeforePhoto ? (
+                {tempBeforePhoto ? (
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow max-w-sm mx-auto">
                     <img src={tempBeforePhoto} alt="Before snap" className="w-full h-full object-cover" />
                     {selectedJob.beforePhotoGPS?.lat && (

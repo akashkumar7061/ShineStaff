@@ -107,11 +107,30 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
   const { user } = useAuth();
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
 
+  const getViewedStorageKey = () => `shinestaff_viewed_jobs_${user?.id}`;
+
+  const getViewedIds = (): string[] => {
+    try {
+      return JSON.parse(localStorage.getItem(getViewedStorageKey()) || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const markJobViewed = (jobId: string) => {
+    const viewed = getViewedIds();
+    if (!viewed.includes(jobId)) {
+      localStorage.setItem(getViewedStorageKey(), JSON.stringify([...viewed, jobId]));
+    }
+    setPendingJobs((prev) => prev.filter((j) => j._id !== jobId));
+  };
+
   const fetchPending = async () => {
     if (!user || user.role !== 'worker') return;
     try {
       const res = await api.get('/jobs');
-      const unread = res.data.filter((j: any) => j.status === 'pending' || j.status === 'accepted');
+      const viewed = getViewedIds();
+      const unread = res.data.filter((j: any) => (j.status === 'pending' || j.status === 'accepted') && !viewed.includes(j._id));
       setPendingJobs(unread);
     } catch (err) {
       console.error('Failed to fetch pending jobs:', err);
@@ -171,6 +190,7 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
             {/* View Job Action Button */}
             <button
               onClick={() => {
+                markJobViewed(activeJob._id);
                 window.location.href = `/worker/jobs?startJobId=${activeJob._id}`;
               }}
               className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider px-4 py-2.5 shadow transition-all active:scale-95 shrink-0 cursor-pointer"
