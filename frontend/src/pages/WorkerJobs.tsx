@@ -388,6 +388,7 @@ const WorkerJobs: React.FC = () => {
                     <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                       <tr>
                         <th className="px-6 py-4">Job Details</th>
+                        <th className="px-6 py-4">Fuel Allowance</th>
                         <th className="px-6 py-4">Client Info</th>
                         <th className="px-6 py-4">Clean Date & Time</th>
                         <th className="px-6 py-4">Amount</th>
@@ -396,12 +397,12 @@ const WorkerJobs: React.FC = () => {
                         <th className="px-6 py-4 text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-855">
                       {filteredJobs.map((job) => (
                         <tr
                           key={job._id}
                           onClick={() => openWorkSheet(job)}
-                          className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors cursor-pointer"
+                          className="hover:bg-slate-55/30 dark:hover:bg-slate-900/30 transition-colors cursor-pointer"
                         >
                           {/* Job Details */}
                           <td className="px-6 py-5">
@@ -412,16 +413,23 @@ const WorkerJobs: React.FC = () => {
                                 <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
                                   {job.company}
                                 </span>
-                                {job.fuelKmsTravelled !== undefined && (
-                                   <div className="flex items-center space-x-1.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2.5 py-1 rounded-xl border border-violet-500/20 font-extrabold text-[9px] tracking-wide uppercase mt-1 w-fit">
-                                     <span>⛽</span>
-                                     <span>{job.fuelKmsTravelled} KM Fuel</span>
-                                     <span className="text-violet-300 dark:text-violet-750">|</span>
-                                     <span>₹{job.fuelAllowance || 0}</span>
-                                   </div>
-                                 )}
                               </div>
                             </div>
+                          </td>
+
+                          {/* Fuel Allowance */}
+                          <td className="px-6 py-5">
+                            {job.fuelKmsTravelled !== undefined && job.fuelKmsTravelled > 0 ? (
+                              <div className="flex flex-col space-y-1.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-3 py-2 rounded-xl border border-violet-500/20 font-extrabold text-[10px] tracking-wide uppercase w-fit text-left">
+                                <div className="flex items-center space-x-1.5">
+                                  <span>⛽</span>
+                                  <span>{job.fuelKmsTravelled} KM</span>
+                                </div>
+                                <span className="text-[9px] text-slate-400 font-medium lowercase">Allowance: ₹{job.fuelAllowance || 0}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
                           </td>
 
                           <td className="px-6 py-5">

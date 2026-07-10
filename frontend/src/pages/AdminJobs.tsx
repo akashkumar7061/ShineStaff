@@ -758,6 +758,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                 <tr>
                   <th className="px-6 py-4">Job Details</th>
+                  <th className="px-6 py-4">Fuel Allowance</th>
                   <th className="px-6 py-4">Assigned Worker</th>
                   <th className="px-6 py-4">Client Info</th>
                   <th className="px-6 py-4">Clean Date & Time</th>
@@ -782,15 +783,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                             {job.company}
                           </span>
 
-                          {job.fuelKmsTravelled > 0 && (
-                            <div className="flex items-center space-x-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold text-[10px] tracking-wide uppercase mt-0.5">
-                              <span>⛽</span>
-                              <span>{job.fuelKmsTravelled} KM Travel</span>
-                              <span className="text-emerald-300 dark:text-emerald-700">|</span>
-                              <span>Allowance: ₹{job.fuelAllowance}</span>
-                            </div>
-                          )}
-
                           {job.status === 'cancelled' && job.cancelReason && (
                             <div className="flex items-start space-x-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-450 px-3 py-2 rounded-xl border border-rose-500/20 font-semibold text-[10px] mt-1 max-w-xs text-left leading-relaxed">
                               <span className="font-extrabold">🚫 Cancel Reason:</span>
@@ -799,6 +791,21 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           )}
                         </div>
                       </div>
+                    </td>
+
+                    {/* Fuel Allowance */}
+                    <td className="px-6 py-5">
+                      {job.fuelKmsTravelled > 0 ? (
+                        <div className="flex flex-col space-y-1.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-3 py-2 rounded-xl border border-violet-500/20 font-extrabold text-[10px] tracking-wide uppercase w-fit text-left">
+                          <div className="flex items-center space-x-1.5">
+                            <span>⛽</span>
+                            <span>{job.fuelKmsTravelled} KM</span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 font-medium lowercase">Allowance: ₹{job.fuelAllowance || 0}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
                     </td>
 
                     {/* Assigned Worker */}
