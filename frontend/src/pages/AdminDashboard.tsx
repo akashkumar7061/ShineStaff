@@ -373,67 +373,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   return (
     <div className="space-y-8">
       
-      {/* Real-Time Operations HUD */}
-      {(jobsList.filter((j: any) => j.status === 'started' || j.status === 'accepted' || j.status === 'completed').length > 0) && (
-        <div className="glass-card p-5 space-y-6 bg-gradient-to-tr from-slate-50 to-white dark:from-slate-900/30 dark:to-slate-950/20 border border-slate-200 dark:border-slate-800 shadow-xl rounded-3xl">
-          
-          <div className="flex items-center justify-between pb-3 border-b border-slate-105 dark:border-slate-850">
-            <div className="text-left">
-              <h3 className="text-sm font-black tracking-tight text-slate-800 dark:text-white uppercase">🚀 Real-Time Operations HUD</h3>
-              <p className="text-[10px] text-slate-400">Live arpeggiating alerts, worker acceptance logs, and active stopwatch trackers</p>
-            </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-          </div>
-
-          {/* 1. Live active cleans in progress */}
-          {jobsList.filter((j: any) => j.status === 'started').length > 0 && (
-            <div className="space-y-3">
-              <span className="block text-[10px] font-black text-emerald-500 uppercase tracking-widest text-left">
-                🟢 Live Cleans In Progress ({jobsList.filter((j: any) => j.status === 'started').length})
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {jobsList.filter((j: any) => j.status === 'started').map((activeJob: any) => (
-                  <LiveActiveJobBanner key={activeJob._id} job={activeJob} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 2. Worker accepted cleans awaiting start */}
-          {jobsList.filter((j: any) => j.status === 'accepted').length > 0 && (
-            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-              <span className="block text-[10px] font-black text-amber-500 uppercase tracking-widest text-left">
-                🟡 Worker Accepted & Awaiting Start ({jobsList.filter((j: any) => j.status === 'accepted').length})
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {jobsList.filter((j: any) => j.status === 'accepted').map((accJob: any) => (
-                  <AcceptedJobBanner key={accJob._id} job={accJob} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 3. Recently completed cleans */}
-          {jobsList.filter((j: any) => j.status === 'completed' && j.completedAt).length > 0 && (
-            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-              <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest text-left">
-                ✅ Recently Completed Cleans (Last 2)
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {jobsList
-                  .filter((j: any) => j.status === 'completed' && j.completedAt)
-                  .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
-                  .slice(0, 2)
-                  .map((compJob: any) => (
-                    <RecentlyCompletedJobBanner key={compJob._id} job={compJob} />
-                  ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-      )}
-      
       {/* SECTION 1: Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         

@@ -23,11 +23,11 @@ import AdminSalary from './pages/AdminSalary';
 import AdminReports from './pages/AdminReports';
 import AdminSettings from './pages/AdminSettings';
 
-// New sidebar standalone pages
 import AdminAttendanceLogs from './pages/AdminAttendanceLogs';
 import AdminMapTracking from './pages/AdminMapTracking';
 import AdminProfile from './pages/AdminProfile';
 import AdminOvertime from './pages/AdminOvertime';
+import AdminOperationsHUD from './pages/AdminOperationsHUD';
 import AdminFuel from './pages/AdminFuel';
 
 const queryClient = new QueryClient();
@@ -487,6 +487,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
                       <AdminDashboard companyFilter="All" />
+                    </AdminRouteWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/operations-hud"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminRouteWrapper>
+                      <AdminOperationsHUD companyFilter="All" />
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }
