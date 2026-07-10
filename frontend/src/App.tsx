@@ -102,84 +102,10 @@ const AdminRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 };
 
-// Wrapper to attach the persistent prominent New Job Assigned banner for workers
+// Wrapper to attach worker portal page styling
 const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [pendingJobs, setPendingJobs] = useState<any[]>([]);
-
-  const fetchPending = async () => {
-    if (!user || user.role !== 'worker') return;
-    try {
-      const res = await api.get('/jobs');
-      const unread = res.data.filter((j: any) => j.status === 'pending' || j.status === 'accepted');
-      setPendingJobs(unread);
-    } catch (err) {
-      console.error('Failed to fetch pending jobs:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchPending();
-
-    const handleSocketUpdate = (e: Event) => {
-      fetchPending();
-    };
-
-    window.addEventListener('socket-update', handleSocketUpdate);
-    return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, [user]);
-
-  const activeJob = pendingJobs[0];
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
-      {activeJob && (
-        <div className="sticky top-[72px] z-30 w-full px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-md transition-all duration-300">
-          <div className="max-w-7xl mx-auto flex items-center justify-between bg-slate-50/50 dark:bg-slate-955/30 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3.5 space-x-3 text-left relative overflow-hidden">
-            {/* Green Left Accent Box with Company Logo */}
-            <div className="relative h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0 shadow-md p-1 bg-white border border-slate-200 dark:border-slate-800">
-              <img src="/logo.png" alt="Company Logo" className="h-full w-full object-contain" />
-              {/* Orange NEW Badge */}
-              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white font-extrabold text-[7.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow animate-pulse">
-                NEW
-              </span>
-            </div>
-
-            {/* Info Text */}
-            <div className="flex-1 min-w-0 text-xs pl-1 text-left">
-              <h4 className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wide flex items-center space-x-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                <span>🟢 New Job Assigned</span>
-              </h4>
-              <div className="font-black text-slate-850 dark:text-white truncate text-[11.5px] mt-0.5">
-                {activeJob.company} Services
-              </div>
-              <p className="text-[10px] text-slate-700 dark:text-slate-205 font-bold truncate mt-0.5">
-                Service: {activeJob.title} • Job #{activeJob._id.slice(-4).toUpperCase()}
-              </p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate mt-0.5">
-                Customer: {activeJob.clientName}
-              </p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate mt-0.5">
-                Location: 📍 {activeJob.address || 'N/A'}
-              </p>
-              <p className="text-[9.5px] text-slate-450 mt-0.5 font-bold">
-                Time: {activeJob.date} • {activeJob.timeSlot}
-              </p>
-            </div>
-
-            {/* View Job Action Button */}
-            <button
-              onClick={() => {
-                window.location.href = `/worker/jobs?startJobId=${activeJob._id}`;
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider px-4 py-2.5 shadow transition-all active:scale-95 shrink-0 cursor-pointer"
-            >
-              View Job
-            </button>
-          </div>
-        </div>
-      )}
       <div className="w-full">
         {children}
       </div>
@@ -209,10 +135,15 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
     socket.on('notification', (data: any) => {
       console.log('Received worker notification:', data);
-      setToast({ message: data.message, visible: true });
+      
+      // Do NOT show in-app toast notification for NEW_JOB or NEW_VISIT type assignments
+      if (data.type !== 'NEW_JOB' && data.type !== 'NEW_VISIT') {
+        setToast({ message: data.message, visible: true });
+      }
+
       window.dispatchEvent(new CustomEvent('socket-update', { detail: data }));
 
-      if (data.type === 'NEW_JOB') {
+      if (data.type === 'NEW_JOB' || data.type === 'NEW_VISIT') {
         // Play premium arpeggio sound once when app is open in foreground
         try {
           const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -243,15 +174,18 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
         }
       }
 
-      if ('Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification('ShineStaff Update', { body: data.message });
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-              new Notification('ShineStaff Update', { body: data.message });
-            }
-          });
+      // Do NOT trigger browser alert popups for NEW_JOB or NEW_VISIT type assignments
+      if (data.type !== 'NEW_JOB' && data.type !== 'NEW_VISIT') {
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification('ShineStaff Update', { body: data.message });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                new Notification('ShineStaff Update', { body: data.message });
+              }
+            });
+          }
         }
       }
     });

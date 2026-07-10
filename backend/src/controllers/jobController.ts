@@ -87,7 +87,20 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     date,
     timeSlot,
     location,
-    fuelKmsTravelled
+    fuelKmsTravelled,
+
+    alternatePhone,
+    clientEmail,
+    serviceCategory,
+    estimatedDuration,
+    priority,
+    landmark,
+    city,
+    state,
+    pincode,
+    notes,
+    specialInstructions,
+    attachments
   } = req.body;
 
   try {
@@ -105,6 +118,24 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     const kms = Number(fuelKmsTravelled) || 0;
     const fuelAllowance = kms * fuelRate;
 
+    // Generate unique Visit ID automatically
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const prefix = company === 'SofaShine' ? 'SS' : 'CC';
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const generatedVisitId = `${prefix}${dateStr}-${rand}`;
+
+    // Upload attachments to Cloudinary if provided
+    let uploadedAttachments: string[] = [];
+    if (attachments && attachments.length > 0) {
+      try {
+        uploadedAttachments = await Promise.all(
+          attachments.map((dataUrl: string) => uploadToCloudinary(dataUrl, 'visit_attachments'))
+        );
+      } catch (uploadErr) {
+        console.error('Failed to upload visit attachments to Cloudinary:', uploadErr);
+      }
+    }
+
     const job = new Job({
       title,
       description,
@@ -121,21 +152,35 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       fuelKmsTravelled: kms,
       fuelAllowance: fuelAllowance,
       status: 'pending',
-      notificationSentAt: new Date()
+      notificationSentAt: new Date(),
+
+      visitId: generatedVisitId,
+      alternatePhone: alternatePhone || '',
+      clientEmail: clientEmail || '',
+      serviceCategory: serviceCategory || '',
+      estimatedDuration: estimatedDuration || '',
+      priority: priority || 'medium',
+      landmark: landmark || '',
+      city: city || '',
+      state: state || '',
+      pincode: pincode || '',
+      notes: notes || '',
+      specialInstructions: specialInstructions || '',
+      createdBy: req.user ? req.user.id : undefined,
+      attachments: uploadedAttachments
     });
 
     await job.save();
 
-    const jobShortId = job._id.toString().slice(-4).toUpperCase();
     const companyLabel = `${company} Services`;
-    const jobCode = `Job #${company === 'SofaShine' ? 'SS' : 'CC'}${jobShortId}`;
+    const visitCode = `Visit #${generatedVisitId}`;
     const scheduledTime = `${date || 'Today'} • ${timeSlot || 'ASAP'}`;
 
-    // Send detailed push notification to worker matching specification layout
+    // Send detailed push notification to worker matching visit specification layout
     sendPushNotification(
       workerId.toString(),
-      '🔔 New Job Assigned',
-      `${companyLabel}\n${title}\n${jobCode}\nCustomer:\n${clientName}\nLocation:\n${address || 'N/A'}\nTime:\n${scheduledTime}`,
+      '🔔 New Visit Assigned',
+      `${companyLabel}\n${visitCode}\n${title}\nCustomer: ${clientName}\nCustomer Address: ${address || 'N/A'}\nVisit Date & Time: ${scheduledTime}`,
       `/worker/jobs?startJobId=${job._id}`
     );
 

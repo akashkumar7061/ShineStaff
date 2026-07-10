@@ -40,6 +40,21 @@ export interface IJob extends Document {
   fuelAllowance?: number;
   workerNotes?: string;
   cancelReason?: string;
+
+  visitId?: string;
+  alternatePhone?: string;
+  clientEmail?: string;
+  serviceCategory?: string;
+  estimatedDuration?: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  landmark?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  notes?: string;
+  specialInstructions?: string;
+  createdBy?: mongoose.Types.ObjectId;
+  attachments?: string[];
 }
 
 const JobSchema = new Schema<IJob>({
@@ -81,7 +96,22 @@ const JobSchema = new Schema<IJob>({
   fuelKmsTravelled: { type: Number, default: 0 },
   fuelAllowance: { type: Number, default: 0 },
   workerNotes: { type: String, default: '' },
-  cancelReason: { type: String, default: '' }
+  cancelReason: { type: String, default: '' },
+
+  visitId: { type: String, default: '' },
+  alternatePhone: { type: String, default: '' },
+  clientEmail: { type: String, default: '' },
+  serviceCategory: { type: String, default: '' },
+  estimatedDuration: { type: String, default: '' },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' },
+  landmark: { type: String, default: '' },
+  city: { type: String, default: '' },
+  state: { type: String, default: '' },
+  pincode: { type: String, default: '' },
+  notes: { type: String, default: '' },
+  specialInstructions: { type: String, default: '' },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  attachments: { type: [String], default: [] }
 }, {
   timestamps: true
 });
