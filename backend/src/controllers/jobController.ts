@@ -96,6 +96,15 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Assigned worker not found' });
     }
 
+    let settings = await Settings.findOne({ settingsId: 'global' });
+    if (!settings) {
+      settings = new Settings({ settingsId: 'global' });
+      await settings.save();
+    }
+    const fuelRate = settings.fuelAllowanceRate || 5;
+    const kms = Number(fuelKmsTravelled) || 0;
+    const fuelAllowance = kms * fuelRate;
+
     const job = new Job({
       title,
       description,
@@ -109,7 +118,8 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       date,
       timeSlot,
       location,
-      fuelKmsTravelled: Number(fuelKmsTravelled) || 0,
+      fuelKmsTravelled: kms,
+      fuelAllowance: fuelAllowance,
       status: 'pending'
     });
 
