@@ -3,6 +3,7 @@ import TravelLog from '../models/TravelLog';
 import Job from '../models/Job';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
+import { logAudit } from '../utils/auditLog';
 
 export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   const { date, type, jobId, kms } = req.body;
@@ -111,6 +112,13 @@ export const approveTravelLog = async (req: AuthRequest, res: Response) => {
 
     await log.save();
 
+    logAudit(req, {
+      action: 'approved',
+      entityType: 'TravelLog',
+      entityId: log._id.toString(),
+      summary: `Approved travel allowance of ₹${log.allowance} for ${log.kms} km`
+    });
+
     // Notify worker via Socket
     const io = getIO();
     if (io) {
@@ -146,6 +154,13 @@ export const updateTravelLog = async (req: AuthRequest, res: Response) => {
     if (toLocation !== undefined) log.toLocation = toLocation;
 
     await log.save();
+
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'TravelLog',
+      entityId: log._id.toString(),
+      summary: `Edited travel log (${log.kms} km, allowance ₹${log.allowance})`
+    });
 
     // Notify admins and worker via Socket
     const io = getIO();
@@ -192,6 +207,13 @@ export const adminSubmitTravelLog = async (req: AuthRequest, res: Response) => {
     });
 
     await travel.save();
+
+    logAudit(req, {
+      action: 'created',
+      entityType: 'TravelLog',
+      entityId: travel._id.toString(),
+      summary: `Manually logged travel (${travel.kms} km, allowance ₹${travel.allowance}) for a worker`
+    });
 
     // Emit Socket alert
     const io = getIO();

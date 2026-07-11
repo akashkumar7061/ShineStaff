@@ -3,6 +3,7 @@ import Leave from '../models/Leave';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
+import { logAudit } from '../utils/auditLog';
 
 export const getLeaves = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
@@ -82,6 +83,13 @@ export const processLeave = async (req: AuthRequest, res: Response) => {
 
     leave.status = status;
     await leave.save();
+
+    logAudit(req, {
+      action: status === 'approved' ? 'approved' : 'rejected',
+      entityType: 'Leave',
+      entityId: leave._id.toString(),
+      summary: `${status === 'approved' ? 'Approved' : 'Rejected'} a leave request (${new Date(leave.startDate).toLocaleDateString()} - ${new Date(leave.endDate).toLocaleDateString()})`
+    });
 
     // Notify worker
     const io = getIO();

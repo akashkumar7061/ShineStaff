@@ -7,6 +7,8 @@ import Overtime from '../models/Overtime';
 import TravelLog from '../models/TravelLog';
 import SalaryRequest from '../models/SalaryRequest';
 import { uploadToCloudinary } from '../config/cloudinary';
+import { AuthRequest } from '../middleware/auth';
+import { logAudit } from '../utils/auditLog';
 
 export const getWorkers = async (req: Request, res: Response) => {
   try {
@@ -145,7 +147,7 @@ export const addWorker = async (req: Request, res: Response) => {
   }
 };
 
-export const editWorker = async (req: Request, res: Response) => {
+export const editWorker = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const {
     name,
@@ -182,13 +184,20 @@ export const editWorker = async (req: Request, res: Response) => {
 
     await worker.save();
 
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'Worker',
+      entityId: worker._id.toString(),
+      summary: `Edited worker profile for ${worker.name}`
+    });
+
     res.status(200).json({ message: 'Worker updated successfully', worker });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-export const deleteWorker = async (req: Request, res: Response) => {
+export const deleteWorker = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   try {
     const worker = await User.findById(id);
@@ -199,6 +208,14 @@ export const deleteWorker = async (req: Request, res: Response) => {
     await User.findByIdAndDelete(id);
     // Delete attendance and jobs too or keep them for history? Mongoose allows cascade if needed,
     // let's just delete the worker profile.
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'Worker',
+      entityId: id,
+      summary: `Deleted worker profile for ${worker.name}`
+    });
+
     res.status(200).json({ message: 'Worker deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

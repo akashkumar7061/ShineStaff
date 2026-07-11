@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import {
   DollarSign,
   Download,
   Calendar,
-  ArrowLeft,
   CheckCircle,
   Clock,
   Sparkles
@@ -14,7 +12,6 @@ import {
 
 const WorkerSalary: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
     return new Date().toISOString().substring(0, 7); // YYYY-MM
@@ -57,21 +54,8 @@ const WorkerSalary: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[300px] w-[300px] rounded-full bg-teal-400/15 dark:bg-teal-600/5 blur-[80px]" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-205/85 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 z-10 relative">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => navigate('/worker')}
-            className="rounded-full p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">Wages & Payouts</span>
-        </div>
-      </header>
-
       {/* Main Grid Container */}
-      <main className="p-6 max-w-4xl mx-auto space-y-6 z-10 relative">
+      <main className="p-6 pt-24 max-w-4xl mx-auto space-y-6 z-10 relative">
         
         {/* Month selector */}
         <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-custom border border-slate-100 dark:border-slate-800/80">

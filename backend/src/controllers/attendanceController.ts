@@ -4,6 +4,7 @@ import Settings from '../models/Settings';
 import User from '../models/User';
 import { uploadToCloudinary } from '../config/cloudinary';
 import { AuthRequest } from '../middleware/auth';
+import { logAudit } from '../utils/auditLog';
 
 export const getTodayAttendance = async (req: Request, res: Response) => {
   try {
@@ -113,7 +114,7 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const editAttendance = async (req: Request, res: Response) => {
+export const editAttendance = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { status, date, checkInTime } = req.body;
 
@@ -132,6 +133,13 @@ export const editAttendance = async (req: Request, res: Response) => {
 
     await attendance.save();
 
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'Attendance',
+      entityId: attendance._id.toString(),
+      summary: `Edited attendance for ${attendance.date} (status: ${attendance.status})`
+    });
+
     res.status(200).json({ message: 'Attendance updated successfully by admin', attendance });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -139,7 +147,7 @@ export const editAttendance = async (req: Request, res: Response) => {
 };
 
 // Admin can create direct manual attendance logs for a worker
-export const createManualAttendance = async (req: Request, res: Response) => {
+export const createManualAttendance = async (req: AuthRequest, res: Response) => {
   const { workerId, date, status, lateReason } = req.body;
   try {
     const existing = await Attendance.findOne({ workerId, date });
@@ -171,6 +179,14 @@ export const createManualAttendance = async (req: Request, res: Response) => {
     });
 
     await attendance.save();
+
+    logAudit(req, {
+      action: 'created',
+      entityType: 'Attendance',
+      entityId: attendance._id.toString(),
+      summary: `Manually recorded attendance for ${date} (status: ${status})`
+    });
+
     res.status(201).json({ message: 'Attendance recorded successfully', attendance });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import Settings from '../models/Settings';
 import { uploadToCloudinary } from '../config/cloudinary';
+import { AuthRequest } from '../middleware/auth';
+import { logAudit } from '../utils/auditLog';
 
 export const getSettings = async (req: Request, res: Response) => {
   try {
@@ -15,7 +17,7 @@ export const getSettings = async (req: Request, res: Response) => {
   }
 };
 
-export const updateSettings = async (req: Request, res: Response) => {
+export const updateSettings = async (req: AuthRequest, res: Response) => {
   const {
     sofaShineLogoDataUrl,
     cleanCruisersLogoDataUrl,
@@ -44,6 +46,13 @@ export const updateSettings = async (req: Request, res: Response) => {
     settings.adminEmailForAlerts = adminEmailForAlerts !== undefined ? adminEmailForAlerts : settings.adminEmailForAlerts;
 
     await settings.save();
+
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'Settings',
+      entityId: settings._id.toString(),
+      summary: 'Updated company settings'
+    });
 
     res.status(200).json({ message: 'Settings updated successfully', settings });
   } catch (error: any) {

@@ -6,6 +6,7 @@ import SalaryRequest from '../models/SalaryRequest';
 import { generatePayslipPDF } from '../utils/pdfGenerator';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
+import { logAudit } from '../utils/auditLog';
 
 export const getSalaryDashboard = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
@@ -230,6 +231,13 @@ export const recordPayout = async (req: AuthRequest, res: Response) => {
 
     await payout.save();
 
+    logAudit(req, {
+      action: 'created',
+      entityType: 'SalaryRequest',
+      entityId: payout._id.toString(),
+      summary: `Recorded a payout of ₹${payout.amount} for ${worker.name} (${payout.month})`
+    });
+
     res.status(201).json({ message: 'Payout recorded successfully', payout });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -253,6 +261,13 @@ export const processSalaryRequest = async (req: AuthRequest, res: Response) => {
     request.status = status;
     request.processedAt = new Date();
     await request.save();
+
+    logAudit(req, {
+      action: status === 'approved' ? 'approved' : 'rejected',
+      entityType: 'SalaryRequest',
+      entityId: request._id.toString(),
+      summary: `${status === 'approved' ? 'Approved' : 'Rejected'} a ₹${request.amount} salary request`
+    });
 
     // Socket alert to worker
     const io = getIO();
@@ -356,6 +371,14 @@ export const deleteSalaryRequest = async (req: AuthRequest, res: Response) => {
     if (!request) {
       return res.status(404).json({ message: 'Payment record not found' });
     }
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'SalaryRequest',
+      entityId: request._id.toString(),
+      summary: `Deleted a ₹${request.amount} payment record (${request.month})`
+    });
+
     res.status(200).json({ message: 'Payment record deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -385,6 +408,14 @@ export const updateSalaryRequest = async (req: AuthRequest, res: Response) => {
     if (month !== undefined) request.month = month;
 
     await request.save();
+
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'SalaryRequest',
+      entityId: request._id.toString(),
+      summary: `Edited payment record (amount: ₹${request.amount}, status: ${request.status})`
+    });
+
     res.status(200).json({ message: 'Payment record updated successfully', request });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

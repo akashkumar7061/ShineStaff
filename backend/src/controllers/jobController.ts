@@ -9,6 +9,7 @@ import { sendMail } from '../config/mailer';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { sendPushNotification, sendPushToAdmins } from '../utils/push';
+import { logAudit } from '../utils/auditLog';
 
 // Calculate distance between two GPS coordinates in KM (Haversine formula)
 const calculateDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -443,6 +444,13 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
     job.cancelReason = reason || 'No reason specified';
     await job.save();
 
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'Job',
+      entityId: job._id.toString(),
+      summary: `Cancelled job "${job.title}"${reason ? ` (reason: ${reason})` : ''}`
+    });
+
     try {
       const populatedJob = await Job.findById(job._id).populate('workerId');
       const io = getIO();
@@ -470,13 +478,20 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteJob = async (req: Request, res: Response) => {
+export const deleteJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   try {
     const job = await Job.findByIdAndDelete(id);
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
     }
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'Job',
+      entityId: id,
+      summary: `Deleted job "${job.title}"`
+    });
 
     try {
       const io = getIO();
@@ -502,7 +517,7 @@ export const deleteJob = async (req: Request, res: Response) => {
   }
 };
 
-export const updateJob = async (req: Request, res: Response) => {
+export const updateJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const {
     title,
@@ -560,6 +575,13 @@ export const updateJob = async (req: Request, res: Response) => {
     }
 
     await job.save();
+
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'Job',
+      entityId: job._id.toString(),
+      summary: `Edited job "${job.title}"`
+    });
 
     try {
       const io = getIO();

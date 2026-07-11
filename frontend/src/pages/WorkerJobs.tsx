@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CameraCapture from '../components/CameraCapture';
@@ -10,7 +9,6 @@ import {
   Clock,
   MapPin,
   Play,
-  ArrowLeft,
   Navigation,
   Info,
   ShieldAlert,
@@ -33,8 +31,6 @@ const getTodayString = () => {
 };
 
 const WorkerJobs: React.FC = () => {
-  const navigate = useNavigate();
-
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'accepted' | 'started' | 'completed'>('all');
@@ -287,21 +283,8 @@ const WorkerJobs: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[300px] w-[300px] rounded-full bg-teal-400/10 blur-[80px]" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-4 md:px-6 lg:px-8 py-4 z-10 relative">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => navigate('/worker')}
-            className="rounded-full p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">My Cleanups</span>
-        </div>
-      </header>
-
       {/* Main Grid Container */}
-      <main className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-6 z-10 relative">
+      <main className="px-4 md:px-6 lg:px-8 py-6 pt-24 max-w-7xl mx-auto space-y-6 z-10 relative">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           

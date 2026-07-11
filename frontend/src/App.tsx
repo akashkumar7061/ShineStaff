@@ -12,9 +12,11 @@ import Login from './pages/Login';
 import WorkerHome from './pages/WorkerHome';
 import WorkerJobs from './pages/WorkerJobs';
 import WorkerAttendance from './pages/WorkerAttendance';
+import WorkerLeaves from './pages/WorkerLeaves';
 import WorkerSalary from './pages/WorkerSalary';
 import WorkerProfile from './pages/WorkerProfile';
 
+import WorkerLayout from './components/WorkerLayout';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminWorkers from './pages/AdminWorkers';
@@ -22,6 +24,7 @@ import AdminJobs from './pages/AdminJobs';
 import AdminSalary from './pages/AdminSalary';
 import AdminReports from './pages/AdminReports';
 import AdminSettings from './pages/AdminSettings';
+import AdminAuditLog from './pages/AdminAuditLog';
 
 // New sidebar standalone pages
 import AdminAttendanceLogs from './pages/AdminAttendanceLogs';
@@ -132,7 +135,7 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
   const activeJob = pendingJobs[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+    <WorkerLayout>
       {activeJob && (
         <div className="sticky top-[72px] z-30 w-full px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-md transition-all duration-300">
           <div className="max-w-7xl mx-auto flex items-center justify-between bg-slate-50/50 dark:bg-slate-955/30 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3.5 space-x-3 text-left relative overflow-hidden">
@@ -183,7 +186,7 @@ const WorkerPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="w-full">
         {children}
       </div>
-    </div>
+    </WorkerLayout>
   );
 };
 
@@ -526,6 +529,16 @@ const App: React.FC = () => {
                 }
               />
               <Route
+                path="/worker/leaves"
+                element={
+                  <ProtectedRoute allowedRole="worker">
+                    <WorkerPortalWrapper>
+                      <WorkerLeaves />
+                    </WorkerPortalWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/worker/salary"
                 element={
                   <ProtectedRoute allowedRole="worker">
@@ -634,6 +647,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
                       <AdminReports />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/audit-log"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
+                      <AdminAuditLog />
                     </AdminLayout>
                   </ProtectedRoute>
                 }

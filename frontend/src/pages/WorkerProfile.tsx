@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import {
@@ -11,7 +10,6 @@ import {
   CreditCard,
   Briefcase,
   DollarSign,
-  ArrowLeft,
   Camera,
   Save,
   CheckCircle2,
@@ -20,7 +18,6 @@ import {
 
 const WorkerProfile: React.FC = () => {
   const { user, refreshUser } = useAuth();
-  const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
@@ -84,21 +81,8 @@ const WorkerProfile: React.FC = () => {
         <div className="absolute bottom-10 right-10 h-[300px] w-[300px] rounded-full bg-teal-400/10 blur-[90px]" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-45 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-8 py-4">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => navigate('/worker')}
-            className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="font-extrabold text-slate-900 dark:text-slate-100 text-lg tracking-tight">Worker Directory Profile</span>
-        </div>
-      </header>
-
       {/* Full-bleed Widescreen Workspace (w-full px-8 instead of max-w-4xl mx-auto) */}
-      <main className="relative p-6 sm:p-8 w-full space-y-6 z-10">
+      <main className="relative p-6 sm:p-8 pt-24 w-full space-y-6 z-10">
         
         {successMsg && (
           <div className="rounded-xl bg-success/15 border border-success/20 p-4 text-xs text-success flex items-center space-x-2 animate-fade-in shadow-sm">

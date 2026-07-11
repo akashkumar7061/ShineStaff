@@ -18,7 +18,8 @@ import {
   Map,
   CheckCircle2,
   Clock,
-  MapPin
+  MapPin,
+  History
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -49,6 +50,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: 'Overtime Charges', path: '/admin/overtime', icon: Clock, color: 'text-amber-500' },
     { name: 'Fuel & Travel Logs', path: '/admin/fuel', icon: MapPin, color: 'text-rose-500' },
     { name: 'Export Reports', path: '/admin/reports', icon: FileSpreadsheet, color: 'text-cyan-500' },
+    { name: 'Audit Log', path: '/admin/audit-log', icon: History, color: 'text-fuchsia-500' },
     { name: 'Company Settings', path: '/admin/settings', icon: SettingsIcon, color: 'text-slate-500' }
   ];
 

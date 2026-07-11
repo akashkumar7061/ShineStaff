@@ -2,6 +2,7 @@ import { Response } from 'express';
 import Overtime from '../models/Overtime';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { logAudit } from '../utils/auditLog';
 
 export const createOvertime = async (req: AuthRequest, res: Response) => {
   const { workerId, date, hours, ratePerHour, reason } = req.body;
@@ -24,6 +25,14 @@ export const createOvertime = async (req: AuthRequest, res: Response) => {
     });
 
     await overtime.save();
+
+    logAudit(req, {
+      action: 'created',
+      entityType: 'Overtime',
+      entityId: overtime._id.toString(),
+      summary: `Logged ${hours}h overtime (₹${totalCharges}) for ${worker.name}`
+    });
+
     res.status(201).json({ message: 'Overtime charge recorded successfully', overtime });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -61,6 +70,14 @@ export const deleteOvertime = async (req: AuthRequest, res: Response) => {
     if (!overtime) {
       return res.status(404).json({ message: 'Overtime log not found' });
     }
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'Overtime',
+      entityId: overtime._id.toString(),
+      summary: `Deleted a ${overtime.hours}h overtime record (₹${overtime.totalCharges})`
+    });
+
     res.status(200).json({ message: 'Overtime record deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

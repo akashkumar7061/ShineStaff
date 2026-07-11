@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { ArrowLeft, Send, Calendar, ListTodo, HelpCircle } from 'lucide-react';
+import { Send, Calendar, ListTodo, HelpCircle } from 'lucide-react';
 
 const WorkerLeaves: React.FC = () => {
-  const navigate = useNavigate();
-
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,21 +55,8 @@ const WorkerLeaves: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[300px] w-[300px] rounded-full bg-teal-400/15 dark:bg-teal-600/5 blur-[80px]" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4 z-10 relative">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => navigate('/worker')}
-            className="rounded-full p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">Leave Tracker</span>
-        </div>
-      </header>
-
       {/* Responsive Grid Container */}
-      <main className="p-6 max-w-7xl mx-auto space-y-6 z-10 relative">
+      <main className="p-6 pt-24 max-w-7xl mx-auto space-y-6 z-10 relative">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
