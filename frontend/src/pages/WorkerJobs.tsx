@@ -50,8 +50,7 @@ const WorkerJobs: React.FC = () => {
   const [tempKms, setTempKms] = useState('');
   const [tempNotes, setTempNotes] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [startDate, setStartDate] = useState(getTodayString());
-  const [endDate, setEndDate] = useState(getTodayString());
+  const [filterDate, setFilterDate] = useState(getTodayString());
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchJobs = async () => {
@@ -253,11 +252,8 @@ const WorkerJobs: React.FC = () => {
       return false;
     }
 
-    // 2. Date Range Filter
-    if (startDate && job.date && job.date < startDate) {
-      return false;
-    }
-    if (endDate && job.date && job.date > endDate) {
+    // 2. Date Filter
+    if (filterDate && job.date && job.date !== filterDate) {
       return false;
     }
 
@@ -309,7 +305,7 @@ const WorkerJobs: React.FC = () => {
                 ))}
               </div>
 
-              {/* Search and Date Range Filters bar */}
+              {/* Search and Date Filters bar */}
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs">
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                   {/* Job/Client Search */}
@@ -325,31 +321,27 @@ const WorkerJobs: React.FC = () => {
                   </div>
                 </div>
 
-                 {/* Date Range Selector */}
-                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                   <span className="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Date Range:</span>
-                   <input
-                     type="date"
-                     value={startDate}
-                     onChange={(e) => setStartDate(e.target.value)}
-                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
-                   />
-                   <span className="text-slate-400 font-bold">➔</span>
-                   <input
-                     type="date"
-                     value={endDate}
-                     onChange={(e) => setEndDate(e.target.value)}
-                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
-                   />
-                   {(startDate || endDate) && (
-                     <button
-                       onClick={() => { setStartDate(''); setEndDate(''); }}
-                       className="text-xs text-danger font-semibold hover:underline px-2"
-                     >
-                       Clear
-                     </button>
-                   )}
-                 </div>
+                {/* Single Date Selector */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                  <span className="text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Clean Date:</span>
+                  </span>
+                  <input
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                  />
+                  {filterDate && (
+                    <button
+                      onClick={() => setFilterDate('')}
+                      className="text-xs text-danger font-semibold hover:underline px-2 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
