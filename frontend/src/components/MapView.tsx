@@ -25,6 +25,7 @@ const MapView: React.FC<MapViewProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const hasFittedBoundsRef = useRef(false);
   
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,11 +140,12 @@ const MapView: React.FC<MapViewProps> = ({
       markersRef.current.push(marker);
     });
 
-    // Fit map bounds if there are multiple markers
-    if (pins.length > 0) {
+    // Fit map bounds only once initially so camera doesn't jump on high-frequency updates
+    if (pins.length > 0 && !hasFittedBoundsRef.current) {
       const bounds = L.latLngBounds(pins.map(p => [p.lat, p.lng]).filter(coords => coords[0] && coords[1]));
       if (bounds.isValid()) {
         mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+        hasFittedBoundsRef.current = true;
       }
     }
   }, [pins, leafletLoaded]);

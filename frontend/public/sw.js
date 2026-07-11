@@ -23,8 +23,8 @@ self.addEventListener('push', (event) => {
     renotify: true,
     requireInteraction: true,
     actions: [
-      { action: 'view_job', title: '⚡ View Job details' },
-      { action: 'dismiss', title: 'Dismiss' }
+      { action: 'view_visit', title: '⚡ View Visit' },
+      { action: 'start_visit', title: '🚀 Start Visit' }
     ]
   };
 

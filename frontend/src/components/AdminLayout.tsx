@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   Clock,
   MapPin,
-  History
+  History,
+  Activity
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -42,6 +43,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, color: 'text-blue-500' },
+    { name: 'Operations HUD', path: '/admin/operations-hud', icon: Activity, color: 'text-rose-500' },
     { name: "Worker Management Logs", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
     { name: 'Worker Management', path: '/admin/workers', icon: Users, color: 'text-indigo-500' },

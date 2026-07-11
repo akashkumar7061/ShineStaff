@@ -70,30 +70,17 @@ const AdminMapTracking: React.FC<AdminMapTrackingProps> = ({ companyFilter }) =>
       })
     : jobsList;
 
-  // Aggregate map pins
-  const mapPins = [
-    ...filteredWorkers
-      .filter((w) => w.currentLocation?.lat && w.currentLocation?.lng)
-      .map((w) => ({
-        id: w._id,
-        name: w.name,
-        lat: w.currentLocation.lat,
-        lng: w.currentLocation.lng,
-        type: 'worker' as const,
-        info: `Status: ${w.status} | Last active: ${w.lastActive ? new Date(w.lastActive).toLocaleTimeString() : 'N/A'}`
-      })),
-    ...filteredJobs
-      .filter((j) => j.location?.lat && j.location?.lng)
-      .map((j) => ({
-        id: j._id,
-        name: j.title,
-        lat: j.location.lat,
-        lng: j.location.lng,
-        type: 'job' as const,
-        company: j.company,
-        info: `Client: ${j.clientName} | Worker: ${(j.workerId as any)?.name || 'N/A'} | Status: ${j.status.toUpperCase()}`
-      }))
-  ];
+  // Aggregate map pins - ONLY showing worker locations as requested by the user
+  const mapPins = filteredWorkers
+    .filter((w) => w.currentLocation?.lat && w.currentLocation?.lng)
+    .map((w) => ({
+      id: w._id,
+      name: w.name,
+      lat: w.currentLocation.lat,
+      lng: w.currentLocation.lng,
+      type: 'worker' as const,
+      info: `Status: ${w.status} | Last active: ${w.lastActive ? new Date(w.lastActive).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'medium' }) : 'N/A'}`
+    }));
 
   return (
     <div className="space-y-6">
