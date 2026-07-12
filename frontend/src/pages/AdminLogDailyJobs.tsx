@@ -21,6 +21,12 @@ import {
 } from 'lucide-react';
 
 const getTodayString = () => new Date().toISOString().split('T')[0];
+const getFirstDayOfMonthString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+};
 
 const AdminLogDailyJobs: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -28,6 +34,8 @@ const AdminLogDailyJobs: React.FC = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'completed' | 'approvals'>('completed');
   const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState(getFirstDayOfMonthString());
+  const [endDate, setEndDate] = useState(getTodayString());
 
   // --- Quick Job Logger Form State ---
   const [jobTitle, setJobTitle] = useState('');
@@ -163,14 +171,15 @@ const AdminLogDailyJobs: React.FC = () => {
 
   // --- Excel Download Handler ---
   const handleDownloadSpreadsheet = (filterType: 'all' | 'completed' | 'cancelled') => {
-    let filtered = [...jobs];
+    let rangeJobs = jobs.filter(j => j.date && j.date >= startDate && j.date <= endDate);
+    let filtered = [...rangeJobs];
     let filename = 'all_work_logs.xls';
 
     if (filterType === 'completed') {
-      filtered = jobs.filter(j => j.status === 'completed');
+      filtered = rangeJobs.filter(j => j.status === 'completed');
       filename = 'completed_work_logs.xls';
     } else if (filterType === 'cancelled') {
-      filtered = jobs.filter(j => j.status === 'cancelled');
+      filtered = rangeJobs.filter(j => j.status === 'cancelled');
       filename = 'cancelled_work_logs.xls';
     }
 
@@ -260,8 +269,15 @@ const AdminLogDailyJobs: React.FC = () => {
 
   const getFilteredList = () => {
     const activeList = activeTab === 'completed' ? completedJobs : approvalJobs;
-    if (!searchQuery) return activeList;
-    return activeList.filter(
+    
+    // Filter by date range first
+    let filtered = activeList.filter(j => {
+      if (!j.date) return false;
+      return j.date >= startDate && j.date <= endDate;
+    });
+
+    if (!searchQuery) return filtered;
+    return filtered.filter(
       j =>
         (j.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (j.clientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -450,7 +466,7 @@ const AdminLogDailyJobs: React.FC = () => {
           <div className="glass-card p-6">
             
             {/* Toolbar Desk */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800 gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800 gap-4">
               
               {/* Tab Navigation */}
               <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1 text-[11px] font-bold">
@@ -478,16 +494,37 @@ const AdminLogDailyJobs: React.FC = () => {
                 </button>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-60">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search title, client, crew..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full text-[11px] font-semibold pl-8 pr-3 py-2 rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
-                />
+              {/* Date Range & Search Container */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                {/* Date Inputs */}
+                <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-500">
+                  <span className="uppercase tracking-wider">From:</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="text-[10px] font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-1.5 outline-none focus:border-sky-500 dark:color-scheme-dark dark:text-white"
+                  />
+                  <span className="uppercase tracking-wider">To:</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="text-[10px] font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-1.5 outline-none focus:border-sky-500 dark:color-scheme-dark dark:text-white"
+                  />
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-56">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search logs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full text-[11px] font-semibold pl-8 pr-3 py-2 rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 outline-none focus:border-sky-500 dark:text-white"
+                  />
+                </div>
               </div>
             </div>
 
