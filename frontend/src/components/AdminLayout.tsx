@@ -248,8 +248,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
         </header>
 
-        {/* Dynamic child content */}
-        <main className={`flex-1 p-6 md:p-8 pt-24 md:pt-28 overflow-y-auto bg-slate-50/50 dark:bg-slate-955/50 transition-all duration-300 ${sidebarOpen ? 'pl-64 lg:pl-0' : 'pl-0'}`}>
+        <main className="flex-1 px-4 sm:px-6 md:p-8 pt-24 md:pt-28 overflow-y-auto bg-slate-50/50 dark:bg-slate-955/50 transition-all duration-300">
           {children}
         </main>
       </div>

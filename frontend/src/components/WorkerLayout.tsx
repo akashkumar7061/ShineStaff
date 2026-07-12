@@ -160,8 +160,8 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* Main Content Shift Wrapper */}
-      <div className={`relative z-10 transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
+      {/* Main Content Wrapper */}
+      <div className="relative z-10 transition-all duration-300 px-4 sm:px-6">
         {children}
       </div>
     </div>
