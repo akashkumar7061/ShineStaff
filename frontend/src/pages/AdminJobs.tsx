@@ -231,7 +231,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setTitle(job.title || '');
     setDescription(job.description || '');
     setCompany(job.company || 'SofaShine');
-    setWorkerId(job.workerId?._id || job.workerId || '');
+    setWorkerId(job.workerId?._id || job.workerId || 'unassigned');
     setClientName(job.clientName || '');
     setClientPhone(job.clientPhone || '');
     setAddress(job.address || '');
@@ -1218,6 +1218,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Assign Crew Worker</label>
                   <select required value={workerId} onChange={(e) => setWorkerId(e.target.value)} className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary">
                     <option value="">-- Choose Worker --</option>
+                    <option value="unassigned">Unassigned (Omit Crew Assignment)</option>
                     {workers.map((w) => (
                       <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
                     ))}

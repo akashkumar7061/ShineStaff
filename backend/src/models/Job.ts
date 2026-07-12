@@ -65,7 +65,7 @@ const JobSchema = new Schema<IJob>({
   title: { type: String, required: true },
   description: { type: String, default: '' },
   company: { type: String, enum: ['SofaShine', 'CleanCruisers'], required: true },
-  workerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  workerId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
   clientName: { type: String, required: true },
   clientPhone: { type: String, required: true },
   address: { type: String, default: '' },

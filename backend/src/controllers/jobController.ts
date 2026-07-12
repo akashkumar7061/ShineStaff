@@ -108,9 +108,12 @@ export const createJob = async (req: AuthRequest, res: Response) => {
   } = req.body;
 
   try {
-    const worker = await User.findById(workerId);
-    if (!worker || worker.role !== 'worker') {
-      return res.status(404).json({ message: 'Assigned worker not found' });
+    let worker = null;
+    if (workerId && workerId !== 'unassigned') {
+      worker = await User.findById(workerId);
+      if (!worker || worker.role !== 'worker') {
+        return res.status(404).json({ message: 'Assigned worker not found' });
+      }
     }
 
     let settings = await Settings.findOne({ settingsId: 'global' });
@@ -144,7 +147,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       title,
       description,
       company,
-      workerId,
+      workerId: worker && worker._id ? worker._id : undefined,
       clientName,
       clientPhone,
       address,
@@ -182,43 +185,45 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     const visitCode = `Visit #${generatedVisitId}`;
     const scheduledTime = `${date || 'Today'} • ${timeSlot || 'ASAP'}`;
 
-    // Send detailed push notification to worker matching visit specification layout
-    sendPushNotification(
-      workerId.toString(),
-      '🔔 New Visit Assigned',
-      `${companyLabel}\n${visitCode}\n${title}\nCustomer: ${clientName}\nCustomer Address: ${address || 'N/A'}\nVisit Date & Time: ${scheduledTime}`,
-      `/worker/jobs?startJobId=${job._id}`
-    );
+    if (worker) {
+      // Send detailed push notification to worker matching visit specification layout
+      sendPushNotification(
+        workerId.toString(),
+        '🔔 New Visit Assigned',
+        `${companyLabel}\n${visitCode}\n${title}\nCustomer: ${clientName}\nCustomer Address: ${address || 'N/A'}\nVisit Date & Time: ${scheduledTime}`,
+        `/worker/jobs?startJobId=${job._id}`
+      );
 
-    const populatedJob = await Job.findById(job._id).populate('workerId');
-    const io = getIO();
-    if (io) {
-      io.to(workerId.toString()).emit('notification', {
-        type: 'NEW_JOB',
-        message: `New job "${title}" assigned to you for ${company}.`,
-        jobTitle: title,
-        company: company,
-        jobId: job._id,
-        job: populatedJob
-      });
+      const populatedJob = await Job.findById(job._id).populate('workerId');
+      const io = getIO();
+      if (io) {
+        io.to(workerId.toString()).emit('notification', {
+          type: 'NEW_JOB',
+          message: `New job "${title}" assigned to you for ${company}.`,
+          jobTitle: title,
+          company: company,
+          jobId: job._id,
+          job: populatedJob
+        });
+      }
+
+      // 2. Email Notification to Worker
+      const emailHtml = `
+        <h3>New Job Assigned - ${company}</h3>
+        <p>Hello ${worker.name},</p>
+        <p>A new cleaning job has been assigned to you:</p>
+        <ul>
+          <li><strong>Title:</strong> ${title}</li>
+          <li><strong>Client:</strong> ${clientName}</li>
+          <li><strong>Address:</strong> ${address}</li>
+          <li><strong>Company:</strong> ${company}</li>
+        </ul>
+        <p>Please log in to your ShineStaff app to view directions and start the job.</p>
+      `;
+      await sendMail(worker.email, 'New Job Assigned - ShineStaff', emailHtml);
     }
 
-    // 2. Email Notification to Worker
-    const emailHtml = `
-      <h3>New Job Assigned - ${company}</h3>
-      <p>Hello ${worker.name},</p>
-      <p>A new cleaning job has been assigned to you:</p>
-      <ul>
-        <li><strong>Title:</strong> ${title}</li>
-        <li><strong>Client:</strong> ${clientName}</li>
-        <li><strong>Address:</strong> ${address}</li>
-        <li><strong>Company:</strong> ${company}</li>
-      </ul>
-      <p>Please log in to your ShineStaff app to view directions and start the job.</p>
-    `;
-    await sendMail(worker.email, 'New Job Assigned - ShineStaff', emailHtml);
-
-    res.status(201).json({ message: 'Job created and worker notified', job });
+    res.status(201).json({ message: 'Job created successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -238,7 +243,7 @@ export const startJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    if (job.workerId.toString() !== req.user.id) {
+    if (!job.workerId || job.workerId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
 
@@ -326,7 +331,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    if (job.workerId.toString() !== req.user.id) {
+    if (!job.workerId || job.workerId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
 
@@ -597,12 +602,16 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     }
 
     // Check worker eligibility
-    if (workerId && workerId !== job.workerId.toString()) {
-      const worker = await User.findById(workerId);
-      if (!worker || worker.role !== 'worker') {
-        return res.status(404).json({ message: 'Worker not found' });
+    if (workerId) {
+      if (workerId === 'unassigned') {
+        job.workerId = undefined as any;
+      } else if (workerId !== job.workerId?.toString()) {
+        const worker = await User.findById(workerId);
+        if (!worker || worker.role !== 'worker') {
+          return res.status(404).json({ message: 'Worker not found' });
+        }
+        job.workerId = workerId;
       }
-      job.workerId = workerId;
     }
 
     job.title = title || job.title;
@@ -688,7 +697,7 @@ export const updateJobFuel = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    if (req.user?.role === 'worker' && job.workerId.toString() !== req.user.id) {
+    if (req.user?.role === 'worker' && (!job.workerId || job.workerId.toString() !== req.user.id)) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
 
@@ -721,7 +730,7 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
     const worker: any = job.workerId;
-    if (worker._id.toString() !== req.user.id) {
+    if (!worker || worker._id.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
     job.status = 'accepted';
@@ -764,7 +773,7 @@ export const rejectJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
     const worker: any = job.workerId;
-    if (worker._id.toString() !== req.user.id) {
+    if (!worker || worker._id.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
     job.status = 'rejected';
