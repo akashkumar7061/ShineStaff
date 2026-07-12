@@ -1379,11 +1379,11 @@ const AdminBIDashboard: React.FC = () => {
                       {analytics.workerPerformance.map((w: any) => (
                         <tr key={w._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
                           <td className="px-4 py-3.5">
-                            <div className="flex items-center space-x-3.5">
+                            <div className="flex items-center space-x-2.5">
                               <img
                                 src={w.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${w.name}`}
                                 alt={w.name}
-                                className="h-8.5 w-8.5 rounded-full object-cover border-2 border-violet-500 shadow-sm"
+                                className="h-6 w-6 rounded-full object-cover border border-violet-500 shadow-sm"
                               />
                               <div>
                                 <span className="block text-slate-800 dark:text-white font-extrabold">{w.name}</span>
