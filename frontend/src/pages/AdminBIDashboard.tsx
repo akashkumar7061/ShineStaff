@@ -26,7 +26,12 @@ import {
   Star,
   Zap,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  ClipboardList,
+  Flame,
+  Archive,
+  BarChart3,
+  UserCheck
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -55,7 +60,6 @@ const getPresetDates = (preset: string) => {
 
   switch (preset) {
     case 'today':
-      // Start of today, end of today
       break;
     case 'yesterday':
       start.setDate(today.getDate() - 1);
@@ -104,14 +108,34 @@ const AdminBIDashboard: React.FC = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [workers, setWorkers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'financials' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'audit'>('financials');
+  const [activeTab, setActiveTab] = useState<'financials' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'operations-desk' | 'audit'>('financials');
 
-  // Expense form state
-  const [expenseCategory, setExpenseCategory] = useState<'material' | 'equipment' | 'marketing' | 'office' | 'miscellaneous'>('material');
+  // --- 1. Daily Operations Desk Forms State ---
+  
+  // A. Quick Job scheduler
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobPrice, setJobPrice] = useState('');
+  const [jobWorker, setJobWorker] = useState('');
+  const [jobClientName, setJobClientName] = useState('');
+  const [jobClientPhone, setJobClientPhone] = useState('');
+  const [jobCompany, setJobCompany] = useState('All');
+  const [jobDate, setJobDate] = useState(getTodayString());
+  const [jobStatus, setJobStatus] = useState<'pending' | 'completed'>('completed');
+  const [jobTimeSlot, setJobTimeSlot] = useState('09:00 AM - 12:00 PM');
+
+  // B. Quick Expense Logger
+  const [expenseCategory, setExpenseCategory] = useState<'material' | 'equipment' | 'marketing' | 'office' | 'miscellaneous' | 'inventory'>('inventory');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(getTodayString());
   const [expenseDescription, setExpenseDescription] = useState('');
+
+  // C. Quick Commute Travel Logger
+  const [travelWorker, setTravelWorker] = useState('');
+  const [travelKms, setTravelKms] = useState('');
+  const [travelAllowance, setTravelAllowance] = useState('');
+  const [travelDate, setTravelDate] = useState(getTodayString());
 
   // Search filter inside audit logs tab
   const [auditSearch, setAuditSearch] = useState('');
@@ -119,15 +143,17 @@ const AdminBIDashboard: React.FC = () => {
   const fetchBIData = async () => {
     setLoading(true);
     try {
-      const [biRes, expRes, jobsRes, auditRes] = await Promise.all([
+      const [biRes, expRes, jobsRes, workersRes, auditRes] = await Promise.all([
         api.get(`/bi/analytics?startDate=${startDate}&endDate=${endDate}`),
         api.get(`/expenses?startDate=${startDate}&endDate=${endDate}`),
         api.get(`/jobs?startDate=${startDate}&endDate=${endDate}`),
+        api.get('/workers'),
         api.get(`/audit-logs?startDate=${startDate}&endDate=${endDate}&limit=100`)
       ]);
       setAnalytics(biRes.data);
       setExpenses(expRes.data);
       setJobs(jobsRes.data);
+      setWorkers(workersRes.data || []);
       setAuditLogs(auditRes.data.logs || []);
     } catch (err) {
       console.error('Failed to load BI dashboard data:', err);
@@ -150,6 +176,43 @@ const AdminBIDashboard: React.FC = () => {
     }
   };
 
+  // --- 2. Action Submissions ---
+
+  const handleAddJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!jobTitle || !jobPrice || !jobWorker || !jobClientName || !jobClientPhone) {
+      alert('Please fill out all job scheduling fields.');
+      return;
+    }
+
+    try {
+      await api.post('/jobs', {
+        title: jobTitle,
+        price: Number(jobPrice),
+        workerId: jobWorker,
+        clientName: jobClientName,
+        clientPhone: jobClientPhone,
+        company: jobCompany === 'All' ? 'ShineStaff' : jobCompany,
+        date: jobDate,
+        timeSlot: jobTimeSlot,
+        status: jobStatus,
+        paymentStatus: jobStatus === 'completed' ? 'received' : 'pending',
+        address: 'Direct Logged via BI Console',
+        location: { lat: 28.6139, lng: 77.2090 } // Default New Delhi coords
+      });
+
+      setJobTitle('');
+      setJobPrice('');
+      setJobClientName('');
+      setJobClientPhone('');
+      alert('Clean Job scheduled and logged successfully!');
+      fetchBIData();
+    } catch (err) {
+      console.error('Failed to quick-add job:', err);
+      alert('Error scheduling job. Please try again.');
+    }
+  };
+
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!expenseAmount || isNaN(Number(expenseAmount)) || Number(expenseAmount) <= 0) return;
@@ -161,12 +224,40 @@ const AdminBIDashboard: React.FC = () => {
         date: expenseDate,
         description: expenseDescription
       });
-      // Reset form & reload
       setExpenseAmount('');
       setExpenseDescription('');
+      alert('Expense logged successfully!');
       fetchBIData();
     } catch (err) {
       console.error('Failed to log expense:', err);
+    }
+  };
+
+  const handleAddTravel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!travelWorker || !travelKms) {
+      alert('Please select a worker and enter travel kms.');
+      return;
+    }
+
+    try {
+      const calculatedAllowance = Number(travelAllowance) || Number(travelKms) * 5; // Default rate ₹5/km
+      await api.post('/travel/admin-submit', {
+        workerId: travelWorker,
+        date: travelDate,
+        kms: Number(travelKms),
+        allowance: calculatedAllowance,
+        fromLocation: 'Office / Site',
+        toLocation: 'Home'
+      });
+
+      setTravelKms('');
+      setTravelAllowance('');
+      alert('Fuel Travel commute allowance logged and approved!');
+      fetchBIData();
+    } catch (err) {
+      console.error('Failed to manually log travel commute:', err);
+      alert('Error logging travel. Please try again.');
     }
   };
 
@@ -198,6 +289,7 @@ const AdminBIDashboard: React.FC = () => {
     }
   };
 
+  // --- 3. Drill-down details state & triggers ---
   const [drillDown, setDrillDown] = useState<{
     title: string;
     type: 'sales' | 'revenue' | 'expenses' | 'profit' | 'gross' | 'outstanding' | 'received' | 'customers';
@@ -252,15 +344,17 @@ const AdminBIDashboard: React.FC = () => {
           { category: 'EXPENSE', desc: 'Equipment Purchase/Leases', amount: analytics.expenseBreakdown.equipment },
           { category: 'EXPENSE', desc: 'Marketing & Advertising Budgets', amount: analytics.expenseBreakdown.marketing },
           { category: 'EXPENSE', desc: 'Office Rents & Admin Overhead', amount: analytics.expenseBreakdown.office },
+          { category: 'EXPENSE', desc: 'Inventory & Supplies Expense', amount: analytics.expenseBreakdown.inventory || 0 },
           { category: 'EXPENSE', desc: 'Miscellaneous Business Costs', amount: analytics.expenseBreakdown.miscellaneous }
         ];
         break;
       case 'gross':
-        title = 'Gross Profit (Revenues - Material/Equipment)';
+        title = 'Gross Profit (Revenues - Cost of Goods Sold)';
         data = [
           { category: 'REVENUE', desc: 'Total Completed Cleans Revenue', amount: analytics.financials.totalRevenue },
           { category: 'EXPENSE (DEDUCTED)', desc: 'Materials & Consumables Costs', amount: analytics.expenseBreakdown.material },
-          { category: 'EXPENSE (DEDUCTED)', desc: 'Equipment Purchase/Leases', amount: analytics.expenseBreakdown.equipment }
+          { category: 'EXPENSE (DEDUCTED)', desc: 'Equipment Purchase/Leases', amount: analytics.expenseBreakdown.equipment },
+          { category: 'EXPENSE (DEDUCTED)', desc: 'Inventory & Cleaning Supplies', amount: analytics.expenseBreakdown.inventory || 0 }
         ];
         break;
       case 'outstanding':
@@ -291,54 +385,189 @@ const AdminBIDashboard: React.FC = () => {
     setDrillDown({ title, type, data });
   };
 
-  // --- Export Utilities ---
-  const exportToCSV = () => {
+  // --- 4. Multi-Sheet Professional Excel Export ---
+  const exportToExcel = () => {
     if (!analytics) return;
 
-    let csvContent = 'data:text/csv;charset=utf-8,';
+    const xmlHeader = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#333333"/>
+  </Style>
+  <Style ss:ID="Title">
+   <Font ss:FontName="Segoe UI" ss:Size="14" ss:Bold="1" ss:Color="#1e1b4b"/>
+  </Style>
+  <Style ss:ID="SubTitle">
+   <Font ss:FontName="Segoe UI" ss:Size="9" ss:Italic="1" ss:Color="#666666"/>
+  </Style>
+  <Style ss:ID="TableHeader">
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#4f46e5" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="KPIKey">
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1"/>
+   <Interior ss:Color="#f3f4f6" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="KPIVal">
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#111827"/>
+  </Style>
+ </Styles>`;
+
+    // Sheet 1: Executive Summary & Corporate Ratios
+    let execSheet = `<Worksheet ss:Name="Executive Summary">
+  <Table>
+   <Row><Cell ss:StyleID="Title"><Data ss:Type="String">ShineStaff Company Performance Ratios</Data></Cell></Row>
+   <Row><Cell ss:StyleID="SubTitle"><Data ss:Type="String">Period: ${startDate} to ${endDate}</Data></Cell></Row>
+   <Row></Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Total Sales (Scheduled)</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.totalSales}</Data></Cell>
+   </Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Total Revenue (Completed)</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.totalRevenue}</Data></Cell>
+   </Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Total Operating Expenses</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.totalExpenses}</Data></Cell>
+   </Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Net Profit</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.netProfit}</Data></Cell>
+   </Row>
+   <Row></Row>
+   <Row><Cell ss:StyleID="KPIKey"><Data ss:Type="String">CORPORATE EFFICIENCY RATIOS</Data></Cell></Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Gross Profit Margin %</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? ((analytics.financials.grossProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
+   </Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Net Profit Margin %</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? ((analytics.financials.netProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
+   </Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Operating Expense Ratio (OER)</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? (((analytics.expenseBreakdown.salaries + analytics.expenseBreakdown.office + analytics.expenseBreakdown.marketing + analytics.expenseBreakdown.miscellaneous) / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
+   </Row>
+   <Row>
+     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Customer Lifetime Value (LTV)</Data></Cell>
+     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.averageOrderValue * (analytics.financials.totalCustomers > 0 ? jobs.length / analytics.financials.totalCustomers : 1)}</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>`;
+
+    // Sheet 2: Expenses Log
+    let expSheet = `<Worksheet ss:Name="Operating Expenditures">
+  <Table>
+   <Row>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Date</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Category</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Description</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Amount (INR)</Data></Cell>
+   </Row>`;
     
-    // Financials
-    csvContent += 'ShineStaff Business Intelligence Summary Report\n';
-    csvContent += `Period: ${startDate} to ${endDate}\n\n`;
-    csvContent += 'FINANCIAL KPI,VALUE\n';
-    csvContent += `Total Sales,INR ${analytics.financials.totalSales}\n`;
-    csvContent += `Total Revenue (Completed Cleans),INR ${analytics.financials.totalRevenue}\n`;
-    csvContent += `Total Expenses,INR ${analytics.financials.totalExpenses}\n`;
-    csvContent += `Net Profit,INR ${analytics.financials.netProfit}\n`;
-    csvContent += `Gross Profit,INR ${analytics.financials.grossProfit}\n`;
-    csvContent += `Received Payments,INR ${analytics.financials.receivedPayments}\n`;
-    csvContent += `Outstanding Payments,INR ${analytics.financials.outstandingPayments}\n`;
-    csvContent += `Pending Payments,INR ${analytics.financials.pendingPayments}\n`;
-    csvContent += `Average Order Value,INR ${analytics.financials.averageOrderValue}\n`;
-    csvContent += `Total Unique Customers,${analytics.financials.totalCustomers}\n\n`;
-
-    // Expense Breakdown
-    csvContent += 'EXPENSE CATEGORY,AMOUNT (INR)\n';
-    csvContent += `Worker Salaries,${analytics.expenseBreakdown.salaries}\n`;
-    csvContent += `Fuel Allowances,${analytics.expenseBreakdown.fuel}\n`;
-    csvContent += `Materials Costs,${analytics.expenseBreakdown.material}\n`;
-    csvContent += `Equipment Costs,${analytics.expenseBreakdown.equipment}\n`;
-    csvContent += `Marketing Expenses,${analytics.expenseBreakdown.marketing}\n`;
-    csvContent += `Office Expenses,${analytics.expenseBreakdown.office}\n`;
-    csvContent += `Miscellaneous,${analytics.expenseBreakdown.miscellaneous}\n\n`;
-
-    // Worker Performance Table
-    csvContent += 'WORKER NAME,COMPANY,ASSIGNED,COMPLETED,PRODUCTIVITY SCORE,RANK,REVENUE GENERATED\n';
-    analytics.workerPerformance.forEach((w: any) => {
-      csvContent += `"${w.name}",${w.company},${w.assignedJobs},${w.completedJobs},${w.productivityScore}%,${w.rank},${w.revenueGenerated}\n`;
+    expenses.forEach(e => {
+      expSheet += `<Row>
+        <Cell><Data ss:Type="String">${e.date}</Data></Cell>
+        <Cell><Data ss:Type="String">${e.category.toUpperCase()}</Data></Cell>
+        <Cell><Data ss:Type="String">${e.description || 'Custom Expense'}</Data></Cell>
+        <Cell><Data ss:Type="Number">${e.amount}</Data></Cell>
+      </Row>`;
+    });
+    
+    (analytics.rawSalaryPayouts || []).forEach((sr: any) => {
+      expSheet += `<Row>
+        <Cell><Data ss:Type="String">${sr.processedAt ? new Date(sr.processedAt).toISOString().split('T')[0] : 'N/A'}</Data></Cell>
+        <Cell><Data ss:Type="String">SALARY PAYOUT</Data></Cell>
+        <Cell><Data ss:Type="String">Approved salary payout for ${sr.workerId?.name || 'Worker'} (${sr.month})</Data></Cell>
+        <Cell><Data ss:Type="Number">${sr.amount}</Data></Cell>
+      </Row>`;
     });
 
-    const encodedUri = encodeURI(csvContent);
+    (analytics.rawTravelLogs || []).forEach((tl: any) => {
+      expSheet += `<Row>
+        <Cell><Data ss:Type="String">${tl.date}</Data></Cell>
+        <Cell><Data ss:Type="String">FUEL ALLOWANCE</Data></Cell>
+        <Cell><Data ss:Type="String">Commute allowance for ${tl.workerId?.name || 'Worker'} (${tl.kms} kms)</Data></Cell>
+        <Cell><Data ss:Type="Number">${tl.allowance}</Data></Cell>
+      </Row>`;
+    });
+
+    expSheet += `</Table></Worksheet>`;
+
+    // Sheet 3: Scheduled Cleans
+    let jobsSheet = `<Worksheet ss:Name="Clean Bookings">
+  <Table>
+   <Row>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Date</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Client</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Clean Title</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Worker Assigned</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Status</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Payment Status</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Price (INR)</Data></Cell>
+   </Row>`;
+
+    jobs.forEach(j => {
+      jobsSheet += `<Row>
+        <Cell><Data ss:Type="String">${j.date}</Data></Cell>
+        <Cell><Data ss:Type="String">${j.clientName || 'N/A'}</Data></Cell>
+        <Cell><Data ss:Type="String">${j.title}</Data></Cell>
+        <Cell><Data ss:Type="String">${(j.workerId as any)?.name || 'Unassigned'}</Data></Cell>
+        <Cell><Data ss:Type="String">${j.status}</Data></Cell>
+        <Cell><Data ss:Type="String">${j.paymentStatus || 'received'}</Data></Cell>
+        <Cell><Data ss:Type="Number">${j.price}</Data></Cell>
+      </Row>`;
+    });
+
+    jobsSheet += `</Table></Worksheet>`;
+
+    // Sheet 4: Worker Scorecards
+    let workerSheet = `<Worksheet ss:Name="Crew Productivity">
+  <Table>
+   <Row>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Worker Name</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Company</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Assigned Jobs</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Completed Jobs</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Attendance Rate</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Productivity Score</Data></Cell>
+     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Rank</Data></Cell>
+   </Row>`;
+
+    analytics.workerPerformance.forEach((w: any) => {
+      workerSheet += `<Row>
+        <Cell><Data ss:Type="String">${w.name}</Data></Cell>
+        <Cell><Data ss:Type="String">${w.company}</Data></Cell>
+        <Cell><Data ss:Type="Number">${w.assignedJobs}</Data></Cell>
+        <Cell><Data ss:Type="Number">${w.completedJobs}</Data></Cell>
+        <Cell><Data ss:Type="String">${w.attendanceRate}%</Data></Cell>
+        <Cell><Data ss:Type="String">${w.productivityScore}%</Data></Cell>
+        <Cell><Data ss:Type="String">${w.rank}</Data></Cell>
+      </Row>`;
+    });
+
+    workerSheet += `</Table></Worksheet>`;
+
+    const xmlFooter = `</Workbook>`;
+
+    const finalXml = xmlHeader + execSheet + expSheet + jobsSheet + workerSheet + xmlFooter;
+    
+    const blob = new Blob([finalXml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ShineStaff_BI_Report_${startDate}_to_${endDate}.csv`);
+    link.href = url;
+    link.download = `ShineStaff_Corporate_Performance_Report_${startDate}_to_${endDate}.xls`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   // Process data for charts
@@ -352,6 +581,7 @@ const AdminBIDashboard: React.FC = () => {
       { name: 'Equipment', value: breakdown.equipment },
       { name: 'Marketing', value: breakdown.marketing },
       { name: 'Office', value: breakdown.office },
+      { name: 'Supplies/Inventory', value: breakdown.inventory || 0 },
       { name: 'Misc', value: breakdown.miscellaneous }
     ].filter(item => item.value > 0);
   };
@@ -366,8 +596,6 @@ const AdminBIDashboard: React.FC = () => {
 
   const getProfitTrendData = () => {
     if (!analytics) return [];
-    const breakdown = analytics.expenseBreakdown;
-    // Generate simple simulated dates between range for plotting profit area
     const totalExp = analytics.financials.totalExpenses;
     const totalRev = analytics.financials.totalRevenue;
     return [
@@ -375,6 +603,10 @@ const AdminBIDashboard: React.FC = () => {
       { date: 'Mid Period', revenue: Math.round(totalRev * 0.5), expense: Math.round(totalExp * 0.4), profit: Math.round(totalRev * 0.5 - totalExp * 0.4) },
       { date: endDate, revenue: totalRev, expense: totalExp, profit: analytics.financials.netProfit }
     ];
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -387,7 +619,7 @@ const AdminBIDashboard: React.FC = () => {
             <Activity className="h-5.5 w-5.5 text-secondary animate-pulse" />
             <span>BI Performance Intelligence Hub</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Power BI metrics, revenue forecasting pipelines, worker scores & goal planning</p>
+          <p className="text-xs text-slate-400 mt-0.5">Corporate business metrics, daily logs engine & multi-sheet exports</p>
         </div>
 
         {/* Date Filters Control Bar */}
@@ -433,12 +665,12 @@ const AdminBIDashboard: React.FC = () => {
           </div>
 
           <button
-            onClick={exportToCSV}
+            onClick={exportToExcel}
             className="flex items-center space-x-1.5 bg-success/10 hover:bg-success/15 text-success font-bold text-xs rounded-xl px-4 py-2.5 transition-colors cursor-pointer"
-            title="Download full BI dataset in Excel/CSV"
+            title="Download multi-sheet corporate performance report in MS Excel"
           >
             <Download className="h-4 w-4" />
-            <span className="hidden md:inline">Export CSV</span>
+            <span className="hidden md:inline">Download Excel Report</span>
           </button>
 
           <button
@@ -474,7 +706,8 @@ const AdminBIDashboard: React.FC = () => {
           
           {/* 2. KPI Summary Grid Block */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                       {/* Sales Card */}
+            
+            {/* Sales Card */}
             <div 
               onClick={() => openDrillDown('sales')}
               className="glass-card p-5 border-l-4 border-l-secondary relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -569,6 +802,7 @@ const AdminBIDashboard: React.FC = () => {
                 +{analytics.financials.totalCustomers > 0 ? Math.round((analytics.financials.returningCustomers / analytics.financials.totalCustomers) * 100) : 0}% Repeat Rate
               </span>
             </div>
+
           </div>
 
           {/* 3. Segment Tabbed Views */}
@@ -576,6 +810,7 @@ const AdminBIDashboard: React.FC = () => {
             <nav className="flex space-x-4 overflow-x-auto pb-1" aria-label="Tabs">
               {[
                 { id: 'financials', label: 'Financial Analytics', icon: DollarSign },
+                { id: 'operations-desk', label: 'Daily Operations Desk ✍️', icon: ClipboardList },
                 { id: 'operations', label: 'Operations & Performance', icon: CheckCircle2 },
                 { id: 'workers', label: 'Worker Performance & Ratings', icon: Award },
                 { id: 'goals', label: 'Targets & Predictions', icon: Zap },
@@ -606,81 +841,404 @@ const AdminBIDashboard: React.FC = () => {
 
           {/* Tab 4.1: Financials Analytics */}
           {activeTab === 'financials' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
               
-              {/* Profit Growth area chart */}
-              <div className="glass-card p-6 lg:col-span-2">
-                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Profit Trend Analysis</h3>
-                <div className="h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={getProfitTrendData()}>
-                      <defs>
-                        <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
-                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} />
-                      <YAxis stroke="#94a3b8" fontSize={10} />
-                      <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '12px' }} />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} />
-                      <Area type="monotone" dataKey="revenue" name="Total Revenue" stroke="#10b981" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
-                      <Area type="monotone" dataKey="profit" name="Net Profit" stroke="#6366f1" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={3} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+              {/* Executive Ratios Card grid */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <div className="glass-card p-5 border-l-4 border-l-indigo-600">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Gross Profit Margin</span>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
+                    {analytics.financials.totalRevenue > 0 ? ((analytics.financials.grossProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%
+                  </h3>
+                  <p className="text-[9px] text-slate-400 mt-1 block">Benchmark: &gt;50% is healthy</p>
                 </div>
+
+                <div className="glass-card p-5 border-l-4 border-l-violet-600">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Net Profit Margin</span>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
+                    {analytics.financials.totalRevenue > 0 ? ((analytics.financials.netProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%
+                  </h3>
+                  <p className="text-[9px] text-slate-400 mt-1 block">Benchmark: &gt;20% is excellent</p>
+                </div>
+
+                <div className="glass-card p-5 border-l-4 border-l-rose-500">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Operating Expense Ratio (OER)</span>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
+                    {analytics.financials.totalRevenue > 0 ? (((analytics.expenseBreakdown.salaries + analytics.expenseBreakdown.office + analytics.expenseBreakdown.marketing + analytics.expenseBreakdown.miscellaneous) / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%
+                  </h3>
+                  <p className="text-[9px] text-slate-400 mt-1 block">Opex efficiency ratio</p>
+                </div>
+
+                <div className="glass-card p-5 border-l-4 border-l-amber-500">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Customer Lifetime Value (LTV)</span>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
+                    ₹{Math.round(analytics.financials.averageOrderValue * (analytics.financials.totalCustomers > 0 ? jobs.length / analytics.financials.totalCustomers : 1)).toLocaleString('en-IN')}
+                  </h3>
+                  <p className="text-[9px] text-slate-400 mt-1 block">Average total booking client spend</p>
+                </div>
+
               </div>
 
-              {/* Expense Breakdown Pie Chart */}
-              <div className="glass-card p-6">
-                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Expenses Breakdown By Category</h3>
-                <div className="h-64 w-full relative flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <RechartsPie
-                        data={getExpenseChartData()}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {getExpenseChartData().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </RechartsPie>
-                      <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                  
-                  {/* Absolute Center total info */}
-                  <div className="absolute flex flex-col items-center justify-center">
-                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Costs</span>
-                    <span className="text-base font-black text-slate-800 dark:text-white mt-0.5">₹{analytics.financials.totalExpenses.toLocaleString('en-IN')}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Profit Growth area chart */}
+                <div className="glass-card p-6 lg:col-span-2">
+                  <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Profit Trend Analysis</h3>
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={getProfitTrendData()}>
+                        <defs>
+                          <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" opacity={0.2} />
+                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} />
+                        <YAxis stroke="#94a3b8" fontSize={10} />
+                        <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '12px' }} />
+                        <Legend wrapperStyle={{ fontSize: '11px' }} />
+                        <Area type="monotone" dataKey="revenue" name="Total Revenue" stroke="#10b981" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="profit" name="Net Profit" stroke="#6366f1" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* Legend list */}
-                <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-bold">
-                  {getExpenseChartData().map((item, index) => (
-                    <div key={item.name} className="flex items-center space-x-1.5 text-slate-650 dark:text-slate-350">
-                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
-                      <span>{item.name}: ₹{item.value.toLocaleString('en-IN')}</span>
+                {/* Expense Breakdown Pie Chart */}
+                <div className="glass-card p-6">
+                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Expenses Breakdown By Category</h3>
+                  <div className="h-64 w-full relative flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <RechartsPie
+                          data={getExpenseChartData()}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {getExpenseChartData().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </RechartsPie>
+                        <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                    
+                    {/* Absolute Center total info */}
+                    <div className="absolute flex flex-col items-center justify-center">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Costs</span>
+                      <span className="text-base font-black text-slate-800 dark:text-white mt-0.5">₹{analytics.financials.totalExpenses.toLocaleString('en-IN')}</span>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Legend list */}
+                  <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-bold">
+                    {getExpenseChartData().map((item, index) => (
+                      <div key={item.name} className="flex items-center space-x-1.5 text-slate-655 dark:text-slate-350">
+                        <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                        <span>{item.name}: ₹{item.value.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4.2: Daily Operations Desk (Logging Engine) */}
+          {activeTab === 'operations-desk' && (
+            <div className="space-y-6">
+              
+              <div className="bg-gradient-to-r from-violet-500/10 to-indigo-500/10 p-5 rounded-3xl border border-violet-200/30">
+                <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
+                  <Sparkles className="h-5 w-5 animate-pulse text-indigo-500" />
+                  <span>Central Operations Control Board</span>
+                </h3>
+                <p className="text-xs text-slate-450 mt-1">Direct logging center. Feed jobs, custom expenses, fuel allowance sheets daily, and see the BI dashboards synchronize instantly.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+                
+                {/* Form A: Quick Job Logger */}
+                <div className="glass-card p-6 border-t-4 border-t-indigo-500">
+                  <h4 className="text-xs font-black uppercase text-indigo-650 tracking-wider mb-4 flex items-center space-x-1">
+                    <ClipboardList className="h-4.5 w-4.5" />
+                    <span>Log Daily Clean Job</span>
+                  </h4>
+                  <form onSubmit={handleAddJob} className="space-y-3.5">
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Clean Job Title:</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Deep Home Cleaning"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Price (INR):</label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="e.g. 3500"
+                          value={jobPrice}
+                          onChange={(e) => setJobPrice(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Date:</label>
+                        <input
+                          type="date"
+                          required
+                          value={jobDate}
+                          onChange={(e) => setJobDate(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500 dark:color-scheme-dark"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Client Name:</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Akash Kumar"
+                          value={jobClientName}
+                          onChange={(e) => setJobClientName(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Phone Number:</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 9876543210"
+                          value={jobClientPhone}
+                          onChange={(e) => setJobClientPhone(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Company Division:</label>
+                        <select
+                          value={jobCompany}
+                          onChange={(e) => setJobCompany(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        >
+                          <option value="All">ShineStaff Div</option>
+                          <option value="Aditya Cleaners">Aditya Clean division</option>
+                          <option value="Elite Cleans">Elite Services</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Assign Crew Worker:</label>
+                        <select
+                          required
+                          value={jobWorker}
+                          onChange={(e) => setJobWorker(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Select worker...</option>
+                          {workers.map((w: any) => (
+                            <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Status:</label>
+                        <select
+                          value={jobStatus}
+                          onChange={(e) => setJobStatus(e.target.value as any)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-855 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        >
+                          <option value="completed">Completed (Paid)</option>
+                          <option value="pending">Scheduled (Pending)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Timing Slot:</label>
+                        <input
+                          type="text"
+                          value={jobTimeSlot}
+                          onChange={(e) => setJobTimeSlot(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md mt-2 flex items-center justify-center space-x-1.5"
+                    >
+                      <Plus className="h-4.5 w-4.5" />
+                      <span>Log scheduled Clean</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Form B: Expense & Inventory Logger */}
+                <div className="glass-card p-6 border-t-4 border-t-rose-500">
+                  <h4 className="text-xs font-black uppercase text-rose-655 tracking-wider mb-4 flex items-center space-x-1">
+                    <Archive className="h-4.5 w-4.5" />
+                    <span>Log Daily Expenditures & Inventory</span>
+                  </h4>
+                  <form onSubmit={handleAddExpense} className="space-y-4">
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Expenditure Category:</label>
+                      <select
+                        value={expenseCategory}
+                        onChange={(e) => setExpenseCategory(e.target.value as any)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-rose-500"
+                      >
+                        <option value="inventory">Inventory & Cleaning Supplies 📦</option>
+                        <option value="material">Cleaning Materials / Liquids</option>
+                        <option value="fuel">Fuel commuting allowances</option>
+                        <option value="equipment">Cleaners Machinery & Equipment</option>
+                        <option value="marketing">Marketing & Google Ads</option>
+                        <option value="office">Office rent & Utilities</option>
+                        <option value="miscellaneous">Miscellaneous expense</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Expense Cost (INR):</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 1500"
+                        value={expenseAmount}
+                        onChange={(e) => setExpenseAmount(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-rose-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Expense Date:</label>
+                      <input
+                        type="date"
+                        required
+                        value={expenseDate}
+                        onChange={(e) => setExpenseDate(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-rose-500 dark:color-scheme-dark"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Description Details:</label>
+                      <textarea
+                        required
+                        placeholder="e.g. Purchased 10 Microfiber cloths & Floor scrubbers"
+                        value={expenseDescription}
+                        onChange={(e) => setExpenseDescription(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 h-20 outline-none focus:border-rose-500 resize-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-rose-500 hover:bg-rose-600 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
+                    >
+                      <Plus className="h-4.5 w-4.5" />
+                      <span>Log Cost Log</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Form C: Direct Fuel & Travel commute distance logger */}
+                <div className="glass-card p-6 border-t-4 border-t-amber-500">
+                  <h4 className="text-xs font-black uppercase text-amber-655 tracking-wider mb-4 flex items-center space-x-1">
+                    <Flame className="h-4.5 w-4.5 animate-bounce" />
+                    <span>Log Daily Travel & Fuel commutes</span>
+                  </h4>
+                  <form onSubmit={handleAddTravel} className="space-y-4">
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Commuted Crew Worker:</label>
+                      <select
+                        required
+                        value={travelWorker}
+                        onChange={(e) => setTravelWorker(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500"
+                      >
+                        <option value="">Select crew member...</option>
+                        {workers.map((w: any) => (
+                          <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">KMs Travelled:</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 45"
+                        value={travelKms}
+                        onChange={(e) => setTravelKms(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Travel Date:</label>
+                      <input
+                        type="date"
+                        required
+                        value={travelDate}
+                        onChange={(e) => setTravelDate(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500 dark:color-scheme-dark"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Allowance (Optional, Leave blank for auto calculations):</label>
+                      <input
+                        type="number"
+                        placeholder="Calculates automatically at ₹5/km"
+                        value={travelAllowance}
+                        onChange={(e) => setTravelAllowance(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-855 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
+                    >
+                      <Plus className="h-4.5 w-4.5" />
+                      <span>Log Commute Kms</span>
+                    </button>
+                  </form>
+                </div>
+
               </div>
 
             </div>
           )}
 
-          {/* Tab 4.2: Operations and Performance */}
+          {/* Tab 4.3: Operations and Performance */}
           {activeTab === 'operations' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -737,7 +1295,7 @@ const AdminBIDashboard: React.FC = () => {
 
               {/* Cancellation Reason Chart */}
               <div className="glass-card p-6 lg:col-span-2">
-                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Incomplete/Cancelled Job Causes</h3>
+                <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Incomplete/Cancelled Job Causes</h3>
                 {getCancellationReasonsData().length === 0 ? (
                   <div className="h-64 flex flex-col items-center justify-center text-slate-400">
                     <CheckCircle2 className="h-10 w-10 text-emerald-500/60 mb-2" />
@@ -765,7 +1323,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.3: Worker Performance Table */}
+          {/* Tab 4.4: Worker Performance Table */}
           {activeTab === 'workers' && (
             <div className="glass-card p-6 overflow-hidden">
               <div className="flex items-center justify-between mb-4">
@@ -774,7 +1332,7 @@ const AdminBIDashboard: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-bold text-slate-650 dark:text-slate-350">
+                <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
                   <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
                     <tr>
                       <th className="px-4 py-3">Worker Name</th>
@@ -813,7 +1371,7 @@ const AdminBIDashboard: React.FC = () => {
                         <td className="px-4 py-3.5">₹{(w.revenueGenerated || 0).toLocaleString('en-IN')}</td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center space-x-2">
-                            <span className="text-slate-850 dark:text-slate-100">{w.productivityScore}%</span>
+                            <span className="text-slate-855 dark:text-slate-100">{w.productivityScore}%</span>
                             <div className="w-14 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                               <div className="bg-secondary h-1.5 rounded-full" style={{ width: `${w.productivityScore}%` }} />
                             </div>
@@ -838,14 +1396,14 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.4: Targets and Predictions */}
+          {/* Tab 4.5: Targets and Predictions */}
           {activeTab === 'goals' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Annual Goal progress gauge */}
               <div className="glass-card p-6 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-2">Annual Revenue Goal Status</h3>
+                  <h3 className="text-xs font-black text-slate-405 uppercase tracking-widest mb-2">Annual Revenue Goal Status</h3>
                   <p className="text-[10px] text-slate-400">Target goal: ₹2 Crore (₹2,00,00,000)</p>
                 </div>
                 
@@ -854,12 +1412,12 @@ const AdminBIDashboard: React.FC = () => {
                     <span>Progress: ₹{analytics.annualGoals.currentAnnualRevenue.toLocaleString('en-IN')}</span>
                     <span>{Math.round((analytics.annualGoals.currentAnnualRevenue / analytics.annualGoals.annualGoal) * 100)}%</span>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-850 h-3.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-slate-855 h-3.5 rounded-full overflow-hidden">
                     <div className="bg-gradient-to-r from-secondary to-blue-500 h-3.5 rounded-full" style={{ width: `${Math.min(100, Math.round((analytics.annualGoals.currentAnnualRevenue / analytics.annualGoals.annualGoal) * 100))}%` }} />
                   </div>
                 </div>
 
-                <div className="text-[10.5px] font-bold text-slate-650 dark:text-slate-350 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div className="text-[10.5px] font-bold text-slate-655 dark:text-slate-350 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <div className="flex justify-between">
                     <span>Remaining Needed:</span>
                     <span className="font-extrabold text-slate-800 dark:text-white">₹{analytics.annualGoals.remainingAnnualRevenue.toLocaleString('en-IN')}</span>
@@ -870,7 +1428,7 @@ const AdminBIDashboard: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Required Per Day:</span>
-                    <span className="font-extrabold text-slate-750 dark:text-slate-200">₹{analytics.annualGoals.requiredRevenuePerDay.toLocaleString('en-IN')}</span>
+                    <span className="font-extrabold text-slate-755 dark:text-slate-200">₹{analytics.annualGoals.requiredRevenuePerDay.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Required Job Count Per Month:</span>
@@ -895,7 +1453,7 @@ const AdminBIDashboard: React.FC = () => {
                     <span className="text-[10px] bg-secondary/10 text-secondary px-2.5 py-1 rounded-full font-black">92% Conf.</span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-100 dark:border-slate-855">
                     <div>
                       <span className="block text-[9px] text-slate-400 uppercase tracking-wider">Next Quarter Forecast</span>
                       <strong className="block text-sm text-slate-800 dark:text-white mt-0.5">₹{analytics.forecasts.nextQuarterRevenueForecast.toLocaleString('en-IN')}</strong>
@@ -903,7 +1461,7 @@ const AdminBIDashboard: React.FC = () => {
                     <span className="text-[10px] bg-secondary/10 text-secondary px-2.5 py-1 rounded-full font-black">85% Conf.</span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-955/60 p-3 rounded-xl border border-slate-100 dark:border-slate-850">
                     <div>
                       <span className="block text-[9px] text-slate-400 uppercase tracking-wider">Suggested Targets Next Month</span>
                       <div className="flex items-center space-x-3 mt-1 text-[11px] text-slate-550 dark:text-slate-350">
@@ -927,8 +1485,8 @@ const AdminBIDashboard: React.FC = () => {
 
                 <div className="my-4 space-y-3 flex-1 overflow-y-auto">
                   {analytics.aiSuggestions.map((s: string, idx: number) => (
-                    <div key={idx} className="flex items-start space-x-2 text-[11px] leading-relaxed text-slate-650 dark:text-slate-300">
-                      <div className="rounded-full bg-violet-100 dark:bg-violet-950/50 p-1 text-violet-500 mt-0.5">
+                    <div key={idx} className="flex items-start space-x-2 text-[11px] leading-relaxed text-slate-655 dark:text-slate-300">
+                      <div className="rounded-full bg-violet-100 dark:bg-violet-955/50 p-1 text-violet-500 mt-0.5">
                         <Zap className="h-3 w-3" />
                       </div>
                       <span>{s}</span>
@@ -940,7 +1498,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.5: Expenses Form & Custom Logs */}
+          {/* Tab 4.6: Expenses Form & Custom Logs */}
           {activeTab === 'expenses' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -955,6 +1513,7 @@ const AdminBIDashboard: React.FC = () => {
                       onChange={(e) => setExpenseCategory(e.target.value as any)}
                       className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary"
                     >
+                      <option value="inventory">Inventory & Supplies 📦</option>
                       <option value="material">Materials & Supplies</option>
                       <option value="equipment">Equipment & Assets</option>
                       <option value="marketing">Marketing & Ads</option>
@@ -964,7 +1523,7 @@ const AdminBIDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Expense Amount (INR):</label>
+                    <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-405">Expense Amount (INR):</label>
                     <input
                       type="number"
                       required
@@ -976,7 +1535,7 @@ const AdminBIDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Expense Date:</label>
+                    <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-405">Expense Date:</label>
                     <input
                       type="date"
                       required
@@ -987,7 +1546,7 @@ const AdminBIDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Description / Notes:</label>
+                    <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-405">Description / Notes:</label>
                     <textarea
                       placeholder="Enter notes (e.g. Sofa Cleaning Liquids Purchase)"
                       value={expenseDescription}
@@ -1011,7 +1570,7 @@ const AdminBIDashboard: React.FC = () => {
                 <div>
                   <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Recorded Custom Expenditures</h3>
                   <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
-                    <table className="w-full text-left text-xs font-bold text-slate-650 dark:text-slate-350">
+                    <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
                       <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-450">
                         <tr>
                           <th className="px-4 py-3">Date</th>
@@ -1035,7 +1594,7 @@ const AdminBIDashboard: React.FC = () => {
                             <td className="px-4 py-3 text-center">
                               <button
                                 onClick={() => handleDeleteExpense(exp._id)}
-                                className="text-danger hover:text-red-650 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer"
+                                className="text-danger hover:text-red-655 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-955/20 cursor-pointer"
                                 title="Delete expense"
                               >
                                 <Trash2 className="h-4.5 w-4.5" />
@@ -1057,7 +1616,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.6: Invoices and Payment statuses */}
+          {/* Tab 4.7: Invoices and Payment statuses */}
           {activeTab === 'payment-tracker' && (
             <div className="glass-card p-6 overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -1068,7 +1627,7 @@ const AdminBIDashboard: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left text-xs font-bold text-slate-650 dark:text-slate-350">
+                <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
                   <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-450">
                     <tr>
                       <th className="px-4 py-3">Date</th>
@@ -1139,7 +1698,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.7: Audit Logs List */}
+          {/* Tab 4.8: Audit Logs List */}
           {activeTab === 'audit' && (
             <div className="glass-card p-6 overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -1160,8 +1719,8 @@ const AdminBIDashboard: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left text-xs font-bold text-slate-650 dark:text-slate-350">
-                  <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-450">
+                <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
+                  <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-455">
                     <tr>
                       <th className="px-4 py-3">Timestamp</th>
                       <th className="px-4 py-3">Admin User</th>
@@ -1249,8 +1808,8 @@ const AdminBIDashboard: React.FC = () => {
 
             {/* Modal Content Table */}
             <div className="flex-1 overflow-y-auto my-4 pr-1">
-              <table className="w-full text-left text-xs font-bold text-slate-650 dark:text-slate-350">
-                <thead className="bg-slate-100 dark:bg-slate-900 uppercase tracking-widest text-[9px] text-slate-450 sticky top-0 z-10">
+              <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
+                <thead className="bg-slate-100 dark:bg-slate-900 uppercase tracking-widest text-[9px] text-slate-455 sticky top-0 z-10">
                   {drillDown.type === 'customers' ? (
                     <tr>
                       <th className="px-4 py-3">Client Name</th>
@@ -1280,7 +1839,7 @@ const AdminBIDashboard: React.FC = () => {
                     if (drillDown.type === 'customers') {
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                          <td className="px-4 py-3 text-slate-850 dark:text-slate-100 font-extrabold">{item.name}</td>
+                          <td className="px-4 py-3 text-slate-855 dark:text-slate-100 font-extrabold">{item.name}</td>
                           <td className="px-4 py-3 text-mono">{item.phone}</td>
                           <td className="px-4 py-3 text-center text-secondary font-black">{item.count} Bookings</td>
                         </tr>

@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IExpense extends Document {
-  category: 'material' | 'equipment' | 'marketing' | 'office' | 'miscellaneous' | 'salary' | 'fuel';
+  category: 'material' | 'equipment' | 'marketing' | 'office' | 'miscellaneous' | 'salary' | 'fuel' | 'inventory';
   amount: number;
   date: string; // Format: YYYY-MM-DD
   description?: string;
@@ -12,7 +12,7 @@ export interface IExpense extends Document {
 const ExpenseSchema = new Schema<IExpense>({
   category: { 
     type: String, 
-    enum: ['material', 'equipment', 'marketing', 'office', 'miscellaneous', 'salary', 'fuel'], 
+    enum: ['material', 'equipment', 'marketing', 'office', 'miscellaneous', 'salary', 'fuel', 'inventory'], 
     required: true 
   },
   amount: { type: Number, required: true },

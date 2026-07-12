@@ -75,6 +75,7 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
     let marketingCost = 0;
     let officeCost = 0;
     let miscellaneousCost = 0;
+    let inventoryCost = 0;
 
     customExpenses.forEach((exp) => {
       if (exp.category === 'material') materialCost += exp.amount;
@@ -84,9 +85,10 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
       else if (exp.category === 'miscellaneous') miscellaneousCost += exp.amount;
       else if (exp.category === 'salary') workerSalariesExpense += exp.amount;
       else if (exp.category === 'fuel') fuelExpense += exp.amount;
+      else if (exp.category === 'inventory') inventoryCost += exp.amount;
     });
 
-    const totalExpenses = workerSalariesExpense + fuelExpense + materialCost + equipmentCost + marketingCost + officeCost + miscellaneousCost;
+    const totalExpenses = workerSalariesExpense + fuelExpense + materialCost + equipmentCost + marketingCost + officeCost + miscellaneousCost + inventoryCost;
     const netProfit = totalRevenue - totalExpenses;
     const grossProfit = totalRevenue - (materialCost + equipmentCost);
 
@@ -284,7 +286,8 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
         equipment: equipmentCost,
         marketing: marketingCost,
         office: officeCost,
-        miscellaneous: miscellaneousCost
+        miscellaneous: miscellaneousCost,
+        inventory: inventoryCost
       },
       jobAnalytics: {
         totalJobsAssigned,
