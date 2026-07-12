@@ -40,6 +40,8 @@ export interface IJob extends Document {
   fuelAllowance?: number;
   workerNotes?: string;
   cancelReason?: string;
+  paymentStatus?: 'pending' | 'received' | 'outstanding';
+  rating?: number;
 
   visitId?: string;
   alternatePhone?: string;
@@ -97,6 +99,8 @@ const JobSchema = new Schema<IJob>({
   fuelAllowance: { type: Number, default: 0 },
   workerNotes: { type: String, default: '' },
   cancelReason: { type: String, default: '' },
+  paymentStatus: { type: String, enum: ['pending', 'received', 'outstanding'], default: 'pending' },
+  rating: { type: Number, min: 1, max: 5 },
 
   visitId: { type: String, default: '' },
   alternatePhone: { type: String, default: '' },

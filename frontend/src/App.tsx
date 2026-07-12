@@ -25,6 +25,7 @@ import AdminSalary from './pages/AdminSalary';
 import AdminReports from './pages/AdminReports';
 import AdminSettings from './pages/AdminSettings';
 import AdminAuditLog from './pages/AdminAuditLog';
+import AdminBIDashboard from './pages/AdminBIDashboard';
 
 import AdminAttendanceLogs from './pages/AdminAttendanceLogs';
 import AdminMapTracking from './pages/AdminMapTracking';
@@ -601,6 +602,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
                       <AdminAuditLog />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/bi-dashboard"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
+                      <AdminBIDashboard />
                     </AdminLayout>
                   </ProtectedRoute>
                 }

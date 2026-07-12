@@ -2,21 +2,29 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAuditLog extends Document {
   adminId: mongoose.Types.ObjectId;
-  action: 'created' | 'updated' | 'deleted' | 'approved' | 'rejected';
+  action: string;
   entityType: string;
-  entityId: mongoose.Types.ObjectId;
+  entityId: string;
   summary: string;
   metadata?: any;
+  ipAddress?: string;
+  device?: string;
+  browser?: string;
+  status?: 'success' | 'failure';
   createdAt: Date;
 }
 
 const AuditLogSchema = new Schema<IAuditLog>({
   adminId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  action: { type: String, enum: ['created', 'updated', 'deleted', 'approved', 'rejected'], required: true },
+  action: { type: String, required: true },
   entityType: { type: String, required: true },
-  entityId: { type: Schema.Types.ObjectId, required: true },
+  entityId: { type: String, required: true },
   summary: { type: String, required: true },
-  metadata: { type: Schema.Types.Mixed }
+  metadata: { type: Schema.Types.Mixed },
+  ipAddress: { type: String, default: '' },
+  device: { type: String, default: 'Desktop' },
+  browser: { type: String, default: 'Browser' },
+  status: { type: String, enum: ['success', 'failure'], default: 'success' }
 }, {
   timestamps: { createdAt: true, updatedAt: false }
 });

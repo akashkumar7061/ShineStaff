@@ -577,7 +577,9 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     date,
     timeSlot,
     location,
-    fuelKmsTravelled
+    fuelKmsTravelled,
+    paymentStatus,
+    rating
   } = req.body;
 
   try {
@@ -617,6 +619,12 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
       const settings = await Settings.findOne({ settingsId: 'global' });
       const fuelRate = settings ? (settings.fuelAllowanceRate || 5) : 5;
       job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
+    }
+    if (paymentStatus !== undefined) {
+      job.paymentStatus = paymentStatus;
+    }
+    if (rating !== undefined) {
+      job.rating = Number(rating);
     }
 
     await job.save();
