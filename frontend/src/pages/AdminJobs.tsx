@@ -37,7 +37,8 @@ const formatTimeTo12Hour = (timeStr: string) => {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   hour = hour % 12;
   hour = hour ? hour : 12;
-  return `${hour}:${min} ${ampm}`;
+  const paddedHour = String(hour).padStart(2, '0');
+  return `${paddedHour}:${min} ${ampm}`;
 };
 
 const getTodayString = () => {
@@ -326,7 +327,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   };
 
   return (
-    <div className="space-y-4 px-4 md:px-6 lg:px-8 text-left h-[calc(100vh-140px)] flex flex-col overflow-hidden pb-4">
+    <div className="space-y-4 px-1.5 md:px-2.5 text-left h-[calc(100vh-140px)] flex flex-col overflow-hidden pb-2 w-full max-w-full">
       
       {/* 1. Header Date Selection Ribbon */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm print:hidden shrink-0">
@@ -402,7 +403,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-4 overflow-hidden min-h-0 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
-        <div className={`h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${
+        <div className={`h-full overflow-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${
           selectedJobForDrawer ? 'xl:col-span-3' : 'xl:col-span-4'
         }`}>
           <table className="w-full text-left text-xs table-fixed min-w-0 border-collapse">
