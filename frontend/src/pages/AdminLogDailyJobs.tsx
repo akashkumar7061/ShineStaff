@@ -32,7 +32,7 @@ const AdminLogDailyJobs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'completed' | 'approvals'>('completed');
+  const [activeTab, setActiveTab] = useState<'completed' | 'approvals' | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState(getFirstDayOfMonthString());
   const [endDate, setEndDate] = useState(getTodayString());
@@ -268,7 +268,14 @@ const AdminLogDailyJobs: React.FC = () => {
   const approvalJobs = jobs.filter(j => j.status === 'pending' || j.status === 'cancelled' || j.status === 'rejected');
 
   const getFilteredList = () => {
-    const activeList = activeTab === 'completed' ? completedJobs : approvalJobs;
+    let activeList = [];
+    if (activeTab === 'all') {
+      activeList = jobs;
+    } else if (activeTab === 'completed') {
+      activeList = completedJobs;
+    } else {
+      activeList = approvalJobs;
+    }
     
     // Filter by date range first
     let filtered = activeList.filter(j => {
@@ -471,6 +478,17 @@ const AdminLogDailyJobs: React.FC = () => {
               {/* Tab Navigation */}
               <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1 text-[11px] font-bold">
                 <button
+                  onClick={() => { setActiveTab('all'); setSearchQuery(''); }}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  <span>All Clean Logs ({jobs.length})</span>
+                </button>
+                <button
                   onClick={() => { setActiveTab('completed'); setSearchQuery(''); }}
                   className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === 'completed'
@@ -614,7 +632,7 @@ const AdminLogDailyJobs: React.FC = () => {
                         </td>
                         <td className="py-2.5 px-3">
                           <div className="flex justify-center items-center space-x-2">
-                            {activeTab === 'approvals' && (
+                            {job.status !== 'completed' && (
                               <button
                                 onClick={() => handleApproveJob(job._id)}
                                 title="Approve Clean Job"
