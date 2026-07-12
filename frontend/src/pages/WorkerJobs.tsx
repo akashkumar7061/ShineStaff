@@ -30,6 +30,15 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getTomorrowString = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const WorkerJobs: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,7 +261,12 @@ const WorkerJobs: React.FC = () => {
       return false;
     }
 
-    // 2. Date Filter
+    // 2. Date Filter (Only today or tomorrow)
+    const todayStr = getTodayString();
+    const tomorrowStr = getTomorrowString();
+    if (job.date !== todayStr && job.date !== tomorrowStr) {
+      return false;
+    }
     if (filterDate && job.date && job.date !== filterDate) {
       return false;
     }
@@ -329,6 +343,8 @@ const WorkerJobs: React.FC = () => {
                   </span>
                   <input
                     type="date"
+                    min={getTodayString()}
+                    max={getTomorrowString()}
                     value={filterDate}
                     onChange={(e) => setFilterDate(e.target.value)}
                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
