@@ -329,31 +329,34 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   return (
     <div className="space-y-4 px-1.5 md:px-2.5 text-left h-[calc(100vh-140px)] flex flex-col overflow-hidden pb-2 w-full max-w-full">
       
+      {/* Page Title & View Site Header */}
+      <div className="flex justify-between items-center py-2 shrink-0">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Schedule</h1>
+        <div className="flex items-center space-x-3 text-xs font-bold text-slate-500">
+          <a href="/" className="text-[#2563eb] hover:underline">View Site</a>
+          <div className="h-7 w-7 rounded-full bg-[#dbeafe] text-[#1e40af] flex items-center justify-center font-bold">A</div>
+        </div>
+      </div>
+
       {/* 1. Header Date Selection Ribbon */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm print:hidden shrink-0">
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
-            <Calendar className="h-5 w-5 text-secondary animate-pulse" />
-            <span>Interactive Scheduling Board</span>
-          </h2>
-          <p className="text-[10px] text-slate-400 mt-0.5">Assign tasks, track timelines, and review check-in compliance logs</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
+        
+        {/* Date Navigation Group */}
+        <div className="flex items-center space-x-2.5">
+          <button onClick={handlePrevDay} className="h-8 w-8 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 transition-colors shadow-sm cursor-pointer text-slate-600">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 px-1.5 min-w-[160px] text-center">
+            {getFormattedDateString(selectedDate)}
+          </span>
+          <button onClick={handleNextDay} className="h-8 w-8 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 transition-colors shadow-sm cursor-pointer text-slate-600">
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Date Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-            <button onClick={handlePrevDay} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 px-1 min-w-[150px] text-center">
-              {getFormattedDateString(selectedDate)}
-            </span>
-            <button onClick={handleNextDay} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          <button onClick={handleGoToToday} className="bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-extrabold text-[11px] px-3 py-2 rounded-xl border border-slate-200/40 dark:border-slate-800/40 cursor-pointer">
+          <button onClick={handleGoToToday} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
             Today
           </button>
 
@@ -364,24 +367,24 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               setSelectedDate(e.target.value);
               setSelectedJobForDrawer(null);
             }}
-            className="text-[11px] font-semibold rounded-xl border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+            className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:border-blue-500 shadow-sm cursor-pointer dark:color-scheme-dark"
           />
 
-          <button onClick={fetchJobsAndWorkers} className="p-2 bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 text-slate-700 dark:text-slate-200 border border-slate-200/40 dark:border-slate-800/40 rounded-xl cursor-pointer" title="Refresh Calendar Grid">
-            <RefreshCw className="h-4 w-4" />
+          <button onClick={fetchJobsAndWorkers} className="h-8 w-8 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 transition-colors shadow-sm cursor-pointer text-slate-600" title="Refresh Calendar Grid">
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
 
           <button
             onClick={() => setSendSchedulesOpen(true)}
-            className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-600 font-extrabold text-[11px] px-3 py-2 rounded-xl border border-emerald-500/35 cursor-pointer"
+            className="flex items-center space-x-1.5 bg-white dark:bg-slate-900 border border-[#22c55e] hover:bg-emerald-50 text-[#22c55e] font-semibold text-xs px-3.5 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-3.5 w-3.5 text-[#22c55e]" />
             <span>Send All Schedules ↗</span>
           </button>
 
           <button
             onClick={() => { resetForm(); setCreateModalOpen(true); }}
-            className="flex items-center space-x-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-extrabold text-[11px] px-3.5 py-2 rounded-lg shadow cursor-pointer"
+            className="flex items-center space-x-1.5 bg-[#2563eb] hover:bg-blue-750 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>+ New Booking</span>
@@ -390,11 +393,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       </div>
 
       {/* 2. Count Badges */}
-      <div className="flex space-x-3 text-[11px] font-bold mt-1 shrink-0">
-        <span className="bg-[#e2e8f0] text-[#475569] px-3.5 py-1.5 rounded-lg">
+      <div className="flex space-x-2 text-[11px] font-bold mt-1.5 shrink-0">
+        <span className="bg-[#e2e8f0] text-[#475569] px-3.5 py-1 rounded-full">
           {totalBookings} bookings
         </span>
-        <span className="bg-[#dbeafe] text-[#1e40af] px-3.5 py-1.5 rounded-lg">
+        <span className="bg-[#dbeafe] text-[#1e40af] px-3.5 py-1 rounded-full">
           {confirmedBookings} confirmed
         </span>
       </div>
