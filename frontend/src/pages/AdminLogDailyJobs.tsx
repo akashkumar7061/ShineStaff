@@ -121,17 +121,17 @@ const AdminLogDailyJobs: React.FC = () => {
     }
   };
 
-  // --- Excel / CSV Download Handler ---
+  // --- Excel Download Handler ---
   const handleDownloadSpreadsheet = (filterType: 'all' | 'completed' | 'cancelled') => {
     let filtered = [...jobs];
-    let filename = 'all_work_logs.csv';
+    let filename = 'all_work_logs.xls';
 
     if (filterType === 'completed') {
       filtered = jobs.filter(j => j.status === 'completed');
-      filename = 'completed_work_logs.csv';
+      filename = 'completed_work_logs.xls';
     } else if (filterType === 'cancelled') {
       filtered = jobs.filter(j => j.status === 'cancelled');
-      filename = 'cancelled_work_logs.csv';
+      filename = 'cancelled_work_logs.xls';
     }
 
     if (filtered.length === 0) {
@@ -139,40 +139,72 @@ const AdminLogDailyJobs: React.FC = () => {
       return;
     }
 
-    const headers = [
-      "Job ID",
-      "Title",
-      "Company",
-      "Client Name",
-      "Client Phone",
-      "Price (INR)",
-      "Date",
-      "Time Slot",
-      "Status",
-      "Payment Status",
-      "Assigned Worker"
-    ];
+    // Build Microsoft Excel XML/HTML spreadsheet format
+    let excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Clean Work Logs</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+      </head>
+      <body>
+        <table border="1">
+          <thead>
+            <tr style="background-color: #f1f5f9; font-weight: bold;">
+              <th>Job ID</th>
+              <th>Clean Job Title</th>
+              <th>Company Division</th>
+              <th>Client Name</th>
+              <th>Client Phone</th>
+              <th>Price (INR)</th>
+              <th>Date</th>
+              <th>Time Slot</th>
+              <th>Status</th>
+              <th>Payment Status</th>
+              <th>Assigned Crew Worker</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
 
-    const rows = filtered.map(j => [
-      j._id || '',
-      j.title || '',
-      j.company || '',
-      j.clientName || '',
-      j.clientPhone || '',
-      j.price || 0,
-      j.date || '',
-      j.timeSlot || '',
-      j.status || '',
-      j.paymentStatus || '',
-      j.workerId?.name || 'Unassigned'
-    ]);
+    filtered.forEach(j => {
+      excelTemplate += `
+        <tr>
+          <td>${j._id || ''}</td>
+          <td>${j.title || ''}</td>
+          <td>${j.company || ''}</td>
+          <td>${j.clientName || ''}</td>
+          <td>${j.clientPhone || ''}</td>
+          <td>${j.price || 0}</td>
+          <td>${j.date || ''}</td>
+          <td>${j.timeSlot || ''}</td>
+          <td>${j.status || ''}</td>
+          <td>${j.paymentStatus || ''}</td>
+          <td>${j.workerId?.name || 'Unassigned'}</td>
+        </tr>
+      `;
+    });
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
+    excelTemplate += `
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
