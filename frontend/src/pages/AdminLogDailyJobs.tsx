@@ -16,7 +16,8 @@ import {
   Calendar,
   Clock,
   Sparkles,
-  Archive
+  Archive,
+  Pencil
 } from 'lucide-react';
 
 const getTodayString = () => new Date().toISOString().split('T')[0];
@@ -38,6 +39,18 @@ const AdminLogDailyJobs: React.FC = () => {
   const [jobDate, setJobDate] = useState(getTodayString());
   const [jobStatus, setJobStatus] = useState<'pending' | 'completed'>('completed');
   const [jobTimeSlot, setJobTimeSlot] = useState('09:00 AM - 12:00 PM');
+
+  // --- Edit Job Modal State ---
+  const [editingJob, setEditingJob] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editWorker, setEditWorker] = useState('');
+  const [editClientName, setEditClientName] = useState('');
+  const [editClientPhone, setEditClientPhone] = useState('');
+  const [editCompany, setEditCompany] = useState('SofaShine');
+  const [editDate, setEditDate] = useState('');
+  const [editStatus, setEditStatus] = useState<'pending' | 'completed' | 'cancelled' | 'rejected' | 'accepted' | 'started'>('completed');
+  const [editTimeSlot, setEditTimeSlot] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -118,6 +131,33 @@ const AdminLogDailyJobs: React.FC = () => {
     } catch (err) {
       console.error('Failed to delete job:', err);
       alert('Failed to delete job.');
+    }
+  };
+
+  const handleUpdateJobSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingJob) return;
+
+    try {
+      await api.put(`/jobs/${editingJob._id}`, {
+        title: editTitle,
+        price: Number(editPrice),
+        workerId: editWorker === 'unassigned' || !editWorker ? undefined : editWorker,
+        clientName: editClientName,
+        clientPhone: editClientPhone,
+        company: editCompany,
+        date: editDate,
+        timeSlot: editTimeSlot,
+        status: editStatus,
+        paymentStatus: editStatus === 'completed' ? 'received' : 'pending'
+      });
+
+      alert('Clean Job updated successfully!');
+      setEditingJob(null);
+      fetchData();
+    } catch (err) {
+      console.error('Failed to update job:', err);
+      alert('Failed to update job.');
     }
   };
 
@@ -471,7 +511,7 @@ const AdminLogDailyJobs: React.FC = () => {
                       <th className="py-2.5 px-3">Price</th>
                       <th className="py-2.5 px-3">Worker Assigned</th>
                       <th className="py-2.5 px-3">Status</th>
-                      {activeTab === 'approvals' && <th className="py-2.5 px-3 text-center">Actions Desk</th>}
+                      <th className="py-2.5 px-3 text-center">Actions Desk</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -535,9 +575,9 @@ const AdminLogDailyJobs: React.FC = () => {
                             {job.status}
                           </span>
                         </td>
-                        {activeTab === 'approvals' && (
-                          <td className="py-2.5 px-3">
-                            <div className="flex justify-center items-center space-x-2">
+                        <td className="py-2.5 px-3">
+                          <div className="flex justify-center items-center space-x-2">
+                            {activeTab === 'approvals' && (
                               <button
                                 onClick={() => handleApproveJob(job._id)}
                                 title="Approve Clean Job"
@@ -545,16 +585,34 @@ const AdminLogDailyJobs: React.FC = () => {
                               >
                                 <Check className="h-3.5 w-3.5" />
                               </button>
-                              <button
-                                onClick={() => handleDeleteJob(job._id)}
-                                title="Delete Clean Job"
-                                className="p-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 cursor-pointer transition-all"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        )}
+                            )}
+                            <button
+                              onClick={() => {
+                                setEditingJob(job);
+                                setEditTitle(job.title || '');
+                                setEditPrice(String(job.price || ''));
+                                setEditWorker(job.workerId?._id || 'unassigned');
+                                setEditClientName(job.clientName || '');
+                                setEditClientPhone(job.clientPhone || '');
+                                setEditCompany(job.company || 'SofaShine');
+                                setEditDate(job.date || getTodayString());
+                                setEditStatus(job.status || 'completed');
+                                setEditTimeSlot(job.timeSlot || '09:00 AM - 12:00 PM');
+                              }}
+                              title="Edit Clean Job"
+                              className="p-1 rounded bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60 text-blue-600 dark:text-blue-400 cursor-pointer transition-all"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteJob(job._id)}
+                              title="Delete Clean Job"
+                              className="p-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 cursor-pointer transition-all"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -564,6 +622,159 @@ const AdminLogDailyJobs: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Job Modal */}
+      {editingJob && (
+        <div onClick={() => setEditingJob(null)} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-205 dark:border-slate-800 shadow-2xl p-6 space-y-4 flex flex-col justify-between text-xs animate-fade-in select-none max-h-[90vh] overflow-y-auto">
+            
+            <button 
+              onClick={() => setEditingJob(null)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-655 font-black text-sm cursor-pointer z-10"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-sm font-black uppercase text-indigo-650 tracking-wider mb-2 flex items-center space-x-1.5 dark:text-indigo-400">
+              <ClipboardList className="h-5 w-5" />
+              <span>Edit Clean Job Entry</span>
+            </h3>
+
+            <form onSubmit={handleUpdateJobSubmit} className="space-y-4 text-xs font-bold text-slate-655 dark:text-slate-350">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Clean Job Title:</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Price (INR):</label>
+                  <input
+                    type="number"
+                    required
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Client Name:</label>
+                  <input
+                    type="text"
+                    required
+                    value={editClientName}
+                    onChange={(e) => setEditClientName(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Phone Number:</label>
+                  <input
+                    type="text"
+                    required
+                    value={editClientPhone}
+                    onChange={(e) => setEditClientPhone(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Company Division:</label>
+                  <select
+                    value={editCompany}
+                    onChange={(e) => setEditCompany(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  >
+                    <option value="SofaShine">SofaShine</option>
+                    <option value="CleanCruisers">CleanCruisers</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Assign Crew Worker:</label>
+                  <select
+                    value={editWorker}
+                    onChange={(e) => setEditWorker(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  >
+                    <option value="unassigned">Unassigned (Omit Crew)</option>
+                    {workers.map((w: any) => (
+                      <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Date:</label>
+                  <input
+                    type="date"
+                    required
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:color-scheme-dark dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Status:</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-855 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  >
+                    <option value="completed">Completed (Paid)</option>
+                    <option value="pending">Pending</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="started">Started</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Timing Slot:</label>
+                  <input
+                    type="text"
+                    value={editTimeSlot}
+                    onChange={(e) => setEditTimeSlot(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingJob(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
