@@ -13,6 +13,7 @@ const AdminMapTracking: React.FC<AdminMapTrackingProps> = ({ companyFilter }) =>
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [showWorkersDropdown, setShowWorkersDropdown] = useState(false);
 
   const fetchTrackingData = async () => {
     setLoading(true);
@@ -92,22 +93,40 @@ const AdminMapTracking: React.FC<AdminMapTrackingProps> = ({ companyFilter }) =>
           <p className="text-xs text-slate-400 mt-0.5">Real-time GPS coordinate overlays for active cleaning crews</p>
         </div>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 sm:w-64 text-left">
             <input
               type="text"
-              list="workers-list"
               placeholder="Search worker by name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setShowWorkersDropdown(true)}
+              onBlur={() => setTimeout(() => setShowWorkersDropdown(false), 200)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowWorkersDropdown(true);
+              }}
               className="w-full text-xs rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 pr-10 outline-none focus:border-secondary transition-all"
             />
-            <datalist id="workers-list">
-              {workersList.map((w) => (
-                <option key={w._id} value={w.name}>
-                  {w.company}
-                </option>
-              ))}
-            </datalist>
+            {showWorkersDropdown && (
+              <div className="absolute z-[999] top-full left-0 right-0 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg mt-1 text-left">
+                {workersList
+                  .filter((w: any) => w.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map((w: any) => (
+                    <div 
+                      key={w._id} 
+                      onClick={() => {
+                        setSearchQuery(w.name);
+                        setShowWorkersDropdown(false);
+                      }}
+                      className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-semibold text-xs text-slate-700 dark:text-slate-200"
+                    >
+                      {w.name} ({w.company})
+                    </div>
+                  ))}
+                {workersList.filter((w: any) => w.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                  <div className="px-4 py-2 text-xs text-slate-400">No matching workers</div>
+                )}
+              </div>
+            )}
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
