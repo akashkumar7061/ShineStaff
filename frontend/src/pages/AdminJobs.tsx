@@ -453,17 +453,21 @@ GST included in all prices.`,
         <title>Invoice - ${invNumber}</title>
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
+          @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+          }
           body {
             font-family: 'Outfit', sans-serif;
             margin: 0;
-            padding: 30px;
+            padding: 0;
             color: #334155;
             background-color: #ffffff;
             -webkit-print-color-adjust: exact;
           }
           .invoice-box {
-            max-width: 800px;
-            margin: auto;
+            width: 100%;
+            margin: 0;
           }
           .header-row {
             display: flex;
