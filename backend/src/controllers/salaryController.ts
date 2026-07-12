@@ -3,6 +3,7 @@ import User from '../models/User';
 import Attendance from '../models/Attendance';
 import Job from '../models/Job';
 import SalaryRequest from '../models/SalaryRequest';
+import TravelLog from '../models/TravelLog';
 import { generatePayslipPDF } from '../utils/pdfGenerator';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
@@ -49,15 +50,15 @@ export const getSalaryDashboard = async (req: AuthRequest, res: Response) => {
     const halfDayEarnings = halfDays * (rate / 2);
     const totalWageEarnings = presentEarnings + halfDayEarnings;
 
-    // Fuel allowances from completed jobs in this month
-    const completedJobs = await Job.find({
+    // Fuel allowances from approved travel logs in this month
+    const approvedTravelLogs = await TravelLog.find({
       workerId,
-      status: 'completed',
-      completedAt: { $gte: start, $lte: end }
+      status: 'approved',
+      date: { $gte: startStr, $lte: endStr }
     });
 
-    const fuelKms = completedJobs.reduce((acc, job) => acc + (job.fuelKmsTravelled || 0), 0);
-    const fuelAllowance = completedJobs.reduce((acc, job) => acc + (job.fuelAllowance || 0), 0);
+    const fuelKms = approvedTravelLogs.reduce((acc, log) => acc + (log.kms || 0), 0);
+    const fuelAllowance = approvedTravelLogs.reduce((acc, log) => acc + (log.allowance || 0), 0);
 
     // Approved salary advance requests for this month
     const approvedAdvances = await SalaryRequest.find({
@@ -90,10 +91,8 @@ export const getSalaryDashboard = async (req: AuthRequest, res: Response) => {
       if (todayAttendance.status === 'present' || todayAttendance.status === 'late') todayWage = rate;
       else if (todayAttendance.status === 'half-day') todayWage = rate / 2;
     }
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
-    const todayJobs = completedJobs.filter(j => j.completedAt && j.completedAt >= todayStart && j.completedAt <= todayEnd);
-    const todayFuel = todayJobs.reduce((acc, j) => acc + (j.fuelAllowance || 0), 0);
+    const todayTravelLogs = approvedTravelLogs.filter(log => log.date === todayStr);
+    const todayFuel = todayTravelLogs.reduce((acc, log) => acc + (log.allowance || 0), 0);
     const todayEarnings = todayWage + todayFuel;
 
     res.status(200).json({
@@ -315,15 +314,14 @@ export const downloadPayslip = async (req: AuthRequest, res: Response) => {
     const totalWageEarnings = (presentDays + lateDays) * rate + halfDays * (rate / 2);
 
     const start = new Date(`${month}-01T00:00:00.000Z`);
-    const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
-    const completedJobs = await Job.find({
+    const approvedTravelLogs = await TravelLog.find({
       workerId,
-      status: 'completed',
-      completedAt: { $gte: start, $lte: end }
+      status: 'approved',
+      date: { $gte: startStr, $lte: endStr }
     });
 
-    const fuelKms = completedJobs.reduce((acc, job) => acc + (job.fuelKmsTravelled || 0), 0);
-    const fuelAllowance = completedJobs.reduce((acc, job) => acc + (job.fuelAllowance || 0), 0);
+    const fuelKms = approvedTravelLogs.reduce((acc, log) => acc + (log.kms || 0), 0);
+    const fuelAllowance = approvedTravelLogs.reduce((acc, log) => acc + (log.allowance || 0), 0);
 
     const approvedAdvances = await SalaryRequest.find({
       workerId,
