@@ -261,12 +261,22 @@ const WorkerJobs: React.FC = () => {
       return false;
     }
 
-    // 2. Date Filter (Only today or tomorrow)
+    // 2. Date Filter (Only today, or tomorrow if after 8 PM)
     const todayStr = getTodayString();
     const tomorrowStr = getTomorrowString();
-    if (job.date !== todayStr && job.date !== tomorrowStr) {
-      return false;
+    const currentHour = new Date().getHours();
+    const showTomorrow = currentHour >= 20; // 8 PM local time
+
+    if (showTomorrow) {
+      if (job.date !== todayStr && job.date !== tomorrowStr) {
+        return false;
+      }
+    } else {
+      if (job.date !== todayStr) {
+        return false;
+      }
     }
+    
     if (filterDate && job.date && job.date !== filterDate) {
       return false;
     }
@@ -344,7 +354,7 @@ const WorkerJobs: React.FC = () => {
                   <input
                     type="date"
                     min={getTodayString()}
-                    max={getTomorrowString()}
+                    max={new Date().getHours() >= 20 ? getTomorrowString() : getTodayString()}
                     value={filterDate}
                     onChange={(e) => setFilterDate(e.target.value)}
                     className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
