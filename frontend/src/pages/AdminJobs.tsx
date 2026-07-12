@@ -135,15 +135,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   useEffect(() => {
     fetchJobsAndWorkers();
     
-    // Check if '?new=true' is in the URL to trigger new booking modal
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('new') === 'true') {
-      resetForm();
-      setCreateModalOpen(true);
-      // Clean up URL parameter so it doesn't reopen on reload
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       const type = customEvent.detail?.type;
