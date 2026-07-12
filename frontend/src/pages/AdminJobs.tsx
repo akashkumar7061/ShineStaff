@@ -690,7 +690,8 @@ GST included in all prices.`,
           <div style="display: flex; justify-content: flex-end; margin-bottom: 40px; text-align: right;">
             <div style="font-size: 12px; color: #475569; width: 220px;">
               <div style="margin-bottom: 45px;">For <strong>${comp.name}</strong></div>
-              <div style="border-top: 1px dashed #cbd5e1; padding-top: 5px; font-weight: 600; color: #0f172a; font-size: 11px;">
+              <div style="border-bottom: 1.5px solid #94a3b8; margin-bottom: 6px; width: 100%;"></div>
+              <div style="font-weight: 600; color: #0f172a; font-size: 11px; text-align: center;">
                 Authorised Signature
               </div>
             </div>
