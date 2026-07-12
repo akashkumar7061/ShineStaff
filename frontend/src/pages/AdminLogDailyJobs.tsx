@@ -237,29 +237,29 @@ const AdminLogDailyJobs: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Layout Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Layout Stack */}
+      <div className="space-y-6">
         
-        {/* Left Column: Logging Form */}
-        <div className="glass-card p-6 border-t-4 border-t-sky-500 h-fit">
+        {/* Top Section: Logging Form */}
+        <div className="glass-card p-6 border-t-4 border-t-sky-500">
           <h4 className="text-xs font-black uppercase text-sky-655 tracking-wider mb-4 flex items-center space-x-1.5 dark:text-sky-400">
             <ClipboardList className="h-5 w-5" />
             <span>Log Daily Clean Job</span>
           </h4>
-          <form onSubmit={handleAddJob} className="space-y-3.5 text-xs font-bold text-slate-655 dark:text-slate-350">
-            <div>
-              <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Clean Job Title:</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Sofa Sanitization Clean"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
-              />
-            </div>
+          <form onSubmit={handleAddJob} className="space-y-4 text-xs font-bold text-slate-655 dark:text-slate-350">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Clean Job Title:</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sofa Sanitization Clean"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
+                />
+              </div>
 
-            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Price (INR):</label>
                 <input
@@ -271,6 +271,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
                 />
               </div>
+
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Date:</label>
                 <input
@@ -283,7 +284,7 @@ const AdminLogDailyJobs: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Client Name:</label>
                 <input
@@ -295,6 +296,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
                 />
               </div>
+
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Phone Number:</label>
                 <input
@@ -306,9 +308,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Company Division:</label>
                 <select
@@ -320,6 +320,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   <option value="CleanCruisers">CleanCruisers</option>
                 </select>
               </div>
+
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Assign Crew Worker:</label>
                 <select
@@ -336,7 +337,7 @@ const AdminLogDailyJobs: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Status:</label>
                 <select
@@ -348,6 +349,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   <option value="pending">Scheduled (Pending)</option>
                 </select>
               </div>
+
               <div>
                 <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Timing Slot:</label>
                 <input
@@ -357,20 +359,22 @@ const AdminLogDailyJobs: React.FC = () => {
                   className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
                 />
               </div>
-            </div>
 
-            <button
-              type="submit"
-              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md mt-2 flex items-center justify-center space-x-1.5"
-            >
-              <Plus className="h-4.5 w-4.5" />
-              <span>Log clean scheduled</span>
-            </button>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="w-full bg-sky-600 hover:bg-sky-700 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
+                >
+                  <Plus className="h-4.5 w-4.5" />
+                  <span>Log clean scheduled</span>
+                </button>
+              </div>
+            </div>
           </form>
         </div>
 
-        {/* Right Column: Work Logs & Approvals Desk */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Bottom Section: Work Logs & Approvals Desk */}
+        <div className="space-y-6">
           <div className="glass-card p-6">
             
             {/* Toolbar Desk */}
