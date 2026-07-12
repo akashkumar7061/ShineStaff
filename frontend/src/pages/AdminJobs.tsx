@@ -516,6 +516,27 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     return () => clearTimeout(timer);
   }, [mapPickerOpen, leafletLoaded, activeMapField]);
 
+  // Autocomplete Suggestions Effect as user types
+  useEffect(() => {
+    if (!mapPickerOpen || !mapSearchQuery || mapSearchQuery.length < 3 || mapSearchQuery === mapSelectedAddress) {
+      setMapSearchResults([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        console.log('Fetching autocomplete suggestions for:', mapSearchQuery);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearchQuery)}&limit=5&countrycodes=in`);
+        const data = await res.json();
+        setMapSearchResults(data || []);
+      } catch (err) {
+        console.error('Autocomplete suggestions error:', err);
+      }
+    }, 400); // 400ms debounce
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [mapSearchQuery, mapPickerOpen]);
+
   // Grid calculation: filter jobs strictly matching the selected date
   const dayJobs = jobs.filter((j) => j.date === selectedDate);
   const totalBookings = dayJobs.length;
