@@ -421,18 +421,18 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all xl:col-span-4">
-          <table className="w-full text-left text-xs table-fixed min-w-0 border-collapse">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all xl:col-span-4 overflow-x-auto scrollbar-thin">
+          <table className="w-full text-left text-xs table-fixed min-w-[1200px] border-collapse">
             <thead className="text-[10px] font-bold text-white uppercase tracking-widest sticky top-0 z-10">
               <tr className="bg-[#1e293b]">
-                <th className="px-3 py-3 w-[100px] bg-[#1e293b] text-white">
+                <th className="px-3 py-3 w-[110px] bg-[#1e293b] text-white">
                   <div className="flex items-center space-x-1 justify-center">
                     <Clock className="h-3.5 w-3.5 text-slate-300" />
                     <span>Time Slot</span>
                   </div>
                 </th>
                 {workers.map((w: any) => (
-                  <th key={w._id} className="px-3 py-3 border-l border-slate-700 bg-[#1e293b] text-white text-left">
+                  <th key={w._id} className="px-3 py-3 w-[180px] border-l border-slate-700 bg-[#1e293b] text-white text-left">
                     <div className="space-y-1">
                       <span className="block text-white font-bold text-xs normal-case">{w.name}</span>
                       <span className="block text-[10px] text-slate-350 font-normal font-sans leading-none">{w.phone}</span>
@@ -455,7 +455,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </div>
                   </th>
                 ))}
-                <th className="px-3 py-3 border-l border-slate-700 bg-[#1e293b] text-slate-300 italic text-left">
+                <th className="px-3 py-3 w-[160px] border-l border-slate-700 bg-[#1e293b] text-slate-300 italic text-left">
                   <span>Unassigned</span>
                 </th>
               </tr>
