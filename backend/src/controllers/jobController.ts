@@ -630,7 +630,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
       // Re-calculate fuel allowance using configured rate
       const settings = await Settings.findOne({ settingsId: 'global' });
       const fuelRate = settings ? (settings.fuelAllowanceRate || 4) : 4;
-      job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
+      job.fuelAllowance = (job.fuelKmsTravelled || 0) * fuelRate;
     }
     if (fromLocation !== undefined) {
       job.fromLocation = fromLocation;
@@ -700,7 +700,7 @@ export const updateJobFuel = async (req: AuthRequest, res: Response) => {
       await settings.save();
     }
     const fuelRate = settings.fuelAllowanceRate || 4;
-    job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
+    job.fuelAllowance = (job.fuelKmsTravelled || 0) * fuelRate;
 
     await job.save();
 
