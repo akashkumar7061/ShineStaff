@@ -875,7 +875,6 @@ const AdminBIDashboard: React.FC = () => {
                 { id: 'goals', label: 'Projections & AI recommendations', icon: Zap },
                 { id: 'expenses', label: 'Manage Expenditures', icon: Plus },
                 { id: 'payment-tracker', label: 'Invoice & Payments status', icon: CreditCard },
-                { id: 'audit', label: 'Audit Logs', icon: Clock },
                 { id: 'settings', label: 'Company Settings', icon: SettingsIcon }
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -1970,91 +1969,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.9: Administrative Activities Audit Log */}
-          {activeTab === 'audit' && (
-            <div className="glass-card p-6 overflow-hidden">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                <div>
-                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Administrative Activities Audit Log</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Immutable tracking logs of IP connections, devices, browsers & actions</p>
-                </div>
 
-                <div className="relative w-full md:w-64">
-                  <input
-                    type="text"
-                    placeholder="Search logs by action summary..."
-                    value={auditSearch}
-                    onChange={(e) => setAuditSearch(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 pl-3 outline-none focus:border-secondary"
-                  />
-                </div>
-              </div>
-
-              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
-                  <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-455">
-                    <tr>
-                      <th className="px-4 py-3">Timestamp</th>
-                      <th className="px-4 py-3">Admin User</th>
-                      <th className="px-4 py-3">Action Type</th>
-                      <th className="px-4 py-3">Summary Description</th>
-                      <th className="px-4 py-3">IP Address</th>
-                      <th className="px-4 py-3">Client details</th>
-                      <th className="px-4 py-3 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {auditLogs
-                      .filter(log => log.summary?.toLowerCase().includes(auditSearch.toLowerCase()))
-                      .map((log: any) => (
-                        <tr key={log._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
-                          <td className="px-4 py-3.5 text-slate-400 whitespace-nowrap">
-                            {new Date(log.createdAt).toLocaleString('en-IN', {
-                              dateStyle: 'short',
-                              timeStyle: 'short'
-                            })}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span className="block text-slate-800 dark:text-white">{(log.adminId as any)?.name || 'Admin'}</span>
-                            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-extrabold">ADMIN</span>
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${
-                              log.action === 'created' 
-                                ? 'bg-secondary/15 text-secondary' 
-                                : log.action === 'deleted' 
-                                ? 'bg-danger/15 text-danger' 
-                                : 'bg-amber-500/15 text-amber-500'
-                            }`}>
-                              {log.action}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 max-w-[220px] truncate" title={log.summary}>{log.summary}</td>
-                          <td className="px-4 py-3.5 font-mono text-[10.5px] text-slate-500">{log.ipAddress || '127.0.0.1'}</td>
-                          <td className="px-4 py-3.5">
-                            <span className="block text-slate-800 dark:text-white text-[10px]">{log.browser || 'Chrome'} ({log.device || 'Desktop'})</span>
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
-                            <span className={`inline-block text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                              (log.status || 'success') === 'success' 
-                                ? 'bg-success/10 text-success' 
-                                : 'bg-danger/10 text-danger'
-                            }`}>
-                              {log.status || 'success'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    {auditLogs.filter(log => log.summary?.toLowerCase().includes(auditSearch.toLowerCase())).length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6 text-slate-400">No matching audit logs found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
 
           {/* Tab 4.10: Global Settings configuration */}
           {activeTab === 'settings' && (
