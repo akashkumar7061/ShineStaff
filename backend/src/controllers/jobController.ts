@@ -108,6 +108,10 @@ export const createJob = async (req: AuthRequest, res: Response) => {
   } = req.body;
 
   try {
+    if (price !== undefined && Number(price) < 0) {
+      return res.status(400).json({ message: 'Price cannot be negative' });
+    }
+
     let worker = null;
     if (workerId && workerId !== 'unassigned') {
       worker = await User.findById(workerId);
@@ -596,6 +600,10 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
   } = req.body;
 
   try {
+    if (price !== undefined && Number(price) < 0) {
+      return res.status(400).json({ message: 'Price cannot be negative' });
+    }
+
     const job = await Job.findById(id);
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });

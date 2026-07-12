@@ -86,6 +86,10 @@ const AdminLogDailyJobs: React.FC = () => {
       alert('Please fill out all required job fields.');
       return;
     }
+    if (Number(jobPrice) < 0) {
+      alert('Price cannot be negative.');
+      return;
+    }
 
     try {
       await api.post('/jobs', {
@@ -145,6 +149,11 @@ const AdminLogDailyJobs: React.FC = () => {
   const handleUpdateJobSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingJob) return;
+
+    if (Number(editPrice) < 0) {
+      alert('Price cannot be negative.');
+      return;
+    }
 
     try {
       await api.put(`/jobs/${editingJob._id}`, {
@@ -360,6 +369,7 @@ const AdminLogDailyJobs: React.FC = () => {
                 <input
                   type="number"
                   required
+                  min="0"
                   placeholder="e.g. 3500"
                   value={jobPrice}
                   onChange={(e) => setJobPrice(e.target.value)}
@@ -713,6 +723,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   <input
                     type="number"
                     required
+                    min="0"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
                     className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"

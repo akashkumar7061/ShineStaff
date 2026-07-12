@@ -188,6 +188,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (Number(price) < 0) {
+      alert('Price cannot be negative.');
+      return;
+    }
     try {
       const payload = {
         title,
@@ -1561,7 +1565,7 @@ GST included in all prices.`,
                 </div>
                 <div>
                   <label className="block text-[9px] uppercase tracking-wider text-slate-405 mb-1.5">Price (₹)</label>
-                  <input type="number" required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Enter job price" className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary" />
+                  <input type="number" required min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Enter job price" className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary" />
                 </div>
               </div>
 

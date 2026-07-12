@@ -70,7 +70,7 @@ const JobSchema = new Schema<IJob>({
   clientPhone: { type: String, required: true },
   address: { type: String, default: '' },
   locationName: { type: String, default: '' },
-  price: { type: Number, default: 0 },
+  price: { type: Number, min: [0, 'Price cannot be negative'], default: 0 },
   date: { type: String, default: '' },
   timeSlot: { type: String, default: '' },
   location: {
