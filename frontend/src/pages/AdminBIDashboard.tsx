@@ -1362,7 +1362,7 @@ const AdminBIDashboard: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
+                  <table className="w-full min-w-[1100px] text-left text-xs font-bold text-slate-655 dark:text-slate-350">
                     <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Worker Name</th>
