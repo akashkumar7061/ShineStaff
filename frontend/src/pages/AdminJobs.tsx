@@ -614,7 +614,10 @@ GST included in all prices.`,
         <div class="invoice-box">
           <div class="header-row">
             <div>
-              <img src="${comp.logo}" alt="${comp.name}" style="height: 48px; width: auto; margin-bottom: 10px; display: block;" />
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <img src="${comp.logo}" alt="${comp.name}" style="height: 42px; width: auto; display: block;" />
+                <span style="font-size: 24px; font-weight: 700; color: ${comp.accent}; font-family: 'Outfit', sans-serif;">${comp.name}</span>
+              </div>
               <div class="company-tagline">${comp.tagline}</div>
               <div class="info-text" style="white-space: pre-line;">${comp.address}</div>
               <div class="info-text" style="margin-top: 6px;">
