@@ -114,7 +114,7 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
 
   const handleOpenApproveModal = (log: any) => {
     setSelectedLog(log);
-    setAllowance((log.kms * 10).toString()); // default auto-calc: ₹10 per KM
+    setAllowance((log.kms * 4).toString()); // default auto-calc: ₹4 per KM
     setApprovalModalOpen(true);
   };
 
@@ -622,7 +622,7 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
                     value={createKms}
                     onChange={(e) => {
                       setCreateKms(e.target.value);
-                      setCreateAllowance((Number(e.target.value) * 10).toString());
+                      setCreateAllowance((Number(e.target.value) * 4).toString());
                     }}
                     placeholder="Distance back home"
                     className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 outline-none focus:border-secondary"

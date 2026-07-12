@@ -118,7 +118,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       settings = new Settings({ settingsId: 'global' });
       await settings.save();
     }
-    const fuelRate = settings.fuelAllowanceRate || 5;
+    const fuelRate = settings.fuelAllowanceRate || 4;
     const kms = Number(fuelKmsTravelled) || 0;
     const calculatedFuelAllowance = fuelAllowance !== undefined ? Number(fuelAllowance) : (kms * fuelRate);
 
@@ -365,7 +365,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
 
     // Use manual KMs entered by worker, otherwise pre-calculated, otherwise GPS distance
     const finalKms = Number(manualFuelKms) >= 0 ? Number(manualFuelKms) : (job.fuelKmsTravelled || calculatedKms || 0);
-    const fuelRate = settings.fuelAllowanceRate || 5; // e.g. ₹5/KM
+    const fuelRate = settings.fuelAllowanceRate || 4; // e.g. ₹4/KM
     const fuelAllowance = finalKms * fuelRate;
 
     job.status = 'completed';
@@ -629,7 +629,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     } else if (fuelKmsTravelled !== undefined) {
       // Re-calculate fuel allowance using configured rate
       const settings = await Settings.findOne({ settingsId: 'global' });
-      const fuelRate = settings ? (settings.fuelAllowanceRate || 5) : 5;
+      const fuelRate = settings ? (settings.fuelAllowanceRate || 4) : 4;
       job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
     }
     if (fromLocation !== undefined) {
@@ -699,7 +699,7 @@ export const updateJobFuel = async (req: AuthRequest, res: Response) => {
       settings = new Settings({ settingsId: 'global' });
       await settings.save();
     }
-    const fuelRate = settings.fuelAllowanceRate || 5;
+    const fuelRate = settings.fuelAllowanceRate || 4;
     job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
 
     await job.save();

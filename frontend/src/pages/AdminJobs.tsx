@@ -357,7 +357,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         console.log('Geocoding rate-limited or not found. Using distance estimation.');
         const estimatedKms = Math.floor(Math.random() * 25) + 5;
         setCommuteKms(estimatedKms.toString());
-        setFuelAllowance((estimatedKms * 5).toString());
+        setFuelAllowance((estimatedKms * 4).toString());
         return;
       }
       
@@ -377,7 +377,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         const distanceMeters = routeData.routes[0].distance;
         const kms = Math.round((distanceMeters / 1000) * 10) / 10;
         setCommuteKms(kms.toString());
-        setFuelAllowance(Math.round(kms * 5).toString());
+        setFuelAllowance(Math.round(kms * 4).toString());
       } else {
         // Fallback to Haversine straight-line
         const R = 6371;
@@ -390,13 +390,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         const haversineKms = Math.round(R * c * 1.2 * 10) / 10;
         
         setCommuteKms(haversineKms.toString());
-        setFuelAllowance(Math.round(haversineKms * 5).toString());
+        setFuelAllowance(Math.round(haversineKms * 4).toString());
       }
     } catch (err) {
       console.error('Routing calculation error:', err);
       const estimatedKms = Math.floor(Math.random() * 25) + 5;
       setCommuteKms(estimatedKms.toString());
-      setFuelAllowance((estimatedKms * 5).toString());
+      setFuelAllowance((estimatedKms * 4).toString());
     } finally {
       setIsCalculatingRoute(false);
     }
@@ -1374,7 +1374,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       onChange={(e) => {
                         setCommuteKms(e.target.value);
                         if (e.target.value) {
-                          setFuelAllowance(String(Math.round(Number(e.target.value) * 5)));
+                          setFuelAllowance(String(Math.round(Number(e.target.value) * 4)));
                         }
                       }}
                       placeholder="KMs travelled"
