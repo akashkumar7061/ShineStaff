@@ -119,12 +119,17 @@ export const approveTravelLog = async (req: AuthRequest, res: Response) => {
       summary: `Approved travel allowance of ₹${log.allowance} for ${log.kms} km`
     });
 
-    // Notify worker via Socket
+    // Notify worker and admins via Socket
     const io = getIO();
     if (io) {
       io.to(log.workerId.toString()).emit('notification', {
         type: 'TRAVEL_LOG_APPROVED',
         message: `Your travel allowance of ₹${allowance} was approved.`,
+        travelId: log._id
+      });
+      io.emit('adminNotification', {
+        type: 'TRAVEL_LOG_APPROVED',
+        message: `Travel allowance approved for worker.`,
         travelId: log._id
       });
     }

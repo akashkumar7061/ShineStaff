@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getSalaryDashboard,
+  getBulkSalaryDashboard,
   getSalaryRequests,
   createSalaryRequest,
   processSalaryRequest,
@@ -16,6 +17,7 @@ const router = Router();
 router.use(authenticateJWT);
 
 router.get('/dashboard', getSalaryDashboard);
+router.get('/bulk-dashboard', authorizeRoles('admin'), getBulkSalaryDashboard);
 router.get('/requests', getSalaryRequests);
 router.post('/requests', authorizeRoles('worker'), createSalaryRequest);
 router.put('/requests/:id', authorizeRoles('admin'), processSalaryRequest);

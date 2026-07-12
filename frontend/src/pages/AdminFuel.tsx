@@ -74,7 +74,8 @@ const AdminFuel: React.FC<AdminFuelProps> = ({ companyFilter }) => {
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'TRAVEL_LOG_SUBMITTED' || customEvent.detail?.type === 'TRAVEL_LOG_UPDATED') {
+      const type = customEvent.detail?.type;
+      if (['TRAVEL_LOG_SUBMITTED', 'TRAVEL_LOG_UPDATED', 'TRAVEL_LOG_APPROVED'].includes(type)) {
         fetchTravelLogs();
       }
     };

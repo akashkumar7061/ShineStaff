@@ -230,12 +230,18 @@ export const recordPayout = async (req: AuthRequest, res: Response) => {
 
     await payout.save();
 
-    logAudit(req, {
-      action: 'created',
-      entityType: 'SalaryRequest',
-      entityId: payout._id.toString(),
-      summary: `Recorded a payout of ₹${payout.amount} for ${worker.name} (${payout.month})`
-    });
+    // Notify worker and admins via Socket
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'SALARY_REQUEST_CREATED',
+        message: `A payout of ₹${payout.amount} was recorded for ${worker.name}.`
+      });
+      io.to(payout.workerId.toString()).emit('notification', {
+        type: 'SALARY_PAID',
+        message: `A payout of ₹${payout.amount} was processed/recorded for you.`
+      });
+    }
 
     res.status(201).json({ message: 'Payout recorded successfully', payout });
   } catch (error: any) {
@@ -268,12 +274,16 @@ export const processSalaryRequest = async (req: AuthRequest, res: Response) => {
       summary: `${status === 'approved' ? 'Approved' : 'Rejected'} a ₹${request.amount} salary request`
     });
 
-    // Socket alert to worker
+    // Socket alert to worker and admins
     const io = getIO();
     if (io) {
       io.to(request.workerId._id.toString()).emit('notification', {
         type: 'SALARY_PAID',
         message: `Your request of ₹${request.amount} has been ${status}.`
+      });
+      io.emit('adminNotification', {
+        type: 'SALARY_REQUEST_APPROVED',
+        message: `Salary request of ₹${request.amount} has been ${status}.`
       });
     }
 
@@ -370,12 +380,14 @@ export const deleteSalaryRequest = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Payment record not found' });
     }
 
-    logAudit(req, {
-      action: 'deleted',
-      entityType: 'SalaryRequest',
-      entityId: request._id.toString(),
-      summary: `Deleted a ₹${request.amount} payment record (${request.month})`
-    });
+    // Notify admins via Socket
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'SALARY_REQUEST_DELETED',
+        message: `Deleted payment record of ₹${request.amount}.`
+      });
+    }
 
     res.status(200).json({ message: 'Payment record deleted successfully' });
   } catch (error: any) {
@@ -407,14 +419,127 @@ export const updateSalaryRequest = async (req: AuthRequest, res: Response) => {
 
     await request.save();
 
-    logAudit(req, {
-      action: 'updated',
-      entityType: 'SalaryRequest',
-      entityId: request._id.toString(),
-      summary: `Edited payment record (amount: ₹${request.amount}, status: ${request.status})`
-    });
+    // Notify admins via Socket
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'SALARY_REQUEST_APPROVED',
+        message: `Updated payment record of ₹${request.amount}.`
+      });
+    }
 
     res.status(200).json({ message: 'Payment record updated successfully', request });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const getBulkSalaryDashboard = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  const { company, month } = req.query;
+  const targetMonth = (month as string) || new Date().toISOString().substring(0, 7);
+
+  try {
+    // 1. Fetch workers filtered by company
+    const workerFilter: any = { role: 'worker' };
+    if (company && company !== 'All') {
+      workerFilter.company = company;
+    }
+    const workers = await User.find(workerFilter);
+    const workerIds = workers.map(w => w._id);
+
+    // 2. Fetch all attendance logs for this month
+    const startStr = `${targetMonth}-01`;
+    const endStr = `${targetMonth}-${new Date(parseInt(targetMonth.split('-')[0]), parseInt(targetMonth.split('-')[1]), 0).getDate()}`;
+    const attendances = await Attendance.find({
+      workerId: { $in: workerIds },
+      date: { $gte: startStr, $lte: endStr }
+    });
+
+    // 3. Fetch all approved travel logs for this month
+    const approvedTravelLogs = await TravelLog.find({
+      workerId: { $in: workerIds },
+      status: 'approved',
+      date: { $gte: startStr, $lte: endStr }
+    });
+
+    // 4. Fetch all approved salary requests
+    const salaryRequests = await SalaryRequest.find({
+      workerId: { $in: workerIds },
+      status: 'approved',
+      month: targetMonth
+    });
+
+    const payrolls = workers.map(worker => {
+      const wIdStr = worker._id.toString();
+
+      // Filter logs for this specific worker in-memory
+      const workerAttendance = attendances.filter(a => a.workerId.toString() === wIdStr);
+      const presentDays = workerAttendance.filter(a => a.status === 'present').length;
+      const lateDays = workerAttendance.filter(a => a.status === 'late').length;
+      const halfDays = workerAttendance.filter(a => a.status === 'half-day').length;
+      const absentDays = workerAttendance.filter(a => a.status === 'absent').length;
+
+      const rate = worker.dailySalary || 0;
+      const presentEarnings = (presentDays + lateDays) * rate;
+      const halfDayEarnings = halfDays * (rate / 2);
+      const totalWageEarnings = presentEarnings + halfDayEarnings;
+
+      const workerTravel = approvedTravelLogs.filter(t => t.workerId.toString() === wIdStr);
+      const fuelKms = workerTravel.reduce((acc, log) => acc + (log.kms || 0), 0);
+      const fuelAllowance = workerTravel.reduce((acc, log) => acc + (log.allowance || 0), 0);
+
+      const workerRequests = salaryRequests.filter(sr => sr.workerId.toString() === wIdStr);
+      const advanceDeducted = workerRequests.filter(sr => sr.type === 'advance').reduce((acc, r) => acc + r.amount, 0);
+      const paidAmount = workerRequests.filter(sr => sr.type === 'regular_payout').reduce((acc, r) => acc + r.amount, 0);
+
+      const grossEarnings = totalWageEarnings + fuelAllowance;
+      const netSalary = Math.max(0, grossEarnings - advanceDeducted);
+      const remainingSalary = Math.max(0, netSalary - paidAmount);
+
+      // Today's earnings
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayAttendance = workerAttendance.find(a => a.date === todayStr);
+      let todayWage = 0;
+      if (todayAttendance) {
+        if (todayAttendance.status === 'present' || todayAttendance.status === 'late') todayWage = rate;
+        else if (todayAttendance.status === 'half-day') todayWage = rate / 2;
+      }
+      const todayFuel = workerTravel.filter(t => t.date === todayStr).reduce((acc, t) => acc + (t.allowance || 0), 0);
+      const todayEarnings = todayWage + todayFuel;
+
+      return {
+        worker: {
+          id: worker._id,
+          name: worker.name,
+          dailySalary: worker.dailySalary,
+          company: worker.company
+        },
+        month: targetMonth,
+        counters: {
+          present: presentDays,
+          late: lateDays,
+          halfDay: halfDays,
+          absent: absentDays
+        },
+        earnings: {
+          baseWage: totalWageEarnings,
+          fuelAllowance,
+          advanceDeducted,
+          grossEarnings,
+          netSalary,
+          paidAmount,
+          remainingSalary,
+          todayEarnings,
+          fuelKms
+        }
+      };
+    });
+
+    res.status(200).json(payrolls);
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

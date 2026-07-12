@@ -115,20 +115,9 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
   const fetchSalaryData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch workers to calculate payroll details for each
-      const workersRes = await api.get(`/workers?company=${companyFilter}`);
-      const workers = workersRes.data;
-
-      const payrolls: any[] = [];
-      for (const w of workers) {
-        try {
-          const dashRes = await api.get(`/salary/dashboard?workerId=${w._id}&month=${selectedMonth}`);
-          payrolls.push(dashRes.data);
-        } catch (err) {
-          console.error(`Failed to fetch payroll for ${w.name}:`, err);
-        }
-      }
-      setPayrollList(payrolls);
+      // Fetch all payrolls in one single fast bulk API call
+      const res = await api.get(`/salary/bulk-dashboard?company=${companyFilter}&month=${selectedMonth}`);
+      setPayrollList(res.data);
     } catch (err) {
       console.error('Failed to fetch salary database:', err);
     } finally {
@@ -141,7 +130,8 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'JOB_COMPLETED' || customEvent.detail?.type === 'TRAVEL_LOG_APPROVED') {
+      const type = customEvent.detail?.type;
+      if (['JOB_COMPLETED', 'TRAVEL_LOG_APPROVED', 'TRAVEL_LOG_UPDATED', 'SALARY_REQUEST_APPROVED', 'SALARY_REQUEST_CREATED', 'SALARY_REQUEST_DELETED'].includes(type)) {
         fetchSalaryData();
       }
     };
