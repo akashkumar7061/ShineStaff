@@ -743,6 +743,49 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 )}
               </div>
 
+              {/* Photo Compliance Audit Section */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-205/60 dark:border-slate-800/60 space-y-2.5">
+                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none text-left">Photo Compliance</span>
+                
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Before Snap</span>
+                    {selectedJobForDrawer.beforePhoto ? (
+                      <img 
+                        src={selectedJobForDrawer.beforePhoto} 
+                        alt="Before" 
+                        onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                        className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
+                      />
+                    ) : (
+                      <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">After Snap</span>
+                    {selectedJobForDrawer.afterPhoto ? (
+                      <img 
+                        src={selectedJobForDrawer.afterPhoto} 
+                        alt="After" 
+                        onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                        className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
+                      />
+                    ) : (
+                      <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                  className="w-full bg-blue-600/10 hover:bg-blue-600/15 text-blue-600 font-extrabold py-1.5 rounded-xl border border-blue-500/20 flex items-center justify-center space-x-1 text-[10px] cursor-pointer"
+                >
+                  <Camera className="h-3 w-3" />
+                  <span>Compare Photos Fullscreen</span>
+                </button>
+              </div>
+
               {/* Update Status Buttons Grid */}
               <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Update Status</span>
