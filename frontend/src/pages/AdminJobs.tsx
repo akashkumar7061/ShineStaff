@@ -406,7 +406,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     const companyInfo = {
       SofaShine: {
         name: "SofaShine",
-        tagline: "Home Cleaning Services",
+        tagline: "SofaShine",
         logo: window.location.origin + "/logos/sofashine_logo.png",
         address: `Plot No. 66, Upper Ground Floor, A-Block,
 Bhagwati Garden Road, Uttam Nagar,
@@ -424,7 +424,7 @@ GST included in all prices.`,
       },
       CleanCruisers: {
         name: "CleanCruisers",
-        tagline: "Doorstep Car Wash",
+        tagline: "CleanCruisers",
         logo: window.location.origin + "/logos/cleancruisers_logo.png",
         address: `Plot No. 66, Upper Ground Floor, A-Block,
 Bhagwati Garden Road, Uttam Nagar,
