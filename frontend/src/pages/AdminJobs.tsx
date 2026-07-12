@@ -407,7 +407,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       SofaShine: {
         name: "SofaShine",
         tagline: "Home Cleaning Services",
-        logo: "https://frontend-eight-iota-3yhwo376fr.vercel.app/logos/sofashine.png",
+        logo: "https://invoicesss.netlify.app/logos/sofashine.svg",
         address: `Plot No. 66, Upper Ground Floor, A-Block,
 Bhagwati Garden Road, Uttam Nagar,
 New Delhi – 110059, India`,
@@ -425,7 +425,7 @@ GST included in all prices.`,
       CleanCruisers: {
         name: "CleanCruisers",
         tagline: "Doorstep Car Wash",
-        logo: "https://frontend-eight-iota-3yhwo376fr.vercel.app/logos/cleancruisers.png",
+        logo: "https://invoicesss.netlify.app/logos/cleancruisers.svg",
         address: `Plot No. 66, Upper Ground Floor, A-Block,
 Bhagwati Garden Road, Uttam Nagar,
 New Delhi – 110059, India`,
@@ -455,7 +455,7 @@ GST included in all prices.`,
         <style>
           @page {
             size: A4;
-            margin: 20mm 15mm 20mm 15mm;
+            margin: 15mm;
           }
           body {
             font-family: 'Outfit', sans-serif;
@@ -467,7 +467,10 @@ GST included in all prices.`,
           }
           .invoice-box {
             width: 100%;
-            margin: 0;
+            max-width: 800px;
+            margin: auto;
+            padding: 25px;
+            box-sizing: border-box;
           }
           .header-row {
             display: flex;
@@ -476,12 +479,6 @@ GST included in all prices.`,
             border-bottom: 2px solid ${comp.accent};
             padding-bottom: 20px;
             margin-bottom: 25px;
-          }
-          .company-logo {
-            font-size: 24px;
-            font-weight: 700;
-            color: ${comp.accent};
-            margin-bottom: 5px;
           }
           .company-tagline {
             font-size: 11px;
@@ -617,7 +614,7 @@ GST included in all prices.`,
         <div class="invoice-box">
           <div class="header-row">
             <div>
-              <div class="company-logo">${comp.name}</div>
+              <img src="${comp.logo}" alt="${comp.name}" style="height: 48px; width: auto; margin-bottom: 10px; display: block;" />
               <div class="company-tagline">${comp.tagline}</div>
               <div class="info-text" style="white-space: pre-line;">${comp.address}</div>
               <div class="info-text" style="margin-top: 6px;">
