@@ -326,33 +326,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   };
 
   return (
-    <div className="space-y-6 px-4 md:px-6 lg:px-8 text-left">
+    <div className="space-y-4 px-4 md:px-6 lg:px-8 text-left h-[calc(100vh-140px)] flex flex-col overflow-hidden pb-4">
       
       {/* 1. Header Date Selection Ribbon */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm print:hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm print:hidden shrink-0">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
-            <Calendar className="h-5.5 w-5.5 text-secondary animate-pulse" />
+          <h2 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
+            <Calendar className="h-5 w-5 text-secondary animate-pulse" />
             <span>Interactive Scheduling Board</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Assign tasks, track timelines, and review check-in compliance logs</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Assign tasks, track timelines, and review check-in compliance logs</p>
         </div>
 
         {/* Date Controls */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
             <button onClick={handlePrevDay} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
-              <ChevronLeft className="h-4.5 w-4.5" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-xs font-black text-slate-700 dark:text-slate-200 px-2 min-w-[170px] text-center">
+            <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 px-1 min-w-[150px] text-center">
               {getFormattedDateString(selectedDate)}
             </span>
             <button onClick={handleNextDay} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
-              <ChevronRight className="h-4.5 w-4.5" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          <button onClick={handleGoToToday} className="bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-extrabold text-xs px-3.5 py-2.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40 cursor-pointer">
+          <button onClick={handleGoToToday} className="bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-extrabold text-[11px] px-3 py-2 rounded-xl border border-slate-200/40 dark:border-slate-800/40 cursor-pointer">
             Today
           </button>
 
@@ -363,52 +363,54 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               setSelectedDate(e.target.value);
               setSelectedJobForDrawer(null);
             }}
-            className="text-xs font-semibold rounded-xl border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark"
+            className="text-[11px] font-semibold rounded-xl border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
           />
 
-          <button onClick={fetchJobsAndWorkers} className="p-2.5 bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 text-slate-700 dark:text-slate-200 border border-slate-200/40 dark:border-slate-800/40 rounded-xl cursor-pointer" title="Refresh Calendar Grid">
-            <RefreshCw className="h-4.5 w-4.5 animate-spin-slow" />
+          <button onClick={fetchJobsAndWorkers} className="p-2 bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 text-slate-700 dark:text-slate-200 border border-slate-200/40 dark:border-slate-800/40 rounded-xl cursor-pointer" title="Refresh Calendar Grid">
+            <RefreshCw className="h-4 w-4" />
           </button>
 
           <button
             onClick={() => setSendSchedulesOpen(true)}
-            className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-600 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-emerald-500/35 cursor-pointer"
+            className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-600 font-extrabold text-[11px] px-3 py-2 rounded-xl border border-emerald-500/35 cursor-pointer"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5" />
             <span>Send All Schedules ↗</span>
           </button>
 
           <button
             onClick={() => { resetForm(); setCreateModalOpen(true); }}
-            className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4.5 py-2.5 rounded-xl shadow cursor-pointer"
+            className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] px-3.5 py-2 rounded-xl shadow cursor-pointer"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span>+ New Booking</span>
           </button>
         </div>
       </div>
 
       {/* 2. Count Badges */}
-      <div className="flex space-x-3 text-xs font-bold mt-2">
-        <span className="bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-full text-slate-600 dark:text-slate-350">
+      <div className="flex space-x-3 text-[11px] font-bold mt-1 shrink-0">
+        <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-slate-600 dark:text-slate-350">
           {totalBookings} bookings
         </span>
-        <span className="bg-indigo-50 dark:bg-indigo-950/40 px-3.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400">
+        <span className="bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full text-indigo-600 dark:text-indigo-400">
           {confirmedBookings} confirmed
         </span>
       </div>
 
       {/* 3. Main Split Panel Container: Grid + Drawer Drawer */}
-      <div className="flex gap-6 items-start relative">
+      <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-4 overflow-hidden min-h-0 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
-        <div className="flex-1 overflow-x-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 min-w-[70vw]">
+        <div className={`h-full overflow-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 transition-all ${
+          selectedJobForDrawer ? 'xl:col-span-3' : 'xl:col-span-4'
+        }`}>
           <table className="w-full text-left text-xs table-fixed min-w-[800px]">
-            <thead className="bg-slate-55 dark:bg-slate-900/40 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/80">
+            <thead className="bg-slate-55 dark:bg-slate-900/40 text-[10px] font-bold text-slate-455 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/80 sticky top-0 bg-white dark:bg-slate-900 z-10">
               <tr>
-                <th className="px-4 py-4 w-52">Time Slot</th>
+                <th className="px-4 py-3 w-48">Time Slot</th>
                 {workers.map((w: any) => (
-                  <th key={w._id} className="px-4 py-4 border-l border-slate-100 dark:border-slate-850 w-60">
+                  <th key={w._id} className="px-4 py-3 border-l border-slate-100 dark:border-slate-850 w-56">
                     <div className="space-y-1">
                       <span className="block text-slate-800 dark:text-white font-black text-xs normal-case">{w.name}</span>
                       <span className="block text-[10px] text-slate-400 font-sans tracking-normal font-semibold leading-none">{w.phone}</span>
@@ -429,7 +431,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </div>
                   </th>
                 ))}
-                <th className="px-4 py-4 border-l border-slate-100 dark:border-slate-850 w-60">
+                <th className="px-4 py-3 border-l border-slate-100 dark:border-slate-850 w-56">
                   <span className="block text-slate-400 font-black text-xs italic">Unassigned</span>
                 </th>
               </tr>
@@ -439,9 +441,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <tr key={slot} className="hover:bg-slate-50/20 dark:hover:bg-slate-900/10">
                   
                   {/* Row Time Slot Cell */}
-                  <td className="px-4 py-6 font-bold text-slate-700 dark:text-slate-350 flex flex-col justify-center">
+                  <td className="px-4 py-5 font-bold text-slate-700 dark:text-slate-350">
                     <div className="flex items-center space-x-1.5 text-indigo-500 font-extrabold">
-                      <Clock className="h-3.5 w-3.5" />
+                      <Clock className="h-3.5 w-3.5 animate-pulse" />
                       <span>{slot}</span>
                     </div>
                   </td>
@@ -450,37 +452,36 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   {workers.map((w: any) => {
                     const cellJobs = dayJobs.filter(j => j.workerId?._id === w._id && j.timeSlot === slot);
                     return (
-                      <td key={w._id} className="px-3 py-4 border-l border-slate-100 dark:border-slate-850 align-top">
+                      <td key={w._id} className="px-3 py-3 border-l border-slate-100 dark:border-slate-850 align-top">
                         {cellJobs.length > 0 ? (
                           <div className="space-y-2">
                             {cellJobs.map((j) => (
                               <div
                                 key={j._id}
                                 onClick={() => setSelectedJobForDrawer(j)}
-                                className={`relative text-left p-3.5 rounded-2xl border cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all group ${
+                                className={`relative text-left p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
                                   selectedJobForDrawer?._id === j._id
-                                    ? 'bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-500 shadow-md'
-                                    : 'bg-indigo-500/[0.04] hover:bg-indigo-500/[0.08] border-indigo-500/15 dark:border-indigo-500/10'
+                                    ? 'bg-indigo-50/65 dark:bg-indigo-950/25 border-indigo-500 shadow-md'
+                                    : 'bg-indigo-500/[0.03] hover:bg-indigo-500/[0.07] border-indigo-500/15 dark:border-indigo-500/10'
                                 }`}
                               >
-                                {/* Edit Button */}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
-                                  className="absolute top-2.5 right-2.5 text-slate-400 hover:text-indigo-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
+                                  className="absolute top-2 right-2 text-slate-400 hover:text-indigo-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
                                   title="Edit details"
                                 >
                                   <Edit className="h-3 w-3" />
                                 </button>
 
-                                <div className="space-y-1.5 pr-4">
+                                <div className="space-y-1.5 pr-3">
                                   <span className="block font-black text-slate-800 dark:text-white text-xs tracking-tight">{j.clientName || 'N/A'}</span>
-                                  <span className="block text-[9.5px] font-bold text-slate-450 uppercase leading-snug">{j.title}</span>
+                                  <span className="block text-[9px] font-bold text-slate-450 uppercase leading-snug">{j.title}</span>
                                   
                                   <div className="flex items-center justify-between pt-2 border-t border-indigo-500/10 text-[9px] font-black">
                                     <a
                                       href={`tel:${j.clientPhone}`}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="flex items-center space-x-1 text-indigo-600 hover:underline"
+                                      className="flex items-center space-x-0.5 text-indigo-600 hover:underline"
                                     >
                                       <span>📞 Call</span>
                                     </a>
@@ -491,13 +492,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                             ))}
                           </div>
                         ) : (
-                          // Grid cell dashed placeholder (Matching Mock)
                           <div
                             onClick={() => {
                               resetForm();
                               setWorkerId(w._id);
                               setTimeSlot(slot);
-                              // Calculate start/end times based on slot range
                               const parts = slot.split(' - ');
                               if (parts.length === 2) {
                                 const convertTo24Hour = (time12: string) => {
@@ -512,7 +511,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               }
                               setCreateModalOpen(true);
                             }}
-                            className="h-20 border border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-500 rounded-2xl flex items-center justify-center text-slate-350 hover:text-indigo-500 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-all font-bold text-lg"
+                            className="h-16 border border-dashed border-slate-205 dark:border-slate-800 hover:border-indigo-500 rounded-2xl flex items-center justify-center text-slate-350 hover:text-indigo-500 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-all font-bold text-base"
                           >
                             +
                           </div>
@@ -521,36 +520,36 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     );
                   })}
 
-                  {/* Unassigned Cell column */}
-                  <td className="px-3 py-4 border-l border-slate-100 dark:border-slate-850 align-top">
+                  {/* Unassigned Cell */}
+                  <td className="px-3 py-3 border-l border-slate-100 dark:border-slate-850 align-top">
                     {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).length > 0 ? (
                       <div className="space-y-2">
                         {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).map((j) => (
                           <div
                             key={j._id}
                             onClick={() => setSelectedJobForDrawer(j)}
-                            className={`relative text-left p-3.5 rounded-2xl border cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all group ${
+                            className={`relative text-left p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
                               selectedJobForDrawer?._id === j._id
-                                ? 'bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-500 shadow-md'
-                                : 'bg-slate-500/[0.04] hover:bg-slate-500/[0.08] border-slate-500/15 dark:border-slate-500/10'
+                                ? 'bg-indigo-50/65 dark:bg-indigo-950/25 border-indigo-500 shadow-md'
+                                : 'bg-slate-500/[0.03] hover:bg-slate-500/[0.07] border-slate-500/15 dark:border-slate-500/10'
                             }`}
                           >
                             <button
                               onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
-                              className="absolute top-2.5 right-2.5 text-slate-450 hover:text-indigo-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
+                              className="absolute top-2 right-2 text-slate-450 hover:text-indigo-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
                             >
                               <Edit className="h-3 w-3" />
                             </button>
 
-                            <div className="space-y-1.5 pr-4">
+                            <div className="space-y-1.5 pr-3">
                               <span className="block font-black text-slate-800 dark:text-white text-xs tracking-tight">{j.clientName || 'N/A'}</span>
-                              <span className="block text-[9.5px] font-bold text-slate-450 uppercase leading-snug">{j.title}</span>
+                              <span className="block text-[9px] font-bold text-slate-450 uppercase leading-snug">{j.title}</span>
                               
                               <div className="flex items-center justify-between pt-2 border-t border-indigo-500/10 text-[9px] font-black">
                                 <a
                                   href={`tel:${j.clientPhone}`}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 text-slate-500 hover:underline"
+                                  className="flex items-center space-x-0.5 text-slate-500 hover:underline"
                                 >
                                   <span>📞 Call</span>
                                 </a>
@@ -568,7 +567,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           setTimeSlot(slot);
                           setCreateModalOpen(true);
                         }}
-                        className="h-20 border border-dashed border-slate-200 dark:border-slate-800 hover:border-slate-400 rounded-2xl flex items-center justify-center text-slate-350 hover:text-slate-500 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-all font-bold text-lg"
+                        className="h-16 border border-dashed border-slate-205 dark:border-slate-800 hover:border-slate-400 rounded-2xl flex items-center justify-center text-slate-350 hover:text-slate-500 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-all font-bold text-base"
                       >
                         +
                       </div>
@@ -580,185 +579,185 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </table>
         </div>
 
-        {/* Right Side: Interactive Slide-in Details/Status Drawer (Matches Screenshot Layout) */}
+        {/* Right Side: Interactive Slide-in Details/Status Drawer */}
         {selectedJobForDrawer && (
-          <div className="w-80 shrink-0 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-5 sticky top-6 space-y-6 text-xs text-left animate-slide-in">
+          <div className="xl:col-span-1 h-full overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-5 space-y-4 flex flex-col justify-between text-xs animate-slide-in select-none">
             
-            {/* Drawer Header */}
-            <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="block font-black tracking-tight text-slate-850 dark:text-white text-base">
-                  {selectedJobForDrawer._id?.slice(-12).toUpperCase() || 'CLEANUP DETAILS'}
-                </span>
-                <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-1.5 rounded-full ${
-                  selectedJobForDrawer.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'
-                }`}>
-                  {selectedJobForDrawer.status || 'confirmed'}
-                </span>
-              </div>
-              <button
-                onClick={() => setSelectedJobForDrawer(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-black p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Quick Actions & Contact Details */}
-            <div className="space-y-3 font-bold">
-              <a
-                href={`tel:${selectedJobForDrawer.clientPhone}`}
-                className="flex items-center justify-center space-x-1.5 bg-blue-500/10 text-blue-600 font-extrabold py-2.5 rounded-xl border border-blue-500/20 cursor-pointer w-full text-center hover:bg-blue-500/15"
-              >
-                <span>📞 Call</span>
-              </a>
-
-              <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <div className="flex items-center space-x-2 text-slate-655 dark:text-slate-350">
-                  <User className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span>{selectedJobForDrawer.clientName || 'N/A'}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-slate-655 dark:text-slate-350">
-                  <Phone className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span>{selectedJobForDrawer.clientPhone || 'N/A'}</span>
-                </div>
-                <div className="flex items-start space-x-2 text-slate-655 dark:text-slate-350">
-                  <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span className="leading-snug">{selectedJobForDrawer.address || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Service & Price */}
-            <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-4 text-left">
-              <h4 className="font-black text-slate-800 dark:text-white text-sm tracking-tight leading-snug">
-                {selectedJobForDrawer.title}
-              </h4>
-              <div className="text-lg font-black text-secondary">
-                ₹{selectedJobForDrawer.price || 0}
-              </div>
-              <div className="flex items-center space-x-1 text-slate-400 font-bold mt-1 text-[10px]">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{selectedJobForDrawer.timeSlot}</span>
-              </div>
-            </div>
-
-            {/* Edit Button link */}
-            <button
-              onClick={() => handleOpenEditModal(selectedJobForDrawer)}
-              className="flex items-center justify-between w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/50 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-            >
-              <div className="flex items-center space-x-2 font-black text-slate-700 dark:text-slate-205">
-                <Edit className="h-3.5 w-3.5" />
-                <span>Edit Details</span>
-              </div>
-              <span className="text-[9px] text-slate-400">Phone · Service · Amount</span>
-            </button>
-
-            {/* Job timing box */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/30 space-y-3">
-              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Job Timing</span>
-              <div className="grid grid-cols-2 gap-2 text-left">
+            <div className="space-y-4">
+              {/* Drawer Header */}
+              <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
-                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled start</span>
-                  <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-200">
-                    {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[0] : '08:00 AM'}
+                  <span className="block font-black tracking-tight text-slate-850 dark:text-white text-sm">
+                    {selectedJobForDrawer._id?.slice(-12).toUpperCase() || 'CLEANUP DETAILS'}
+                  </span>
+                  <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-1.5 rounded-full ${
+                    selectedJobForDrawer.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'
+                  }`}>
+                    {selectedJobForDrawer.status || 'confirmed'}
                   </span>
                 </div>
-                <div>
-                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled end</span>
-                  <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-200">
-                    {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[1] : '02:00 PM'}
-                  </span>
-                </div>
+                <button
+                  onClick={() => setSelectedJobForDrawer(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-black p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Large Worker started buttons */}
-              <button
-                onClick={() => handleUpdateStatus(selectedJobForDrawer._id, selectedJobForDrawer.status === 'started' ? 'completed' : 'started')}
-                className="w-full bg-violet-600 hover:bg-violet-750 text-white font-extrabold py-2.5 rounded-xl shadow cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span>{selectedJobForDrawer.status === 'started' ? 'Complete Cleanup' : 'Worker Started'}</span>
-              </button>
-            </div>
+              {/* Quick Actions & Contact Details */}
+              <div className="space-y-3 font-bold">
+                <a
+                  href={`tel:${selectedJobForDrawer.clientPhone}`}
+                  className="flex items-center justify-center space-x-1.5 bg-blue-500/10 hover:bg-blue-500/15 text-blue-600 font-extrabold py-2.5 rounded-xl border border-blue-500/20 cursor-pointer w-full text-center"
+                >
+                  <span>📞 Call</span>
+                </a>
 
-            {/* Assigned Worker Contact */}
-            <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/10 space-y-3 text-left">
-              <span className="block text-[8px] font-black text-indigo-550 dark:text-indigo-400 uppercase tracking-widest leading-none">Assigned Worker</span>
-              {selectedJobForDrawer.workerId ? (
-                <div className="space-y-3 font-bold text-slate-700 dark:text-slate-200">
-                  <div>
-                    <span className="block font-black text-slate-800 dark:text-white leading-tight">{selectedJobForDrawer.workerId.name}</span>
-                    <span className="block text-[10px] text-slate-400 mt-0.5 leading-none">{selectedJobForDrawer.workerId.phone}</span>
+                <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-slate-655 dark:text-slate-350">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span>{selectedJobForDrawer.clientName || 'N/A'}</span>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span>{selectedJobForDrawer.clientPhone || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+                    <span className="leading-snug">{selectedJobForDrawer.address || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
 
-                  <div className="flex space-x-2">
+              {/* Service & Price */}
+              <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                <h4 className="font-black text-slate-850 dark:text-white text-xs tracking-tight leading-snug">
+                  {selectedJobForDrawer.title}
+                </h4>
+                <div className="text-base font-black text-secondary">
+                  ₹{selectedJobForDrawer.price || 0}
+                </div>
+                <div className="flex items-center space-x-1 text-slate-400 font-bold mt-1 text-[10px]">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{selectedJobForDrawer.timeSlot}</span>
+                </div>
+              </div>
+
+              {/* Edit Button link */}
+              <button
+                onClick={() => handleOpenEditModal(selectedJobForDrawer)}
+                className="flex items-center justify-between w-full p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/50 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+              >
+                <div className="flex items-center space-x-2 font-black text-slate-700 dark:text-slate-205">
+                  <Edit className="h-3.5 w-3.5" />
+                  <span>Edit Details</span>
+                </div>
+                <span className="text-[8px] text-slate-400 font-normal">Edit booking details</span>
+              </button>
+
+              {/* Job timing box */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/30 space-y-2.5">
+                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Job Timing</span>
+                <div className="grid grid-cols-2 gap-2 text-left">
+                  <div>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled start</span>
+                    <span className="text-[10px] font-extrabold text-slate-750 dark:text-slate-200">
+                      {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[0] : '08:00 AM'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled end</span>
+                    <span className="text-[10px] font-extrabold text-slate-750 dark:text-slate-200">
+                      {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[1] : '02:00 PM'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleUpdateStatus(selectedJobForDrawer._id, selectedJobForDrawer.status === 'started' ? 'completed' : 'started')}
+                  className="w-full bg-violet-600 hover:bg-violet-750 text-white font-extrabold py-2.5 rounded-xl shadow cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>{selectedJobForDrawer.status === 'started' ? 'Complete Cleanup' : 'Worker Started'}</span>
+                </button>
+              </div>
+
+              {/* Assigned Worker Contact */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/10 space-y-2.5 text-left">
+                <span className="block text-[8px] font-black text-indigo-550 dark:text-indigo-400 uppercase tracking-widest leading-none">Assigned Worker</span>
+                {selectedJobForDrawer.workerId ? (
+                  <div className="space-y-2.5 font-bold text-slate-700 dark:text-slate-200">
+                    <div>
+                      <span className="block font-black text-slate-805 dark:text-white leading-tight">{selectedJobForDrawer.workerId.name}</span>
+                      <span className="block text-[9.5px] text-slate-400 mt-0.5 leading-none">{selectedJobForDrawer.workerId.phone}</span>
+                    </div>
+
                     <button
                       onClick={() => window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}`, '_blank')}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-1.5 rounded-lg text-center flex items-center justify-center space-x-1 text-[10px] cursor-pointer"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs cursor-pointer"
                     >
-                      <MessageSquare className="h-3 w-3" />
+                      <MessageSquare className="h-3.5 w-3.5" />
                       <span>Message</span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        const text = `Hello ${selectedJobForDrawer.workerId.name},\nNew cleaning job details:\nClient: ${selectedJobForDrawer.clientName}\nPhone: ${selectedJobForDrawer.clientPhone}\nAddress: ${selectedJobForDrawer.address}\nSlot: ${selectedJobForDrawer.timeSlot}\nPrice: ₹${selectedJobForDrawer.price}`;
+                        window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}?text=${encodeURIComponent(text)}`, '_blank');
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs shadow-sm cursor-pointer"
+                    >
+                      <span>Open WhatsApp with Job Details ↗</span>
+                    </button>
                   </div>
+                ) : (
+                  <span className="block text-slate-450 italic font-medium py-1">Unassigned</span>
+                )}
+              </div>
 
-                  <button
-                    onClick={() => {
-                      const text = `Hello ${selectedJobForDrawer.workerId.name},\nNew cleaning job details:\nClient: ${selectedJobForDrawer.clientName}\nPhone: ${selectedJobForDrawer.clientPhone}\nAddress: ${selectedJobForDrawer.address}\nSlot: ${selectedJobForDrawer.timeSlot}\nPrice: ₹${selectedJobForDrawer.price}`;
-                      window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}?text=${encodeURIComponent(text)}`, '_blank');
-                    }}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs shadow-sm cursor-pointer"
-                  >
-                    <span>Open WhatsApp with Job Details ↗</span>
-                  </button>
-                  <span className="block text-[8.5px] text-slate-400 text-center font-normal font-sans">Opens WhatsApp pre-filled — just tap Send</span>
+              {/* Update Status Buttons Grid */}
+              <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3">
+                <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Update Status</span>
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                  {[
+                    { id: 'pending', label: 'confirmed', bg: 'bg-indigo-50 border-indigo-400 text-indigo-650' },
+                    { id: 'started', label: 'in progress', bg: 'bg-amber-50 border-amber-400 text-amber-650' },
+                    { id: 'completed', label: 'completed', bg: 'bg-emerald-50 border-emerald-400 text-emerald-650' },
+                    { id: 'cancelled', label: 'cancelled', bg: 'bg-rose-50 border-rose-400 text-rose-650' }
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => handleUpdateStatus(selectedJobForDrawer._id, s.id)}
+                      className={`p-2 rounded-xl border text-center cursor-pointer transition-colors ${
+                        selectedJobForDrawer.status === s.id
+                          ? s.bg
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <span className="block text-slate-450 italic font-medium py-2">Unassigned</span>
-              )}
-            </div>
-
-            {/* Update Status Buttons Grid */}
-            <div className="space-y-3 border-t border-slate-105 dark:border-slate-800 pt-4">
-              <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Update Status</span>
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-                {[
-                  { id: 'pending', label: 'confirmed', bg: 'bg-indigo-50 border-indigo-400 text-indigo-650' },
-                  { id: 'started', label: 'in progress', bg: 'bg-amber-50 border-amber-400 text-amber-650' },
-                  { id: 'completed', label: 'completed', bg: 'bg-emerald-50 border-emerald-400 text-emerald-650' },
-                  { id: 'cancelled', label: 'cancelled', bg: 'bg-rose-50 border-rose-400 text-rose-650' }
-                ].map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => handleUpdateStatus(selectedJobForDrawer._id, s.id)}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-colors ${
-                      selectedJobForDrawer.status === s.id
-                        ? s.bg
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
               </div>
             </div>
 
-            {/* Delete button option */}
-            <button
-              onClick={() => {
-                if (window.confirm('Delete this clean booking permanently?')) {
-                  api.delete(`/jobs/${selectedJobForDrawer._id}`).then(() => {
-                    alert('Job deleted successfully');
-                    setSelectedJobForDrawer(null);
-                    fetchJobsAndWorkers();
-                  });
-                }
-              }}
-              className="w-full text-danger border border-danger/25 hover:bg-danger/5 font-black py-2 rounded-xl text-center cursor-pointer mt-3"
-            >
-              Delete Job
-            </button>
+            {/* Bottom Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => {
+                  if (window.confirm('Delete this clean booking permanently?')) {
+                    api.delete(`/jobs/${selectedJobForDrawer._id}`).then(() => {
+                      alert('Job deleted successfully');
+                      setSelectedJobForDrawer(null);
+                      fetchJobsAndWorkers();
+                    });
+                  }
+                }}
+                className="w-full text-danger border border-danger/25 hover:bg-danger/5 font-black py-2 rounded-xl text-center cursor-pointer"
+              >
+                Delete Job
+              </button>
+            </div>
 
           </div>
         )}
