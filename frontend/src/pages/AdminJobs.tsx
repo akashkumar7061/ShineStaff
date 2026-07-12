@@ -406,9 +406,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
-        <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${
-          selectedJobForDrawer ? 'xl:col-span-3' : 'xl:col-span-4'
-        }`}>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all xl:col-span-4">
           <table className="w-full text-left text-xs table-fixed min-w-0 border-collapse">
             <thead className="text-[10px] font-bold text-white uppercase tracking-widest sticky top-0 z-10">
               <tr className="bg-[#1e293b]">
@@ -607,229 +605,255 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </table>
         </div>
 
-        {/* Right Side: Interactive Slide-in Details/Status Drawer */}
+        {/* Centered Modal: Interactive Details/Status Dialog with backdrop blur */}
         {selectedJobForDrawer && (
-          <div className="xl:col-span-1 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-5 space-y-4 flex flex-col justify-between text-xs animate-slide-in select-none">
-            
-            <div className="space-y-4">
-              {/* Drawer Header */}
-              <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-3">
-                <div>
-                  <span className="block font-black tracking-tight text-slate-850 dark:text-white text-sm">
-                    {selectedJobForDrawer._id?.slice(-12).toUpperCase() || 'CLEANUP DETAILS'}
-                  </span>
-                  <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-1.5 rounded-full ${
-                    selectedJobForDrawer.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'
-                  }`}>
-                    {selectedJobForDrawer.status || 'confirmed'}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSelectedJobForDrawer(null)}
-                  className="text-slate-400 hover:text-slate-600 text-sm font-black p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Quick Actions & Contact Details */}
-              <div className="space-y-3 font-bold">
-                <a
-                  href={`tel:${selectedJobForDrawer.clientPhone}`}
-                  className="flex items-center justify-center space-x-1.5 bg-blue-500/10 hover:bg-blue-500/15 text-blue-600 font-extrabold py-2.5 rounded-xl border border-blue-500/20 cursor-pointer w-full text-center"
-                >
-                  <span>📞 Call</span>
-                </a>
-
-                <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-slate-655 dark:text-slate-350">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-slate-400 shrink-0" />
-                    <span>{selectedJobForDrawer.clientName || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-slate-400 shrink-0" />
-                    <span>{selectedJobForDrawer.clientPhone || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{selectedJobForDrawer.address || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Service & Price */}
-              <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
-                <h4 className="font-black text-slate-850 dark:text-white text-xs tracking-tight leading-snug">
-                  {selectedJobForDrawer.title}
-                </h4>
-                <div className="text-base font-black text-secondary">
-                  ₹{selectedJobForDrawer.price || 0}
-                </div>
-                <div className="flex items-center space-x-1 text-slate-400 font-bold mt-1 text-[10px]">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{selectedJobForDrawer.timeSlot}</span>
-                </div>
-              </div>
-
-              {/* Edit Button link */}
-              <button
-                onClick={() => handleOpenEditModal(selectedJobForDrawer)}
-                className="flex items-center justify-between w-full p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/50 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-850 shadow-2xl p-6 space-y-4 flex flex-col justify-between text-xs animate-fade-in select-none max-h-[90vh] overflow-y-auto">
+              
+              <button 
+                onClick={() => setSelectedJobForDrawer(null)} 
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 font-black text-sm cursor-pointer z-10"
               >
-                <div className="flex items-center space-x-2 font-black text-slate-700 dark:text-slate-205">
-                  <Edit className="h-3.5 w-3.5" />
-                  <span>Edit Details</span>
-                </div>
-                <span className="text-[8px] text-slate-400 font-normal">Edit booking details</span>
+                ✕
               </button>
 
-              {/* Job timing box */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200/30 space-y-2.5">
-                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Job Timing</span>
-                <div className="grid grid-cols-2 gap-2 text-left">
+              <div className="space-y-4">
+                {/* Drawer Header */}
+                <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-3">
                   <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled start</span>
-                    <span className="text-[10px] font-extrabold text-slate-750 dark:text-slate-200">
-                      {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[0] : '08:00 AM'}
+                    <span className="block font-black tracking-tight text-slate-850 dark:text-white text-sm">
+                      {selectedJobForDrawer._id?.slice(-12).toUpperCase() || 'CLEANUP DETAILS'}
                     </span>
-                  </div>
-                  <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled end</span>
-                    <span className="text-[10px] font-extrabold text-slate-750 dark:text-slate-200">
-                      {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[1] : '02:00 PM'}
+                    <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-1.5 rounded-full ${
+                      selectedJobForDrawer.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'
+                    }`}>
+                      {selectedJobForDrawer.status || 'confirmed'}
                     </span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleUpdateStatus(selectedJobForDrawer._id, selectedJobForDrawer.status === 'started' ? 'completed' : 'started')}
-                  className="w-full bg-violet-600 hover:bg-violet-750 text-white font-extrabold py-2.5 rounded-xl shadow cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>{selectedJobForDrawer.status === 'started' ? 'Complete Cleanup' : 'Worker Started'}</span>
-                </button>
-              </div>
-
-              {/* Assigned Worker Contact */}
-              <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/10 space-y-2.5 text-left">
-                <span className="block text-[8px] font-black text-indigo-550 dark:text-indigo-400 uppercase tracking-widest leading-none">Assigned Worker</span>
-                {selectedJobForDrawer.workerId ? (
-                  <div className="space-y-2.5 font-bold text-slate-700 dark:text-slate-200">
-                    <div>
-                      <span className="block font-black text-slate-805 dark:text-white leading-tight">{selectedJobForDrawer.workerId.name}</span>
-                      <span className="block text-[9.5px] text-slate-400 mt-0.5 leading-none">{selectedJobForDrawer.workerId.phone}</span>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 gap-2 pb-1">
+                  <a
+                    href={`tel:${selectedJobForDrawer.clientPhone}`}
+                    className="bg-slate-100 hover:bg-slate-205 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs shadow-sm cursor-pointer border border-slate-200 dark:border-slate-750"
+                  >
+                    <span>📞 Call Client</span>
+                  </a>
+                  {selectedJobForDrawer.workerId ? (
+                    <a
+                      href={`tel:${selectedJobForDrawer.workerId.phone}`}
+                      className="bg-slate-100 hover:bg-slate-205 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs shadow-sm cursor-pointer border border-slate-200 dark:border-slate-750"
+                    >
+                      <span>📞 Call Worker</span>
+                    </a>
+                  ) : (
+                    <div className="bg-slate-100 dark:bg-slate-800 font-black py-2 rounded-xl text-center text-slate-400 text-xs border border-slate-200 dark:border-slate-750 opacity-50 cursor-not-allowed">
+                      No Worker
                     </div>
+                  )}
+                </div>
 
-                    <button
-                      onClick={() => window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}`, '_blank')}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs cursor-pointer"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      <span>Message</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        const text = `Hello ${selectedJobForDrawer.workerId.name},\nNew cleaning job details:\nClient: ${selectedJobForDrawer.clientName}\nPhone: ${selectedJobForDrawer.clientPhone}\nAddress: ${selectedJobForDrawer.address}\nSlot: ${selectedJobForDrawer.timeSlot}\nPrice: ₹${selectedJobForDrawer.price}`;
-                        window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}?text=${encodeURIComponent(text)}`, '_blank');
-                      }}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs shadow-sm cursor-pointer"
-                    >
-                      <span>Open WhatsApp with Job Details ↗</span>
-                    </button>
-                  </div>
-                ) : (
-                  <span className="block text-slate-450 italic font-medium py-1">Unassigned</span>
-                )}
-              </div>
-
-              {/* Photo Compliance Audit Section */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-205/60 dark:border-slate-800/60 space-y-2.5">
-                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none text-left">Photo Compliance</span>
-                
-                <div className="grid grid-cols-2 gap-2 text-center">
+                {/* Client Info */}
+                <div className="space-y-2.5 font-bold text-slate-700 dark:text-slate-200 text-left">
                   <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Before Snap</span>
-                    {selectedJobForDrawer.beforePhoto ? (
-                      <img 
-                        src={selectedJobForDrawer.beforePhoto} 
-                        alt="Before" 
-                        onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
-                        className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
-                      />
-                    ) : (
-                      <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
-                    )}
+                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Client Name</span>
+                    <span className="text-[11px] font-extrabold text-slate-850 dark:text-white mt-1 block">{selectedJobForDrawer.clientName}</span>
                   </div>
-                  
                   <div>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">After Snap</span>
-                    {selectedJobForDrawer.afterPhoto ? (
-                      <img 
-                        src={selectedJobForDrawer.afterPhoto} 
-                        alt="After" 
-                        onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
-                        className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
-                      />
-                    ) : (
-                      <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
-                    )}
+                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Phone Number</span>
+                    <span className="text-[11px] font-extrabold text-slate-850 dark:text-white mt-1 block">{selectedJobForDrawer.clientPhone}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Location Address</span>
+                    <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-250 mt-1 block leading-normal">{selectedJobForDrawer.address}</span>
                   </div>
                 </div>
 
+                {/* Service & Price */}
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                  <div>
+                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Service Clean</span>
+                    <span className="text-[11px] font-extrabold text-slate-850 dark:text-white mt-1 block">{selectedJobForDrawer.title}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Wage Cost</span>
+                    <span className="text-[11px] font-extrabold text-[#2563eb] mt-1 block">₹{selectedJobForDrawer.price}</span>
+                  </div>
+                </div>
+
+                {/* Edit Details */}
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <button
+                    onClick={() => handleOpenEditModal(selectedJobForDrawer)}
+                    className="w-full bg-slate-100 hover:bg-slate-205 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs shadow-sm cursor-pointer border border-slate-200 dark:border-slate-700"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    <span>Edit Details</span>
+                  </button>
+                </div>
+
+                {/* Job Timing */}
+                <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/10 space-y-2.5 text-left">
+                  <span className="block text-[8px] font-black text-indigo-550 dark:text-indigo-400 uppercase tracking-widest leading-none">Job Timings</span>
+                  
+                  <div className="grid grid-cols-2 gap-2.5 font-bold">
+                    <div>
+                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled start</span>
+                      <span className="text-[10px] font-extrabold text-slate-750 dark:text-slate-200">
+                        {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[0] : '08:00 AM'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Scheduled end</span>
+                      <span className="text-[10px] font-extrabold text-slate-750 dark:text-slate-200">
+                        {selectedJobForDrawer.timeSlot ? selectedJobForDrawer.timeSlot.split(' - ')[1] : '02:00 PM'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleUpdateStatus(selectedJobForDrawer._id, selectedJobForDrawer.status === 'started' ? 'completed' : 'started')}
+                    className="w-full bg-violet-600 hover:bg-violet-750 text-white font-extrabold py-2.5 rounded-xl shadow cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span>{selectedJobForDrawer.status === 'started' ? 'Complete Cleanup' : 'Worker Started'}</span>
+                  </button>
+                </div>
+
+                {/* Assigned Worker Contact */}
+                <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/10 space-y-2.5 text-left">
+                  <span className="block text-[8px] font-black text-indigo-550 dark:text-indigo-400 uppercase tracking-widest leading-none">Assigned Worker</span>
+                  {selectedJobForDrawer.workerId ? (
+                    <div className="space-y-2.5 font-bold text-slate-700 dark:text-slate-200">
+                      <div>
+                        <span className="block font-black text-slate-855 dark:text-white leading-tight">{selectedJobForDrawer.workerId.name}</span>
+                        <span className="block text-[9.5px] text-slate-400 mt-0.5 leading-none">{selectedJobForDrawer.workerId.phone}</span>
+                      </div>
+
+                      <button
+                        onClick={() => window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}`, '_blank')}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs cursor-pointer"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>Message</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const text = `Hello ${selectedJobForDrawer.workerId.name},\nNew cleaning job details:\nClient: ${selectedJobForDrawer.clientName}\nPhone: ${selectedJobForDrawer.clientPhone}\nAddress: ${selectedJobForDrawer.address}\nSlot: ${selectedJobForDrawer.timeSlot}\nPrice: ₹${selectedJobForDrawer.price}`;
+                          window.open(`https://wa.me/91${selectedJobForDrawer.workerId.phone || ''}?text=${encodeURIComponent(text)}`, '_blank');
+                        }}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs shadow-sm cursor-pointer"
+                      >
+                        <span>Open WhatsApp with Job Details ↗</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="block text-slate-450 italic font-medium py-1">Unassigned</span>
+                  )}
+                </div>
+
+                {/* Photo Compliance Audit Section */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-905/40 border border-slate-205/60 dark:border-slate-800/60 space-y-2.5">
+                  <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none text-left">Photo Compliance</span>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div>
+                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Before Snap</span>
+                      {selectedJobForDrawer.beforePhoto ? (
+                        <img 
+                          src={selectedJobForDrawer.beforePhoto} 
+                          alt="Before" 
+                          onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                          className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
+                        />
+                      ) : (
+                        <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">After Snap ({selectedJobForDrawer.afterPhotos?.length || (selectedJobForDrawer.afterPhoto ? 1 : 0)})</span>
+                      {selectedJobForDrawer.afterPhotos && selectedJobForDrawer.afterPhotos.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-1 max-h-[58px] overflow-y-auto">
+                          {selectedJobForDrawer.afterPhotos.map((url: string, idx: number) => (
+                            <img 
+                              key={url}
+                              src={url} 
+                              alt={`After ${idx+1}`} 
+                              onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                              className="h-6 w-full object-cover rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-80 transition-opacity" 
+                            />
+                          ))}
+                        </div>
+                      ) : selectedJobForDrawer.afterPhoto ? (
+                        <img 
+                          src={selectedJobForDrawer.afterPhoto} 
+                          alt="After" 
+                          onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                          className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
+                        />
+                      ) : (
+                        <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                    className="w-full bg-blue-600/10 hover:bg-blue-600/15 text-blue-600 font-extrabold py-1.5 rounded-xl border border-blue-500/20 flex items-center justify-center space-x-1 text-[10px] cursor-pointer"
+                  >
+                    <Camera className="h-3 w-3" />
+                    <span>Compare Photos Fullscreen</span>
+                  </button>
+                </div>
+
+                {/* Update Status Buttons Grid */}
+                <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Update Status</span>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                    {[
+                      { id: 'pending', label: 'confirmed', bg: 'bg-indigo-50 border-indigo-400 text-indigo-650' },
+                      { id: 'started', label: 'in progress', bg: 'bg-amber-50 border-amber-400 text-amber-650' },
+                      { id: 'completed', label: 'completed', bg: 'bg-emerald-50 border-emerald-400 text-emerald-650' },
+                      { id: 'cancelled', label: 'cancelled', bg: 'bg-rose-50 border-rose-400 text-rose-650' }
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleUpdateStatus(selectedJobForDrawer._id, s.id)}
+                        className={`p-2 rounded-xl border text-center cursor-pointer transition-colors ${
+                          selectedJobForDrawer.status === s.id
+                            ? s.bg
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
-                  onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
-                  className="w-full bg-blue-600/10 hover:bg-blue-600/15 text-blue-600 font-extrabold py-1.5 rounded-xl border border-blue-500/20 flex items-center justify-center space-x-1 text-[10px] cursor-pointer"
+                  onClick={() => {
+                    if (window.confirm('Delete this clean booking permanently?')) {
+                      api.delete(`/jobs/${selectedJobForDrawer._id}`).then(() => {
+                        alert('Job deleted successfully');
+                        setSelectedJobForDrawer(null);
+                        fetchJobsAndWorkers();
+                      });
+                    }
+                  }}
+                  className="w-full text-danger border border-danger/25 hover:bg-danger/5 font-black py-2 rounded-xl text-center cursor-pointer"
                 >
-                  <Camera className="h-3 w-3" />
-                  <span>Compare Photos Fullscreen</span>
+                  Delete Job
                 </button>
               </div>
 
-              {/* Update Status Buttons Grid */}
-              <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Update Status</span>
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-                  {[
-                    { id: 'pending', label: 'confirmed', bg: 'bg-indigo-50 border-indigo-400 text-indigo-650' },
-                    { id: 'started', label: 'in progress', bg: 'bg-amber-50 border-amber-400 text-amber-650' },
-                    { id: 'completed', label: 'completed', bg: 'bg-emerald-50 border-emerald-400 text-emerald-650' },
-                    { id: 'cancelled', label: 'cancelled', bg: 'bg-rose-50 border-rose-400 text-rose-650' }
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => handleUpdateStatus(selectedJobForDrawer._id, s.id)}
-                      className={`p-2 rounded-xl border text-center cursor-pointer transition-colors ${
-                        selectedJobForDrawer.status === s.id
-                          ? s.bg
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
-
-            {/* Bottom Actions */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                onClick={() => {
-                  if (window.confirm('Delete this clean booking permanently?')) {
-                    api.delete(`/jobs/${selectedJobForDrawer._id}`).then(() => {
-                      alert('Job deleted successfully');
-                      setSelectedJobForDrawer(null);
-                      fetchJobsAndWorkers();
-                    });
-                  }
-                }}
-                className="w-full text-danger border border-danger/25 hover:bg-danger/5 font-black py-2 rounded-xl text-center cursor-pointer"
-              >
-                Delete Job
-              </button>
-            </div>
-
           </div>
         )}
 
@@ -1035,7 +1059,16 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               {/* After snapshot */}
               <div className="space-y-3 flex flex-col items-center">
                 <span className="bg-emerald-500/10 text-emerald-500 font-extrabold text-[10px] px-3 py-1 rounded-full uppercase">After Cleanup Completed</span>
-                {selectedJobPhotos.afterPhoto ? (
+                {selectedJobPhotos.afterPhotos && selectedJobPhotos.afterPhotos.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2 w-full max-h-80 overflow-y-auto">
+                    {selectedJobPhotos.afterPhotos.map((url: string, idx: number) => (
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <img src={url} alt={`After Clean ${idx + 1}`} className="h-full w-full object-cover" />
+                        <span className="absolute bottom-1 left-1 bg-slate-950/70 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Photo {idx + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : selectedJobPhotos.afterPhoto ? (
                   <img src={selectedJobPhotos.afterPhoto} alt="After" className="rounded-xl object-contain max-h-80 border shadow-md w-full" />
                 ) : (
                   <div className="h-64 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 font-bold w-full bg-slate-50 dark:bg-slate-950/20">No After Photo Uploaded</div>
