@@ -95,6 +95,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [commuteKms, setCommuteKms] = useState('');
   const [fuelAllowance, setFuelAllowance] = useState('');
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  const [activeMapField, setActiveMapField] = useState<'from' | 'to'>('from');
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [mapSearchResults, setMapSearchResults] = useState<any[]>([]);
+  const [mapSelectedAddress, setMapSelectedAddress] = useState('');
+  const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number }>({ lat: 28.6139, lng: 77.2090 });
+  const mapInstanceRef = useRef<any>(null);
+  const mapMarkerRef = useRef<any>(null);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [resolvingGPS, setResolvingGPS] = useState(false);
@@ -393,6 +401,120 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setIsCalculatingRoute(false);
     }
   };
+
+  const handleMapSearch = async () => {
+    if (!mapSearchQuery) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearchQuery)}&limit=5`);
+      const data = await res.json();
+      setMapSearchResults(data);
+    } catch (err) {
+      console.error('Map search error:', err);
+    }
+  };
+
+  const handleSelectSearchResult = (result: any) => {
+    const lat = Number(result.lat);
+    const lon = Number(result.lon);
+    const coords = { lat, lng: lon };
+    setMapCoords(coords);
+    setMapSelectedAddress(result.display_name);
+    setMapSearchQuery(result.display_name);
+    setMapSearchResults([]);
+
+    if (mapInstanceRef.current && mapMarkerRef.current) {
+      mapInstanceRef.current.setView([lat, lon], 14);
+      mapMarkerRef.current.setLatLng([lat, lon]);
+    }
+  };
+
+  const handleConfirmLocation = () => {
+    if (activeMapField === 'from') {
+      setFromLocation(mapSelectedAddress);
+    } else {
+      setToLocation(mapSelectedAddress);
+      setAddress(mapSelectedAddress);
+    }
+    setMapPickerOpen(false);
+  };
+
+  // Initialize and update Leaflet Map in picker modal
+  useEffect(() => {
+    if (!mapPickerOpen || !leafletLoaded) return;
+    
+    const timer = setTimeout(() => {
+      const L = (window as any).L;
+      if (!L) return;
+
+      const container = document.getElementById('picker-map-container');
+      if (!container) return;
+
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        mapMarkerRef.current = null;
+      }
+
+      // Geocode the current address to center the map if starting
+      const initMap = async () => {
+        let lat = 28.6139;
+        let lng = 77.2090;
+        const currentAddr = activeMapField === 'from' ? fromLocation : (toLocation || address);
+        
+        if (currentAddr && currentAddr !== 'Office' && currentAddr !== 'Last Work Site') {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(currentAddr)}&limit=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+              lat = Number(data[0].lat);
+              lng = Number(data[0].lon);
+            }
+          } catch (e) {
+            console.error('Failed to geocode initial map address:', e);
+          }
+        }
+        
+        setMapCoords({ lat, lng });
+        
+        const map = L.map('picker-map-container').setView([lat, lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        mapInstanceRef.current = map;
+        mapMarkerRef.current = marker;
+
+        const handleMarkerPositionChange = async (newLat: number, newLng: number) => {
+          setMapCoords({ lat: newLat, lng: newLng });
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`);
+            const data = await res.json();
+            if (data && data.display_name) {
+              setMapSelectedAddress(data.display_name);
+              setMapSearchQuery(data.display_name);
+            }
+          } catch (err) {
+            console.error('Reverse geocode error:', err);
+          }
+        };
+
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          handleMarkerPositionChange(pos.lat, pos.lng);
+        });
+
+        map.on('click', (e: any) => {
+          marker.setLatLng(e.latlng);
+          handleMarkerPositionChange(e.latlng.lat, e.latlng.lng);
+        });
+      };
+      
+      initMap();
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [mapPickerOpen, leafletLoaded, activeMapField]);
 
   // Grid calculation: filter jobs strictly matching the selected date
   const dayJobs = jobs.filter((j) => j.date === selectedDate);
@@ -1152,23 +1274,53 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">From Location</label>
-                    <input
-                      type="text"
-                      value={fromLocation}
-                      onChange={(e) => setFromLocation(e.target.value)}
-                      placeholder="e.g. Office or Last Work Address"
-                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={fromLocation}
+                        onChange={(e) => setFromLocation(e.target.value)}
+                        placeholder="e.g. Office or Last Work Address"
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 pr-9 outline-none focus:border-secondary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMapField('from');
+                          setMapSearchQuery(fromLocation);
+                          setMapSelectedAddress(fromLocation);
+                          setMapPickerOpen(true);
+                        }}
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-[#2563eb] cursor-pointer"
+                        title="Pick from map"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">To Location</label>
-                    <input
-                      type="text"
-                      value={toLocation}
-                      onChange={(e) => setToLocation(e.target.value)}
-                      placeholder="e.g. Client Address"
-                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={toLocation}
+                        onChange={(e) => setToLocation(e.target.value)}
+                        placeholder="e.g. Client Address"
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 pr-9 outline-none focus:border-secondary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMapField('to');
+                          setMapSearchQuery(toLocation || address);
+                          setMapSelectedAddress(toLocation || address);
+                          setMapPickerOpen(true);
+                        }}
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-[#2563eb] cursor-pointer"
+                        title="Pick from map"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1225,6 +1377,99 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 {isEditMode ? 'Apply Modified Settings' : 'Create & Assign Booking'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Map Picker Modal */}
+      {mapPickerOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-extrabold text-slate-850 dark:text-white text-sm uppercase tracking-wider">
+                Select {activeMapField === 'from' ? 'Commute Start' : 'Destination'} Location
+              </h3>
+              <button onClick={() => setMapPickerOpen(false)} className="text-slate-400 hover:text-slate-655 text-xs font-black">✕</button>
+            </div>
+
+            <div className="p-5 flex-1 flex flex-col space-y-4 overflow-y-auto">
+              {/* Search Box */}
+              <div className="relative">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={mapSearchQuery}
+                    onChange={(e) => setMapSearchQuery(e.target.value)}
+                    placeholder="Search for address, area, or landmark..."
+                    className="flex-1 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleMapSearch();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleMapSearch}
+                    className="bg-[#2563eb] hover:bg-blue-700 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs transition-all cursor-pointer flex items-center space-x-1 shadow-md"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>Search</span>
+                  </button>
+                </div>
+
+                {/* Search Results Dropdown */}
+                {mapSearchResults.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-[1000] max-h-48 overflow-y-auto text-left font-semibold">
+                    {mapSearchResults.map((result, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSearchResult(result)}
+                        className="w-full px-4 py-2.5 text-xs text-slate-700 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-900/40 last:border-0 text-left block cursor-pointer transition-colors"
+                      >
+                        {result.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Map Container */}
+              <div className="relative border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden h-80 w-full shadow-inner bg-slate-50 dark:bg-slate-950/30">
+                <div id="picker-map-container" className="h-full w-full z-10" />
+                <span className="absolute bottom-2 left-2 z-20 bg-slate-950/70 text-white text-[8px] font-bold px-2 py-1 rounded">
+                  💡 Hint: Drag marker or click map to choose location
+                </span>
+              </div>
+
+              {/* Selected Location Address display */}
+              <div className="bg-slate-50 dark:bg-slate-955/40 border border-slate-150 dark:border-slate-800/60 p-3.5 rounded-2xl text-left">
+                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Selected Address</span>
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 leading-normal block">
+                  {mapSelectedAddress || 'No location selected yet. Type search or click map.'}
+                </span>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950/20 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-2.5">
+              <button
+                type="button"
+                onClick={() => setMapPickerOpen(false)}
+                className="px-4 py-2.5 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-extrabold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!mapSelectedAddress}
+                onClick={handleConfirmLocation}
+                className="px-5 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] disabled:opacity-50 text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-md transition-all"
+              >
+                Confirm Location
+              </button>
+            </div>
           </div>
         </div>
       )}
