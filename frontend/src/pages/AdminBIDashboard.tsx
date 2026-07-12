@@ -198,6 +198,99 @@ const AdminBIDashboard: React.FC = () => {
     }
   };
 
+  const [drillDown, setDrillDown] = useState<{
+    title: string;
+    type: 'sales' | 'revenue' | 'expenses' | 'profit' | 'gross' | 'outstanding' | 'received' | 'customers';
+    data: any[];
+  } | null>(null);
+
+  const openDrillDown = (type: 'sales' | 'revenue' | 'expenses' | 'profit' | 'gross' | 'outstanding' | 'received' | 'customers') => {
+    if (!analytics) return;
+    
+    let title = '';
+    let data: any[] = [];
+
+    switch (type) {
+      case 'sales':
+        title = 'Total Sales (Scheduled Cleans)';
+        data = jobs;
+        break;
+      case 'revenue':
+        title = 'Total Revenue (Completed Cleans)';
+        data = jobs.filter(j => j.status === 'completed');
+        break;
+      case 'expenses':
+        title = 'Total Operating Expenses';
+        const items: any[] = [];
+        expenses.forEach(e => items.push({ date: e.date, category: e.category.toUpperCase(), desc: e.description || 'Custom Expense', amount: e.amount }));
+        (analytics.rawSalaryPayouts || []).forEach((sr: any) => {
+          items.push({ 
+            date: sr.processedAt ? new Date(sr.processedAt).toISOString().split('T')[0] : 'N/A', 
+            category: 'SALARIES', 
+            desc: `Salary Payout Request approved for ${sr.workerId?.name || 'Worker'} (${sr.month})`, 
+            amount: sr.amount 
+          });
+        });
+        (analytics.rawTravelLogs || []).forEach((tl: any) => {
+          items.push({ 
+            date: tl.date, 
+            category: 'FUEL ALLOWANCE', 
+            desc: `Fuel Reimbursement for ${tl.workerId?.name || 'Worker'} (${tl.kms} Kms)`, 
+            amount: tl.allowance 
+          });
+        });
+        items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        data = items;
+        break;
+      case 'profit':
+        title = 'Net Profit Detail (Revenues vs Expenses)';
+        data = [
+          { category: 'REVENUE', desc: 'Total Completed Cleans Revenue', amount: analytics.financials.totalRevenue },
+          { category: 'EXPENSE', desc: 'Worker Salaries Payouts', amount: analytics.expenseBreakdown.salaries },
+          { category: 'EXPENSE', desc: 'Fuel & Travel Reimbursements', amount: analytics.expenseBreakdown.fuel },
+          { category: 'EXPENSE', desc: 'Materials & Consumables Costs', amount: analytics.expenseBreakdown.material },
+          { category: 'EXPENSE', desc: 'Equipment Purchase/Leases', amount: analytics.expenseBreakdown.equipment },
+          { category: 'EXPENSE', desc: 'Marketing & Advertising Budgets', amount: analytics.expenseBreakdown.marketing },
+          { category: 'EXPENSE', desc: 'Office Rents & Admin Overhead', amount: analytics.expenseBreakdown.office },
+          { category: 'EXPENSE', desc: 'Miscellaneous Business Costs', amount: analytics.expenseBreakdown.miscellaneous }
+        ];
+        break;
+      case 'gross':
+        title = 'Gross Profit (Revenues - Material/Equipment)';
+        data = [
+          { category: 'REVENUE', desc: 'Total Completed Cleans Revenue', amount: analytics.financials.totalRevenue },
+          { category: 'EXPENSE (DEDUCTED)', desc: 'Materials & Consumables Costs', amount: analytics.expenseBreakdown.material },
+          { category: 'EXPENSE (DEDUCTED)', desc: 'Equipment Purchase/Leases', amount: analytics.expenseBreakdown.equipment }
+        ];
+        break;
+      case 'outstanding':
+        title = 'Outstanding Payments (Completed Unpaid)';
+        data = jobs.filter(j => j.status === 'completed' && j.paymentStatus !== 'received');
+        break;
+      case 'received':
+        title = 'Received Payments (Completed Paid)';
+        data = jobs.filter(j => j.status === 'completed' && j.paymentStatus === 'received');
+        break;
+      case 'customers':
+        title = 'Client Booking Activity (Repeat & Unique)';
+        const map: { [phone: string]: { name: string; phone: string; count: number } } = {};
+        jobs.forEach(j => {
+          if (j.clientPhone) {
+            if (!map[j.clientPhone]) {
+              map[j.clientPhone] = { name: j.clientName, phone: j.clientPhone, count: 0 };
+            }
+            map[j.clientPhone].count++;
+          }
+        });
+        data = Object.values(map).sort((a, b) => b.count - a.count);
+        break;
+      default:
+        break;
+    }
+
+    setDrillDown({ title, type, data });
+  };
+
   // --- Export Utilities ---
   const exportToCSV = () => {
     if (!analytics) return;
@@ -381,9 +474,11 @@ const AdminBIDashboard: React.FC = () => {
           
           {/* 2. KPI Summary Grid Block */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            {/* Sales Card */}
-            <div className="glass-card p-5 border-l-4 border-l-secondary relative overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                       {/* Sales Card */}
+            <div 
+              onClick={() => openDrillDown('sales')}
+              className="glass-card p-5 border-l-4 border-l-secondary relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
               <div className="flex items-center justify-between text-slate-400">
                 <span className="text-[10px] font-black uppercase tracking-wider">Total Sales</span>
                 <Layers className="h-4.5 w-4.5 text-secondary/70" />
@@ -393,7 +488,10 @@ const AdminBIDashboard: React.FC = () => {
             </div>
 
             {/* Revenue Card */}
-            <div className="glass-card p-5 border-l-4 border-l-emerald-500 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div 
+              onClick={() => openDrillDown('revenue')}
+              className="glass-card p-5 border-l-4 border-l-emerald-500 relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
               <div className="flex items-center justify-between text-slate-400">
                 <span className="text-[10px] font-black uppercase tracking-wider">Total Revenue</span>
                 <TrendingUp className="h-4.5 w-4.5 text-emerald-500/70" />
@@ -403,7 +501,10 @@ const AdminBIDashboard: React.FC = () => {
             </div>
 
             {/* Expenses Card */}
-            <div className="glass-card p-5 border-l-4 border-l-rose-500 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div 
+              onClick={() => openDrillDown('expenses')}
+              className="glass-card p-5 border-l-4 border-l-rose-500 relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
               <div className="flex items-center justify-between text-slate-400">
                 <span className="text-[10px] font-black uppercase tracking-wider">Total Expenses</span>
                 <TrendingDown className="h-4.5 w-4.5 text-rose-500/70" />
@@ -413,7 +514,10 @@ const AdminBIDashboard: React.FC = () => {
             </div>
 
             {/* Net Profit Card */}
-            <div className={`glass-card p-5 border-l-4 ${analytics.financials.netProfit >= 0 ? 'border-l-indigo-500' : 'border-l-rose-600'} relative overflow-hidden shadow-sm hover:shadow-md transition-shadow`}>
+            <div 
+              onClick={() => openDrillDown('profit')}
+              className={`glass-card p-5 border-l-4 ${analytics.financials.netProfit >= 0 ? 'border-l-indigo-500' : 'border-l-rose-600'} relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all`}
+            >
               <div className="flex items-center justify-between text-slate-400">
                 <span className="text-[10px] font-black uppercase tracking-wider">Net Profit</span>
                 <DollarSign className="h-4.5 w-4.5 text-indigo-500/70" />
@@ -425,35 +529,46 @@ const AdminBIDashboard: React.FC = () => {
             </div>
 
             {/* Gross Profit Margin */}
-            <div className="glass-card p-4 flex flex-col justify-between">
-              <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest block">Gross Profit</span>
+            <div 
+              onClick={() => openDrillDown('gross')}
+              className="glass-card p-4 flex flex-col justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="text-[9px] font-black text-slate-455 uppercase tracking-widest block">Gross Profit</span>
               <h4 className="text-base font-black text-slate-800 dark:text-white mt-1">₹{analytics.financials.grossProfit.toLocaleString('en-IN')}</h4>
               <span className="text-[9px] text-slate-400 mt-1 block">Excl. salaries & fuel</span>
             </div>
 
             {/* Outstanding Payments */}
-            <div className="glass-card p-4 flex flex-col justify-between">
+            <div 
+              onClick={() => openDrillDown('outstanding')}
+              className="glass-card p-4 flex flex-col justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-widest block">Outstanding Payments</span>
               <h4 className="text-base font-black text-rose-500 mt-1">₹{analytics.financials.outstandingPayments.toLocaleString('en-IN')}</h4>
               <span className="text-[9px] text-slate-400 mt-1 block">Completed unpaid cleans</span>
             </div>
 
             {/* Received Payments */}
-            <div className="glass-card p-4 flex flex-col justify-between">
+            <div 
+              onClick={() => openDrillDown('received')}
+              className="glass-card p-4 flex flex-col justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-widest block">Received Payments</span>
               <h4 className="text-base font-black text-emerald-500 mt-1">₹{analytics.financials.receivedPayments.toLocaleString('en-IN')}</h4>
               <span className="text-[9px] text-slate-400 mt-1 block">Completed cash/online paid</span>
             </div>
 
             {/* Customers summary */}
-            <div className="glass-card p-4 flex flex-col justify-between">
+            <div 
+              onClick={() => openDrillDown('customers')}
+              className="glass-card p-4 flex flex-col justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
               <span className="text-[9px] font-black text-slate-455 uppercase tracking-widest block">Returning Clients</span>
               <h4 className="text-base font-black text-slate-800 dark:text-white mt-1">{analytics.financials.returningCustomers} / {analytics.financials.totalCustomers}</h4>
               <span className="text-[9px] text-emerald-500 font-bold mt-1 block">
                 +{analytics.financials.totalCustomers > 0 ? Math.round((analytics.financials.returningCustomers / analytics.financials.totalCustomers) * 100) : 0}% Repeat Rate
               </span>
             </div>
-
           </div>
 
           {/* 3. Segment Tabbed Views */}
@@ -1110,6 +1225,142 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* Drill-down Analytics Modal */}
+      {drillDown && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md">
+          <div className="glass-card w-full max-w-4xl max-h-[85vh] flex flex-col p-6 rounded-3xl border border-slate-205 dark:border-slate-800 shadow-2xl overflow-hidden bg-white/95 dark:bg-slate-900/95">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800 dark:text-white uppercase tracking-wider">{drillDown.title}</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Drill-down records list for {startDate} to {endDate}</p>
+              </div>
+              <button
+                onClick={() => setDrillDown(null)}
+                className="rounded-full p-1.5 text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-850 text-xs font-black cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content Table */}
+            <div className="flex-1 overflow-y-auto my-4 pr-1">
+              <table className="w-full text-left text-xs font-bold text-slate-650 dark:text-slate-350">
+                <thead className="bg-slate-100 dark:bg-slate-900 uppercase tracking-widest text-[9px] text-slate-450 sticky top-0 z-10">
+                  {drillDown.type === 'customers' ? (
+                    <tr>
+                      <th className="px-4 py-3">Client Name</th>
+                      <th className="px-4 py-3">Client Phone</th>
+                      <th className="px-4 py-3 text-center">Total Bookings Count</th>
+                    </tr>
+                  ) : drillDown.type === 'expenses' || drillDown.type === 'profit' || drillDown.type === 'gross' ? (
+                    <tr>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Description</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Client</th>
+                      <th className="px-4 py-3">Clean Title</th>
+                      <th className="px-4 py-3">Assigned Worker</th>
+                      <th className="px-4 py-3">Job Status</th>
+                      <th className="px-4 py-3 text-right">Price</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {drillDown.data.map((item: any, idx: number) => {
+                    if (drillDown.type === 'customers') {
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                          <td className="px-4 py-3 text-slate-850 dark:text-slate-100 font-extrabold">{item.name}</td>
+                          <td className="px-4 py-3 text-mono">{item.phone}</td>
+                          <td className="px-4 py-3 text-center text-secondary font-black">{item.count} Bookings</td>
+                        </tr>
+                      );
+                    } else if (drillDown.type === 'expenses' || drillDown.type === 'profit' || drillDown.type === 'gross') {
+                      const isRev = item.category?.includes('REVENUE');
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                          <td className="px-4 py-3 text-slate-450">{item.date || 'Period Metric'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                              isRev 
+                                ? 'bg-success/15 text-success' 
+                                : 'bg-rose-500/10 text-rose-500'
+                            }`}>
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">{item.desc}</td>
+                          <td className={`px-4 py-3 text-right font-black ${
+                            isRev ? 'text-success' : 'text-danger'
+                          }`}>
+                            {isRev ? '+' : '-'}₹{(item.amount || 0).toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      );
+                    } else {
+                      return (
+                        <tr key={item._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                          <td className="px-4 py-3 whitespace-nowrap">{item.date}</td>
+                          <td className="px-4 py-3">
+                            <span className="block text-slate-800 dark:text-white font-extrabold">{item.clientName}</span>
+                            <span className="text-[10px] text-slate-400">{item.clientPhone}</span>
+                          </td>
+                          <td className="px-4 py-3 truncate max-w-[150px]">{item.title}</td>
+                          <td className="px-4 py-3">{(item.workerId as any)?.name || 'Unassigned'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                              item.status === 'completed' 
+                                ? 'bg-success/15 text-success' 
+                                : item.status === 'cancelled' 
+                                ? 'bg-danger/15 text-danger' 
+                                : 'bg-amber-500/15 text-amber-500'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-white">
+                            ₹{(item.price || 0).toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      );
+                    }
+                  })}
+                  {drillDown.data.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-6 text-slate-400">No records found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs font-black">
+              <span className="text-slate-400 uppercase tracking-widest text-[9px]">Total Items: {drillDown.data.length}</span>
+              <span className="text-sm font-black text-slate-800 dark:text-white">
+                {drillDown.type === 'customers' 
+                  ? `${drillDown.data.reduce((acc, curr) => acc + curr.count, 0)} Total Clean Bookings`
+                  : drillDown.type === 'profit'
+                  ? `Net Calculation: ₹${analytics.financials.netProfit.toLocaleString('en-IN')}`
+                  : drillDown.type === 'gross'
+                  ? `Gross Calculation: ₹${analytics.financials.grossProfit.toLocaleString('en-IN')}`
+                  : `Sum Total: ₹${(
+                      drillDown.data.reduce((acc, curr) => acc + (curr.price || curr.amount || 0), 0)
+                    ).toLocaleString('en-IN')}`
+                }
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>

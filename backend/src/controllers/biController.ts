@@ -22,7 +22,7 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
     const [jobs, customExpenses, travelLogs, salaryPayouts, workers, attendanceLogs] = await Promise.all([
       Job.find({ date: { $gte: startStr, $lte: endStr } }).populate('workerId', 'name photo company status'),
       Expense.find({ date: { $gte: startStr, $lte: endStr } }),
-      TravelLog.find({ date: { $gte: startStr, $lte: endStr }, status: 'approved' }),
+      TravelLog.find({ date: { $gte: startStr, $lte: endStr }, status: 'approved' }).populate('workerId', 'name'),
       // Map startDate/endDate to months YYYY-MM
       SalaryRequest.find({ 
         month: { 
@@ -30,7 +30,7 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
           $lte: endStr.substring(0, 7) 
         }, 
         status: 'approved' 
-      }),
+      }).populate('workerId', 'name'),
       User.find({ role: 'worker' }),
       Attendance.find({ date: { $gte: startStr, $lte: endStr } })
     ]);
@@ -312,7 +312,9 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
         suggestedNextMonthJobsTarget,
         suggestedNextMonthRevenueTarget
       },
-      aiSuggestions
+      aiSuggestions,
+      rawSalaryPayouts: salaryPayouts,
+      rawTravelLogs: travelLogs
     });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
