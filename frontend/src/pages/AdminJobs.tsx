@@ -686,20 +686,21 @@ GST included in all prices.`,
             </div>
           </div>
 
-          <!-- Signature Block (Below Total Amount) -->
-          <div style="display: flex; justify-content: flex-start; margin-bottom: 40px; text-align: left;">
-            <div style="font-size: 12px; color: #475569; width: 220px;">
-              <div style="margin-bottom: 45px;">For <strong>${comp.name}</strong></div>
-              <div style="border-bottom: 1.5px solid #94a3b8; margin-bottom: 6px; width: 100%;"></div>
-              <div style="font-weight: 600; color: #0f172a; font-size: 11px; text-align: center;">
-                Authorised Signature
-              </div>
-            </div>
-          </div>
-
           <div class="footer-section">
             <div class="terms-title">Terms & Conditions:</div>
-            <div style="white-space: pre-line;">${comp.terms}</div>
+            <div style="white-space: pre-line; margin-bottom: 25px;">${comp.terms}</div>
+
+            <!-- Signature Block (Below Terms & Conditions) -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 30px; text-align: left;">
+              <div style="font-size: 12px; color: #475569; width: 220px;">
+                <div style="margin-bottom: 40px;">For <strong>${comp.name}</strong></div>
+                <div style="border-bottom: 1.5px solid #94a3b8; margin-bottom: 6px; width: 100%;"></div>
+                <div style="font-weight: 600; color: #0f172a; font-size: 11px; text-align: center;">
+                  Authorised Signature
+                </div>
+              </div>
+            </div>
+
             <div class="notes-msg">${comp.notes}</div>
           </div>
         </div>
