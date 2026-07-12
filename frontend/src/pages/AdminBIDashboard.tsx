@@ -1378,23 +1378,27 @@ const AdminBIDashboard: React.FC = () => {
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {analytics.workerPerformance.map((w: any) => (
                         <tr key={w._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
-                          <td className="px-4 py-3.5 flex items-center space-x-3.5">
-                            <img
-                              src={w.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${w.name}`}
-                              alt={w.name}
-                              className="h-8.5 w-8.5 rounded-full object-cover border-2 border-violet-500 shadow-sm"
-                            />
-                            <div>
-                              <span className="block text-slate-800 dark:text-white font-extrabold">{w.name}</span>
-                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{w.company}</span>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center space-x-3.5">
+                              <img
+                                src={w.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${w.name}`}
+                                alt={w.name}
+                                className="h-8.5 w-8.5 rounded-full object-cover border-2 border-violet-500 shadow-sm"
+                              />
+                              <div>
+                                <span className="block text-slate-800 dark:text-white font-extrabold">{w.name}</span>
+                                <span className="text-[9px] text-slate-400 uppercase tracking-wider">{w.company}</span>
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-3.5">
                             <span>{w.assignedJobs} Assigned / <strong className="text-emerald-500">{w.completedJobs} Done</strong></span>
                           </td>
-                          <td className="px-4 py-3.5 flex items-center space-x-1 pt-5">
-                            <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                            <span>{w.avgRating} / 5</span>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center space-x-1">
+                              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                              <span>{w.avgRating} / 5</span>
+                            </div>
                           </td>
                           <td className="px-4 py-3.5">{w.attendanceRate}%</td>
                           <td className="px-4 py-3.5">{w.onTimeRate}%</td>
