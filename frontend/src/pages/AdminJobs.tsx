@@ -687,7 +687,7 @@ GST included in all prices.`,
           </div>
 
           <!-- Signature Block (Below Total Amount) -->
-          <div style="display: flex; justify-content: flex-end; margin-bottom: 40px; text-align: right;">
+          <div style="display: flex; justify-content: flex-start; margin-bottom: 40px; text-align: left;">
             <div style="font-size: 12px; color: #475569; width: 220px;">
               <div style="margin-bottom: 45px;">For <strong>${comp.name}</strong></div>
               <div style="border-bottom: 1.5px solid #94a3b8; margin-bottom: 6px; width: 100%;"></div>
