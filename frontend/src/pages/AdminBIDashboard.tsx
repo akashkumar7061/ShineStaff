@@ -136,16 +136,7 @@ const AdminBIDashboard: React.FC = () => {
     dailyBaseRate: 400
   });
 
-  // --- Daily Operations Desk Forms State ---
-  const [jobTitle, setJobTitle] = useState('');
-  const [jobPrice, setJobPrice] = useState('');
-  const [jobWorker, setJobWorker] = useState('');
-  const [jobClientName, setJobClientName] = useState('');
-  const [jobClientPhone, setJobClientPhone] = useState('');
-  const [jobCompany, setJobCompany] = useState('All');
-  const [jobDate, setJobDate] = useState(getTodayString());
-  const [jobStatus, setJobStatus] = useState<'pending' | 'completed'>('completed');
-  const [jobTimeSlot, setJobTimeSlot] = useState('09:00 AM - 12:00 PM');
+
 
   const [expenseCategory, setExpenseCategory] = useState<'material' | 'equipment' | 'marketing' | 'office' | 'miscellaneous' | 'inventory'>('inventory');
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -215,39 +206,7 @@ const AdminBIDashboard: React.FC = () => {
 
   // --- Action Submissions ---
 
-  const handleAddJob = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!jobTitle || !jobPrice || !jobWorker || !jobClientName || !jobClientPhone) {
-      alert('Please fill out all job fields.');
-      return;
-    }
 
-    try {
-      await api.post('/jobs', {
-        title: jobTitle,
-        price: Number(jobPrice),
-        workerId: jobWorker,
-        clientName: jobClientName,
-        clientPhone: jobClientPhone,
-        company: jobCompany === 'All' ? 'ShineStaff' : jobCompany,
-        date: jobDate,
-        timeSlot: jobTimeSlot,
-        status: jobStatus,
-        paymentStatus: jobStatus === 'completed' ? 'received' : 'pending',
-        address: 'Direct Logged via BI Console',
-        location: { lat: 28.6139, lng: 77.2090 }
-      });
-
-      setJobTitle('');
-      setJobPrice('');
-      setJobClientName('');
-      setJobClientPhone('');
-      alert('Clean Job scheduled successfully!');
-      fetchBIData();
-    } catch (err) {
-      console.error('Failed to quick-add job:', err);
-    }
-  };
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1020,138 +979,8 @@ const AdminBIDashboard: React.FC = () => {
               </div>
 
               {/* Sub-Section 1: Daily Quick Logging Forms Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
                 
-                {/* Form A: Quick Job Logger */}
-                <div className="glass-card p-6 border-t-4 border-t-indigo-500">
-                  <h4 className="text-xs font-black uppercase text-indigo-650 tracking-wider mb-4 flex items-center space-x-1">
-                    <ClipboardList className="h-4.5 w-4.5" />
-                    <span>Log Daily Clean Job</span>
-                  </h4>
-                  <form onSubmit={handleAddJob} className="space-y-3.5">
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Clean Job Title:</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Sofa Sanitization Clean"
-                        value={jobTitle}
-                        onChange={(e) => setJobTitle(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Price (INR):</label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="e.g. 3500"
-                          value={jobPrice}
-                          onChange={(e) => setJobPrice(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Date:</label>
-                        <input
-                          type="date"
-                          required
-                          value={jobDate}
-                          onChange={(e) => setJobDate(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500 dark:color-scheme-dark"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Client Name:</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Rajesh Sharma"
-                          value={jobClientName}
-                          onChange={(e) => setJobClientName(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Phone Number:</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. 9876543210"
-                          value={jobClientPhone}
-                          onChange={(e) => setJobClientPhone(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Company Division:</label>
-                        <select
-                          value={jobCompany}
-                          onChange={(e) => setJobCompany(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        >
-                          <option value="All">ShineStaff Division</option>
-                          <option value="Aditya Cleaners">Aditya Cleaners Division</option>
-                          <option value="Elite Cleans">Elite Cleans Division</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Assign Crew Worker:</label>
-                        <select
-                          required
-                          value={jobWorker}
-                          onChange={(e) => setJobWorker(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        >
-                          <option value="">Select worker...</option>
-                          {workers.map((w: any) => (
-                            <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Status:</label>
-                        <select
-                          value={jobStatus}
-                          onChange={(e) => setJobStatus(e.target.value as any)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-855 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        >
-                          <option value="completed">Completed (Paid)</option>
-                          <option value="pending">Scheduled (Pending)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Timing Slot:</label>
-                        <input
-                          type="text"
-                          value={jobTimeSlot}
-                          onChange={(e) => setJobTimeSlot(e.target.value)}
-                          className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-indigo-650 hover:bg-indigo-700 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md mt-2 flex items-center justify-center space-x-1.5"
-                    >
-                      <Plus className="h-4.5 w-4.5" />
-                      <span>Log clean scheduled</span>
-                    </button>
-                  </form>
-                </div>
-
                 {/* Form B: Expense & Inventory Logger */}
                 <div className="glass-card p-6 border-t-4 border-t-rose-500">
                   <h4 className="text-xs font-black uppercase text-rose-655 tracking-wider mb-4 flex items-center space-x-1">

@@ -26,6 +26,7 @@ import AdminReports from './pages/AdminReports';
 import AdminSettings from './pages/AdminSettings';
 import AdminAuditLog from './pages/AdminAuditLog';
 import AdminBIDashboard from './pages/AdminBIDashboard';
+import AdminLogDailyJobs from './pages/AdminLogDailyJobs';
 
 import AdminAttendanceLogs from './pages/AdminAttendanceLogs';
 import AdminMapTracking from './pages/AdminMapTracking';
@@ -612,6 +613,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
                       <AdminBIDashboard />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/log-daily-jobs"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
+                      <AdminLogDailyJobs />
                     </AdminLayout>
                   </ProtectedRoute>
                 }
