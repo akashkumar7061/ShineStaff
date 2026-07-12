@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
+import MapView from '../components/MapView';
 import {
   Activity,
   TrendingUp,
@@ -31,7 +32,12 @@ import {
   Flame,
   Archive,
   BarChart3,
-  UserCheck
+  UserCheck,
+  Plane,
+  RefreshCw,
+  Settings as SettingsIcon,
+  History,
+  Map
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -110,11 +116,27 @@ const AdminBIDashboard: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'financials' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'operations-desk' | 'audit'>('financials');
+  const [activeTab, setActiveTab] = useState<'financials' | 'operations-desk' | 'live-gps-tracking' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'audit' | 'settings'>('financials');
 
-  // --- 1. Daily Operations Desk Forms State ---
-  
-  // A. Quick Job scheduler
+  // --- Approvals Desk State ---
+  const [pendingSalaryRequests, setPendingSalaryRequests] = useState<any[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [pendingTravelLogs, setPendingTravelLogs] = useState<any[]>([]);
+
+  // --- Attendance Log State ---
+  const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
+
+  // --- GPS Map Tracking State ---
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+
+  // --- Company Settings Config state ---
+  const [globalSettings, setGlobalSettings] = useState<any>({
+    fuelAllowanceRate: 5,
+    monthlyTargetRevenue: 1000000,
+    dailyBaseRate: 400
+  });
+
+  // --- Daily Operations Desk Forms State ---
   const [jobTitle, setJobTitle] = useState('');
   const [jobPrice, setJobPrice] = useState('');
   const [jobWorker, setJobWorker] = useState('');
@@ -125,36 +147,51 @@ const AdminBIDashboard: React.FC = () => {
   const [jobStatus, setJobStatus] = useState<'pending' | 'completed'>('completed');
   const [jobTimeSlot, setJobTimeSlot] = useState('09:00 AM - 12:00 PM');
 
-  // B. Quick Expense Logger
   const [expenseCategory, setExpenseCategory] = useState<'material' | 'equipment' | 'marketing' | 'office' | 'miscellaneous' | 'inventory'>('inventory');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(getTodayString());
   const [expenseDescription, setExpenseDescription] = useState('');
 
-  // C. Quick Commute Travel Logger
   const [travelWorker, setTravelWorker] = useState('');
   const [travelKms, setTravelKms] = useState('');
   const [travelAllowance, setTravelAllowance] = useState('');
   const [travelDate, setTravelDate] = useState(getTodayString());
 
-  // Search filter inside audit logs tab
   const [auditSearch, setAuditSearch] = useState('');
 
   const fetchBIData = async () => {
     setLoading(true);
     try {
-      const [biRes, expRes, jobsRes, workersRes, auditRes] = await Promise.all([
+      const [biRes, expRes, jobsRes, workersRes, auditRes, leavesRes, salaryRequestsRes, travelLogsRes, attendanceRes, settingsRes] = await Promise.all([
         api.get(`/bi/analytics?startDate=${startDate}&endDate=${endDate}`),
         api.get(`/expenses?startDate=${startDate}&endDate=${endDate}`),
         api.get(`/jobs?startDate=${startDate}&endDate=${endDate}`),
         api.get('/workers'),
-        api.get(`/audit-logs?startDate=${startDate}&endDate=${endDate}&limit=100`)
+        api.get(`/audit-logs?startDate=${startDate}&endDate=${endDate}&limit=100`),
+        api.get('/leaves'),
+        api.get('/salary/requests'),
+        api.get('/travel/all'),
+        api.get('/attendance/today'),
+        api.get('/settings')
       ]);
+
       setAnalytics(biRes.data);
       setExpenses(expRes.data);
       setJobs(jobsRes.data);
       setWorkers(workersRes.data || []);
       setAuditLogs(auditRes.data.logs || []);
+
+      // Filter approvals
+      setPendingLeaves((leavesRes.data || []).filter((l: any) => l.status === 'pending'));
+      setPendingSalaryRequests((salaryRequestsRes.data || []).filter((sr: any) => sr.status === 'pending'));
+      setPendingTravelLogs((travelLogsRes.data || []).filter((tl: any) => tl.status === 'pending'));
+
+      // Filter attendance logs
+      setTodayAttendance(attendanceRes.data || []);
+      
+      if (settingsRes.data) {
+        setGlobalSettings(settingsRes.data);
+      }
     } catch (err) {
       console.error('Failed to load BI dashboard data:', err);
     } finally {
@@ -176,12 +213,12 @@ const AdminBIDashboard: React.FC = () => {
     }
   };
 
-  // --- 2. Action Submissions ---
+  // --- Action Submissions ---
 
   const handleAddJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle || !jobPrice || !jobWorker || !jobClientName || !jobClientPhone) {
-      alert('Please fill out all job scheduling fields.');
+      alert('Please fill out all job fields.');
       return;
     }
 
@@ -198,18 +235,17 @@ const AdminBIDashboard: React.FC = () => {
         status: jobStatus,
         paymentStatus: jobStatus === 'completed' ? 'received' : 'pending',
         address: 'Direct Logged via BI Console',
-        location: { lat: 28.6139, lng: 77.2090 } // Default New Delhi coords
+        location: { lat: 28.6139, lng: 77.2090 }
       });
 
       setJobTitle('');
       setJobPrice('');
       setJobClientName('');
       setJobClientPhone('');
-      alert('Clean Job scheduled and logged successfully!');
+      alert('Clean Job scheduled successfully!');
       fetchBIData();
     } catch (err) {
       console.error('Failed to quick-add job:', err);
-      alert('Error scheduling job. Please try again.');
     }
   };
 
@@ -241,7 +277,7 @@ const AdminBIDashboard: React.FC = () => {
     }
 
     try {
-      const calculatedAllowance = Number(travelAllowance) || Number(travelKms) * 5; // Default rate ₹5/km
+      const calculatedAllowance = Number(travelAllowance) || Number(travelKms) * (globalSettings.fuelAllowanceRate || 5);
       await api.post('/travel/admin-submit', {
         workerId: travelWorker,
         date: travelDate,
@@ -253,11 +289,53 @@ const AdminBIDashboard: React.FC = () => {
 
       setTravelKms('');
       setTravelAllowance('');
-      alert('Fuel Travel commute allowance logged and approved!');
+      alert('Fuel commute allowance logged successfully!');
       fetchBIData();
     } catch (err) {
-      console.error('Failed to manually log travel commute:', err);
-      alert('Error logging travel. Please try again.');
+      console.error('Failed to manually log travel:', err);
+    }
+  };
+
+  // --- Approvals Action Handlers ---
+
+  const handleProcessLeave = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      await api.put(`/leaves/${id}/process`, { status });
+      alert(`Leave request ${status}!`);
+      fetchBIData();
+    } catch (err) {
+      console.error('Failed to process leave:', err);
+    }
+  };
+
+  const handleProcessSalary = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      await api.put(`/salary/requests/${id}`, { status });
+      alert(`Salary payout request ${status}!`);
+      fetchBIData();
+    } catch (err) {
+      console.error('Failed to process salary request:', err);
+    }
+  };
+
+  const handleProcessTravel = async (id: string) => {
+    try {
+      await api.put(`/travel/${id}/approve`);
+      alert('Fuel Travel commute reimbursement approved!');
+      fetchBIData();
+    } catch (err) {
+      console.error('Failed to approve travel log:', err);
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/settings', globalSettings);
+      alert('Global configuration saved successfully!');
+      fetchBIData();
+    } catch (err) {
+      console.error('Failed to save settings:', err);
     }
   };
 
@@ -289,7 +367,7 @@ const AdminBIDashboard: React.FC = () => {
     }
   };
 
-  // --- 3. Drill-down details state & triggers ---
+  // --- Drill-down details ---
   const [drillDown, setDrillDown] = useState<{
     title: string;
     type: 'sales' | 'revenue' | 'expenses' | 'profit' | 'gross' | 'outstanding' | 'received' | 'customers';
@@ -385,7 +463,7 @@ const AdminBIDashboard: React.FC = () => {
     setDrillDown({ title, type, data });
   };
 
-  // --- 4. Multi-Sheet Professional Excel Export ---
+  // --- Professional Excel Export ---
   const exportToExcel = () => {
     if (!analytics) return;
 
@@ -456,14 +534,10 @@ const AdminBIDashboard: React.FC = () => {
      <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Operating Expense Ratio (OER)</Data></Cell>
      <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? (((analytics.expenseBreakdown.salaries + analytics.expenseBreakdown.office + analytics.expenseBreakdown.marketing + analytics.expenseBreakdown.miscellaneous) / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
    </Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Customer Lifetime Value (LTV)</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.averageOrderValue * (analytics.financials.totalCustomers > 0 ? jobs.length / analytics.financials.totalCustomers : 1)}</Data></Cell>
-   </Row>
   </Table>
  </Worksheet>`;
 
-    // Sheet 2: Expenses Log
+    // Sheet 2: Expenditures Log
     let expSheet = `<Worksheet ss:Name="Operating Expenditures">
   <Table>
    <Row>
@@ -529,36 +603,8 @@ const AdminBIDashboard: React.FC = () => {
 
     jobsSheet += `</Table></Worksheet>`;
 
-    // Sheet 4: Worker Scorecards
-    let workerSheet = `<Worksheet ss:Name="Crew Productivity">
-  <Table>
-   <Row>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Worker Name</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Company</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Assigned Jobs</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Completed Jobs</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Attendance Rate</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Productivity Score</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Rank</Data></Cell>
-   </Row>`;
-
-    analytics.workerPerformance.forEach((w: any) => {
-      workerSheet += `<Row>
-        <Cell><Data ss:Type="String">${w.name}</Data></Cell>
-        <Cell><Data ss:Type="String">${w.company}</Data></Cell>
-        <Cell><Data ss:Type="Number">${w.assignedJobs}</Data></Cell>
-        <Cell><Data ss:Type="Number">${w.completedJobs}</Data></Cell>
-        <Cell><Data ss:Type="String">${w.attendanceRate}%</Data></Cell>
-        <Cell><Data ss:Type="String">${w.productivityScore}%</Data></Cell>
-        <Cell><Data ss:Type="String">${w.rank}</Data></Cell>
-      </Row>`;
-    });
-
-    workerSheet += `</Table></Worksheet>`;
-
     const xmlFooter = `</Workbook>`;
-
-    const finalXml = xmlHeader + execSheet + expSheet + jobsSheet + workerSheet + xmlFooter;
+    const finalXml = xmlHeader + execSheet + expSheet + jobsSheet + xmlFooter;
     
     const blob = new Blob([finalXml], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
@@ -568,6 +614,10 @@ const AdminBIDashboard: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   // Process data for charts
@@ -605,9 +655,17 @@ const AdminBIDashboard: React.FC = () => {
     ];
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Map Pins calculation
+  const mapPins = workers
+    .filter((w: any) => w.currentLocation?.lat && w.currentLocation?.lng)
+    .map((w: any) => ({
+      id: w._id,
+      name: w.name,
+      lat: w.currentLocation.lat,
+      lng: w.currentLocation.lng,
+      type: 'worker' as const,
+      info: `Status: ${w.status || 'Active'} | Company: ${w.company}`
+    }));
 
   return (
     <div className="space-y-6 text-left max-w-full print:p-0">
@@ -809,14 +867,16 @@ const AdminBIDashboard: React.FC = () => {
           <div className="border-b border-slate-200 dark:border-slate-800 print:hidden">
             <nav className="flex space-x-4 overflow-x-auto pb-1" aria-label="Tabs">
               {[
-                { id: 'financials', label: 'Financial Analytics', icon: DollarSign },
+                { id: 'financials', label: 'Financial Ratios & Trends', icon: DollarSign },
                 { id: 'operations-desk', label: 'Daily Operations Desk ✍️', icon: ClipboardList },
-                { id: 'operations', label: 'Operations & Performance', icon: CheckCircle2 },
-                { id: 'workers', label: 'Worker Performance & Ratings', icon: Award },
-                { id: 'goals', label: 'Targets & Predictions', icon: Zap },
-                { id: 'expenses', label: 'Log Business Expenses', icon: Plus },
-                { id: 'payment-tracker', label: 'Invoices & Payments', icon: CreditCard },
-                { id: 'audit', label: 'Audit Logs', icon: Clock }
+                { id: 'live-gps-tracking', label: 'Live GPS Commutes 📍', icon: Map },
+                { id: 'operations', label: 'Operations & Target Planning', icon: CheckCircle2 },
+                { id: 'workers', label: 'Worker Performance & Attendance', icon: Award },
+                { id: 'goals', label: 'Projections & AI recommendations', icon: Zap },
+                { id: 'expenses', label: 'Manage Expenditures', icon: Plus },
+                { id: 'payment-tracker', label: 'Invoice & Payments status', icon: CreditCard },
+                { id: 'audit', label: 'Audit Logs', icon: Clock },
+                { id: 'settings', label: 'Company Settings', icon: SettingsIcon }
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -845,7 +905,6 @@ const AdminBIDashboard: React.FC = () => {
               
               {/* Executive Ratios Card grid */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                
                 <div className="glass-card p-5 border-l-4 border-l-indigo-600">
                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Gross Profit Margin</span>
                   <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
@@ -877,12 +936,9 @@ const AdminBIDashboard: React.FC = () => {
                   </h3>
                   <p className="text-[9px] text-slate-400 mt-1 block">Average total booking client spend</p>
                 </div>
-
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Profit Growth area chart */}
                 <div className="glass-card p-6 lg:col-span-2">
                   <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Profit Trend Analysis</h3>
                   <div className="h-80 w-full">
@@ -910,7 +966,6 @@ const AdminBIDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Expense Breakdown Pie Chart */}
                 <div className="glass-card p-6">
                   <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Expenses Breakdown By Category</h3>
                   <div className="h-64 w-full relative flex items-center justify-center">
@@ -932,15 +987,11 @@ const AdminBIDashboard: React.FC = () => {
                         <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
                       </RechartsPieChart>
                     </ResponsiveContainer>
-                    
-                    {/* Absolute Center total info */}
                     <div className="absolute flex flex-col items-center justify-center">
                       <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Costs</span>
                       <span className="text-base font-black text-slate-800 dark:text-white mt-0.5">₹{analytics.financials.totalExpenses.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
-
-                  {/* Legend list */}
                   <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-bold">
                     {getExpenseChartData().map((item, index) => (
                       <div key={item.name} className="flex items-center space-x-1.5 text-slate-655 dark:text-slate-350">
@@ -950,23 +1001,26 @@ const AdminBIDashboard: React.FC = () => {
                     ))}
                   </div>
                 </div>
-
               </div>
             </div>
           )}
 
-          {/* Tab 4.2: Daily Operations Desk (Logging Engine) */}
+          {/* Tab 4.2: Daily Operations Desk & Approvals Command Room */}
           {activeTab === 'operations-desk' && (
             <div className="space-y-6">
               
-              <div className="bg-gradient-to-r from-violet-500/10 to-indigo-500/10 p-5 rounded-3xl border border-violet-200/30">
-                <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
-                  <Sparkles className="h-5 w-5 animate-pulse text-indigo-500" />
-                  <span>Central Operations Control Board</span>
-                </h3>
-                <p className="text-xs text-slate-450 mt-1">Direct logging center. Feed jobs, custom expenses, fuel allowance sheets daily, and see the BI dashboards synchronize instantly.</p>
+              {/* Header Info */}
+              <div className="bg-gradient-to-r from-violet-500/10 to-indigo-500/10 p-5 rounded-3xl border border-violet-200/30 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
+                    <Sparkles className="h-5 w-5 animate-pulse text-indigo-500" />
+                    <span>Central Operations Command Room</span>
+                  </h3>
+                  <p className="text-xs text-slate-450 mt-1">Manage all daily data entries and approve worker salary, commute reimbursements, and leave requests in one central control board.</p>
+                </div>
               </div>
 
+              {/* Sub-Section 1: Daily Quick Logging Forms Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
                 
                 {/* Form A: Quick Job Logger */}
@@ -981,7 +1035,7 @@ const AdminBIDashboard: React.FC = () => {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Deep Home Cleaning"
+                        placeholder="e.g. Sofa Sanitization Clean"
                         value={jobTitle}
                         onChange={(e) => setJobTitle(e.target.value)}
                         className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
@@ -1018,7 +1072,7 @@ const AdminBIDashboard: React.FC = () => {
                         <input
                           type="text"
                           required
-                          placeholder="e.g. Akash Kumar"
+                          placeholder="e.g. Rajesh Sharma"
                           value={jobClientName}
                           onChange={(e) => setJobClientName(e.target.value)}
                           className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
@@ -1045,9 +1099,9 @@ const AdminBIDashboard: React.FC = () => {
                           onChange={(e) => setJobCompany(e.target.value)}
                           className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-indigo-500"
                         >
-                          <option value="All">ShineStaff Div</option>
-                          <option value="Aditya Cleaners">Aditya Clean division</option>
-                          <option value="Elite Cleans">Elite Services</option>
+                          <option value="All">ShineStaff Division</option>
+                          <option value="Aditya Cleaners">Aditya Cleaners Division</option>
+                          <option value="Elite Cleans">Elite Cleans Division</option>
                         </select>
                       </div>
                       <div>
@@ -1091,10 +1145,10 @@ const AdminBIDashboard: React.FC = () => {
 
                     <button
                       type="submit"
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md mt-2 flex items-center justify-center space-x-1.5"
+                      className="w-full bg-indigo-650 hover:bg-indigo-700 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md mt-2 flex items-center justify-center space-x-1.5"
                     >
                       <Plus className="h-4.5 w-4.5" />
-                      <span>Log scheduled Clean</span>
+                      <span>Log clean scheduled</span>
                     </button>
                   </form>
                 </div>
@@ -1232,13 +1286,190 @@ const AdminBIDashboard: React.FC = () => {
                     </button>
                   </form>
                 </div>
+              </div>
+
+              {/* Sub-Section 2: Approvals Action Center Lists */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* 1. Pending Salary Advance/Payout requests */}
+                <div className="glass-card p-6 overflow-hidden">
+                  <h4 className="text-xs font-black uppercase text-indigo-500 tracking-wider mb-4 flex items-center space-x-1.5">
+                    <UserCheck className="h-5 w-5" />
+                    <span>Pending Salary Payout Requests ({pendingSalaryRequests.length})</span>
+                  </h4>
+                  <div className="overflow-x-auto max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-[11px] font-bold text-slate-650 dark:text-slate-350">
+                      <thead className="bg-slate-100 dark:bg-slate-900 text-[9px] text-slate-450 uppercase tracking-widest">
+                        <tr>
+                          <th className="px-3 py-2">Worker</th>
+                          <th className="px-3 py-2">Month</th>
+                          <th className="px-3 py-2">Amount</th>
+                          <th className="px-3 py-2 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {pendingSalaryRequests.map((sr: any) => (
+                          <tr key={sr._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
+                            <td className="px-3 py-2.5">{sr.workerId?.name || 'Worker'}</td>
+                            <td className="px-3 py-2.5">{sr.month}</td>
+                            <td className="px-3 py-2.5 text-secondary font-black">₹{sr.amount}</td>
+                            <td className="px-3 py-2.5 flex justify-center space-x-2">
+                              <button 
+                                onClick={() => handleProcessSalary(sr._id, 'approved')}
+                                className="bg-success text-white font-extrabold text-[10px] px-2.5 py-1 rounded cursor-pointer hover:bg-emerald-600"
+                              >
+                                Approve
+                              </button>
+                              <button 
+                                onClick={() => handleProcessSalary(sr._id, 'rejected')}
+                                className="bg-danger text-white font-extrabold text-[10px] px-2.5 py-1 rounded cursor-pointer hover:bg-red-650"
+                              >
+                                Reject
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {pendingSalaryRequests.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="text-center py-6 text-slate-400 font-semibold">No pending salary requests.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 2. Pending Leaves requests */}
+                <div className="glass-card p-6 overflow-hidden">
+                  <h4 className="text-xs font-black uppercase text-indigo-500 tracking-wider mb-4 flex items-center space-x-1.5">
+                    <Plane className="h-5 w-5" />
+                    <span>Pending Leave Request Forms ({pendingLeaves.length})</span>
+                  </h4>
+                  <div className="overflow-x-auto max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-[11px] font-bold text-slate-650 dark:text-slate-350">
+                      <thead className="bg-slate-100 dark:bg-slate-900 text-[9px] text-slate-450 uppercase tracking-widest">
+                        <tr>
+                          <th className="px-3 py-2">Worker</th>
+                          <th className="px-3 py-2">Date Range</th>
+                          <th className="px-3 py-2">Reason</th>
+                          <th className="px-3 py-2 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {pendingLeaves.map((l: any) => (
+                          <tr key={l._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
+                            <td className="px-3 py-2.5">{l.workerId?.name || 'Worker'}</td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">{l.startDate} to {l.endDate}</td>
+                            <td className="px-3 py-2.5 truncate max-w-[120px]">{l.reason}</td>
+                            <td className="px-3 py-2.5 flex justify-center space-x-2">
+                              <button 
+                                onClick={() => handleProcessLeave(l._id, 'approved')}
+                                className="bg-success text-white font-extrabold text-[10px] px-2.5 py-1 rounded cursor-pointer hover:bg-emerald-600"
+                              >
+                                Approve
+                              </button>
+                              <button 
+                                onClick={() => handleProcessLeave(l._id, 'rejected')}
+                                className="bg-danger text-white font-extrabold text-[10px] px-2.5 py-1 rounded cursor-pointer hover:bg-red-650"
+                              >
+                                Reject
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {pendingLeaves.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="text-center py-6 text-slate-400 font-semibold">No pending leaves.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 3. Pending Fuel commute Travel log approvals */}
+                <div className="glass-card p-6 lg:col-span-2 overflow-hidden">
+                  <h4 className="text-xs font-black uppercase text-indigo-500 tracking-wider mb-4 flex items-center space-x-1.5">
+                    <Flame className="h-5 w-5" />
+                    <span>Pending Commute Travel Logs Claims ({pendingTravelLogs.length})</span>
+                  </h4>
+                  <div className="overflow-x-auto max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-[11px] font-bold text-slate-655 dark:text-slate-350">
+                      <thead className="bg-slate-100 dark:bg-slate-900 text-[9px] text-slate-450 uppercase tracking-widest">
+                        <tr>
+                          <th className="px-4 py-2">Date</th>
+                          <th className="px-4 py-2">Worker</th>
+                          <th className="px-4 py-2">Route Commute</th>
+                          <th className="px-4 py-2">KMs Travelled</th>
+                          <th className="px-4 py-2">Calculated Allowance</th>
+                          <th className="px-4 py-2 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {pendingTravelLogs.map((tl: any) => (
+                          <tr key={tl._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
+                            <td className="px-4 py-2.5">{tl.date}</td>
+                            <td className="px-4 py-2.5">{(tl.workerId as any)?.name || 'Worker'}</td>
+                            <td className="px-4 py-2.5">{tl.fromLocation} ➔ {tl.toLocation}</td>
+                            <td className="px-4 py-2.5">{tl.kms} Kms</td>
+                            <td className="px-4 py-2.5 font-black text-rose-500">₹{tl.allowance}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <button 
+                                onClick={() => handleProcessTravel(tl._id)}
+                                className="bg-indigo-600 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-xl cursor-pointer hover:bg-indigo-700 shadow"
+                              >
+                                Approve Allowance
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {pendingTravelLogs.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center py-6 text-slate-400 font-semibold">No pending travel allowances claim request logs.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
               </div>
 
             </div>
           )}
 
-          {/* Tab 4.3: Operations and Performance */}
+          {/* Tab 4.3: Live GPS Map Tracking embedded Command tab */}
+          {activeTab === 'live-gps-tracking' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Live Commuting Crews GPS Tracker</h3>
+                  <p className="text-[10px] text-slate-400">View coordinates and commuting locations of active workers on the maps.</p>
+                </div>
+                
+                <div className="relative w-full sm:w-64">
+                  <input
+                    type="text"
+                    placeholder="Search crew worker by name..."
+                    value={mapSearchQuery}
+                    onChange={(e) => setMapSearchQuery(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              {/* Embedded Interactive Maps */}
+              <div className="glass-card p-6 h-[72vh] min-h-[500px]">
+                <MapView 
+                  pins={mapPins.filter((pin: any) => 
+                    pin.name.toLowerCase().includes(mapSearchQuery.toLowerCase())
+                  )} 
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4.4: Operations and Performance */}
           {activeTab === 'operations' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -1276,7 +1507,7 @@ const AdminBIDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-450 space-y-2">
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-455 space-y-2">
                     <div className="flex justify-between">
                       <span>Average Job Completion Time:</span>
                       <span className="font-extrabold text-slate-750 dark:text-slate-200">{analytics.jobAnalytics.averageCompletionTimeHours} Hours</span>
@@ -1295,7 +1526,7 @@ const AdminBIDashboard: React.FC = () => {
 
               {/* Cancellation Reason Chart */}
               <div className="glass-card p-6 lg:col-span-2">
-                <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Incomplete/Cancelled Job Causes</h3>
+                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Incomplete/Cancelled Job Causes</h3>
                 {getCancellationReasonsData().length === 0 ? (
                   <div className="h-64 flex flex-col items-center justify-center text-slate-400">
                     <CheckCircle2 className="h-10 w-10 text-emerald-500/60 mb-2" />
@@ -1323,80 +1554,123 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.4: Worker Performance Table */}
+          {/* Tab 4.5: Worker Performance Table & Attendance Check-ins */}
           {activeTab === 'workers' && (
-            <div className="glass-card p-6 overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Worker Performance Productivity Rankings</h3>
-                <span className="text-[10px] font-bold text-slate-400">Based on completions, ratings & attendance rates</span>
+            <div className="space-y-6">
+              
+              {/* Leaderboard rankings */}
+              <div className="glass-card p-6 overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Worker Performance Productivity Rankings</h3>
+                  <span className="text-[10px] font-bold text-slate-400 font-sans">Based on completions, ratings & attendance rates</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
+                    <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Worker Name</th>
+                        <th className="px-4 py-3">Assigned / Completed</th>
+                        <th className="px-4 py-3">Rating</th>
+                        <th className="px-4 py-3">Attendance %</th>
+                        <th className="px-4 py-3">On-Time %</th>
+                        <th className="px-4 py-3">Revenues Generated</th>
+                        <th className="px-4 py-3">Productivity Score</th>
+                        <th className="px-4 py-3">Rank Designation</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {analytics.workerPerformance.map((w: any) => (
+                        <tr key={w._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
+                          <td className="px-4 py-3.5 flex items-center space-x-3.5">
+                            <img
+                              src={w.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${w.name}`}
+                              alt={w.name}
+                              className="h-8.5 w-8.5 rounded-full object-cover border-2 border-violet-500 shadow-sm"
+                            />
+                            <div>
+                              <span className="block text-slate-800 dark:text-white font-extrabold">{w.name}</span>
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{w.company}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span>{w.assignedJobs} Assigned / <strong className="text-emerald-500">{w.completedJobs} Done</strong></span>
+                          </td>
+                          <td className="px-4 py-3.5 flex items-center space-x-1 pt-5">
+                            <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                            <span>{w.avgRating} / 5</span>
+                          </td>
+                          <td className="px-4 py-3.5">{w.attendanceRate}%</td>
+                          <td className="px-4 py-3.5">{w.onTimeRate}%</td>
+                          <td className="px-4 py-3.5">₹{(w.revenueGenerated || 0).toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-slate-855 dark:text-slate-100">{w.productivityScore}%</span>
+                              <div className="w-14 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-secondary h-1.5 rounded-full" style={{ width: `${w.productivityScore}%` }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${
+                              w.rank === 'Top Performer' 
+                                ? 'bg-success/15 text-success' 
+                                : w.rank === 'Needs Improvement' 
+                                ? 'bg-danger/15 text-danger' 
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-450'
+                            }`}>
+                              {w.rank}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
-                  <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
-                    <tr>
-                      <th className="px-4 py-3">Worker Name</th>
-                      <th className="px-4 py-3">Assigned / Completed</th>
-                      <th className="px-4 py-3">Rating</th>
-                      <th className="px-4 py-3">Attendance %</th>
-                      <th className="px-4 py-3">On-Time %</th>
-                      <th className="px-4 py-3">Revenues Generated</th>
-                      <th className="px-4 py-3">Productivity Score</th>
-                      <th className="px-4 py-3">Rank Designation</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {analytics.workerPerformance.map((w: any) => (
-                      <tr key={w._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                        <td className="px-4 py-3.5 flex items-center space-x-3.5">
-                          <img
-                            src={w.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${w.name}`}
-                            alt={w.name}
-                            className="h-8.5 w-8.5 rounded-full object-cover border-2 border-violet-500 shadow-sm"
-                          />
-                          <div>
-                            <span className="block text-slate-800 dark:text-white font-extrabold">{w.name}</span>
-                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">{w.company}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span>{w.assignedJobs} Assigned / <strong className="text-emerald-500">{w.completedJobs} Done</strong></span>
-                        </td>
-                        <td className="px-4 py-3.5 flex items-center space-x-1 pt-5">
-                          <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                          <span>{w.avgRating} / 5</span>
-                        </td>
-                        <td className="px-4 py-3.5">{w.attendanceRate}%</td>
-                        <td className="px-4 py-3.5">{w.onTimeRate}%</td>
-                        <td className="px-4 py-3.5">₹{(w.revenueGenerated || 0).toLocaleString('en-IN')}</td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-slate-855 dark:text-slate-100">{w.productivityScore}%</span>
-                            <div className="w-14 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                              <div className="bg-secondary h-1.5 rounded-full" style={{ width: `${w.productivityScore}%` }} />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${
-                            w.rank === 'Top Performer' 
-                              ? 'bg-success/15 text-success' 
-                              : w.rank === 'Needs Improvement' 
-                              ? 'bg-danger/15 text-danger' 
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-450'
-                          }`}>
-                            {w.rank}
-                          </span>
-                        </td>
+              {/* Daily check-in log details */}
+              <div className="glass-card p-6 overflow-hidden">
+                <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Daily Attendance Check-Ins Tracker</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350">
+                    <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Worker Name</th>
+                        <th className="px-4 py-3">Check-In Time</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Overtime Logged</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {todayAttendance.map((att: any) => (
+                        <tr key={att._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
+                          <td className="px-4 py-3 font-extrabold">{att.workerId?.name || 'Worker'}</td>
+                          <td className="px-4 py-3">{att.checkInTime || 'N/A'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                              att.status === 'present' ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'
+                            }`}>
+                              {att.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">{att.overtimeMinutes || 0} mins</td>
+                        </tr>
+                      ))}
+                      {todayAttendance.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-center py-6 text-slate-400">No worker checked-in yet today.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
             </div>
           )}
 
-          {/* Tab 4.5: Targets and Predictions */}
+          {/* Tab 4.6: Targets & forecasting */}
           {activeTab === 'goals' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -1453,7 +1727,7 @@ const AdminBIDashboard: React.FC = () => {
                     <span className="text-[10px] bg-secondary/10 text-secondary px-2.5 py-1 rounded-full font-black">92% Conf.</span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-100 dark:border-slate-855">
+                  <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-955/60 p-3 rounded-xl border border-slate-100 dark:border-slate-855">
                     <div>
                       <span className="block text-[9px] text-slate-400 uppercase tracking-wider">Next Quarter Forecast</span>
                       <strong className="block text-sm text-slate-800 dark:text-white mt-0.5">₹{analytics.forecasts.nextQuarterRevenueForecast.toLocaleString('en-IN')}</strong>
@@ -1464,7 +1738,7 @@ const AdminBIDashboard: React.FC = () => {
                   <div className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-955/60 p-3 rounded-xl border border-slate-100 dark:border-slate-850">
                     <div>
                       <span className="block text-[9px] text-slate-400 uppercase tracking-wider">Suggested Targets Next Month</span>
-                      <div className="flex items-center space-x-3 mt-1 text-[11px] text-slate-550 dark:text-slate-350">
+                      <div className="flex items-center space-x-3 mt-1 text-[11px] text-slate-555 dark:text-slate-350">
                         <span>Jobs: <strong className="text-secondary font-black">{analytics.forecasts.suggestedNextMonthJobsTarget}</strong></span>
                         <span>Revenue: <strong className="text-emerald-500 font-black">₹{analytics.forecasts.suggestedNextMonthRevenueTarget.toLocaleString('en-IN')}</strong></span>
                       </div>
@@ -1480,7 +1754,7 @@ const AdminBIDashboard: React.FC = () => {
                     <Sparkles className="h-4.5 w-4.5 text-violet-500 animate-pulse" />
                     <span>AI Strategic Business Advice</span>
                   </h3>
-                  <p className="text-[10px] text-slate-450">Auto-generated recommendations from historic numbers</p>
+                  <p className="text-[10px] text-slate-455">Auto-generated recommendations from historic numbers</p>
                 </div>
 
                 <div className="my-4 space-y-3 flex-1 overflow-y-auto">
@@ -1498,7 +1772,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.6: Expenses Form & Custom Logs */}
+          {/* Tab 4.7: Manage Expenditures */}
           {activeTab === 'expenses' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -1616,7 +1890,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.7: Invoices and Payment statuses */}
+          {/* Tab 4.8: Invoice & Payment status tracker */}
           {activeTab === 'payment-tracker' && (
             <div className="glass-card p-6 overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -1652,7 +1926,6 @@ const AdminBIDashboard: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 font-black text-slate-800 dark:text-white">₹{(job.price || 0).toLocaleString('en-IN')}</td>
                         
-                        {/* Rating click options */}
                         <td className="px-4 py-3">
                           <div className="flex items-center space-x-0.5">
                             {[1, 2, 3, 4, 5].map((star) => (
@@ -1667,7 +1940,6 @@ const AdminBIDashboard: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* Payment Toggle Dropdown */}
                         <td className="px-4 py-3 text-center">
                           <select
                             value={job.paymentStatus || 'received'}
@@ -1698,7 +1970,7 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Tab 4.8: Audit Logs List */}
+          {/* Tab 4.9: Administrative Activities Audit Log */}
           {activeTab === 'audit' && (
             <div className="glass-card p-6 overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -1735,7 +2007,7 @@ const AdminBIDashboard: React.FC = () => {
                     {auditLogs
                       .filter(log => log.summary?.toLowerCase().includes(auditSearch.toLowerCase()))
                       .map((log: any) => (
-                        <tr key={log._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                        <tr key={log._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
                           <td className="px-4 py-3.5 text-slate-400 whitespace-nowrap">
                             {new Date(log.createdAt).toLocaleString('en-IN', {
                               dateStyle: 'short',
@@ -1784,6 +2056,55 @@ const AdminBIDashboard: React.FC = () => {
             </div>
           )}
 
+          {/* Tab 4.10: Global Settings configuration */}
+          {activeTab === 'settings' && (
+            <div className="glass-card p-6 max-w-xl">
+              <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">ShineStaff Global Configuration Settings</h3>
+              <form onSubmit={handleSaveSettings} className="space-y-4 text-xs font-bold text-slate-650 dark:text-slate-300">
+                <div>
+                  <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Fuel Allowance Commute Rate (INR per KM):</label>
+                  <input
+                    type="number"
+                    required
+                    value={globalSettings.fuelAllowanceRate || 5}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, fuelAllowanceRate: Number(e.target.value) })}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Monthly Targets Revenue Goal (INR):</label>
+                  <input
+                    type="number"
+                    required
+                    value={globalSettings.monthlyTargetRevenue || 1000000}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, monthlyTargetRevenue: Number(e.target.value) })}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Daily Attendance Base Salary Rate (INR):</label>
+                  <input
+                    type="number"
+                    required
+                    value={globalSettings.dailyBaseRate || 400}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, dailyBaseRate: Number(e.target.value) })}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-secondary hover:bg-secondary-dark text-white font-extrabold p-3 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
+                >
+                  <Plus className="h-4.5 w-4.5" />
+                  <span>Save configurations</span>
+                </button>
+              </form>
+            </div>
+          )}
+
         </div>
       )}
 
@@ -1800,7 +2121,7 @@ const AdminBIDashboard: React.FC = () => {
               </div>
               <button
                 onClick={() => setDrillDown(null)}
-                className="rounded-full p-1.5 text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-850 text-xs font-black cursor-pointer"
+                className="rounded-full p-1.5 text-slate-455 hover:bg-slate-100 dark:hover:bg-slate-850 text-xs font-black cursor-pointer"
               >
                 ✕
               </button>
