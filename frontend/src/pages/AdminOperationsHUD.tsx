@@ -260,6 +260,8 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
 };
 
 const AdminOperationsHUD: React.FC<AdminOperationsHUDProps> = ({ companyFilter }) => {
+  const getTodayString = () => new Date().toISOString().split('T')[0];
+  const [filterDate, setFilterDate] = useState(getTodayString());
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -289,22 +291,46 @@ const AdminOperationsHUD: React.FC<AdminOperationsHUDProps> = ({ companyFilter }
     };
   }, [companyFilter]);
 
-  const activeJobs = jobs.filter((j: any) => j.status === 'started');
-  const acceptedJobs = jobs.filter((j: any) => j.status === 'accepted');
+  const activeJobs = jobs.filter((j: any) => j.status === 'started' && (!filterDate || j.date === filterDate));
+  const acceptedJobs = jobs.filter((j: any) => j.status === 'accepted' && (!filterDate || j.date === filterDate));
   const completedJobs = jobs
-    .filter((j: any) => j.status === 'completed' && j.completedAt)
+    .filter((j: any) => j.status === 'completed' && j.completedAt && (!filterDate || j.date === filterDate))
     .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
     .slice(0, 4);
 
   return (
     <div className="space-y-6 text-left max-w-full">
       {/* Page Header */}
-      <div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
-          <Activity className="h-5.5 w-5.5 text-secondary animate-pulse" />
-          <span>Real-Time Operations HUD</span>
-        </h2>
-        <p className="text-xs text-slate-400 mt-0.5">Live work stopwatch counters, worker acceptance logs, and compliance trackers</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
+            <Activity className="h-5.5 w-5.5 text-secondary animate-pulse" />
+            <span>Real-Time Operations HUD</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">Live work stopwatch counters, worker acceptance logs, and compliance trackers</p>
+        </div>
+
+        {/* Date Selector Filter */}
+        <div className="flex items-center space-x-2 self-start sm:self-center">
+          <span className="text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+            <span>Operations Date:</span>
+          </span>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-950/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+          />
+          {filterDate && (
+            <button
+              onClick={() => setFilterDate('')}
+              className="text-xs text-danger font-semibold hover:underline px-2 cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {loading && jobs.length === 0 ? (
