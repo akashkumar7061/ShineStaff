@@ -116,7 +116,7 @@ const AdminBIDashboard: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'financials' | 'operations-desk' | 'live-gps-tracking' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'audit' | 'settings'>('financials');
+  const [activeTab, setActiveTab] = useState<'financials' | 'operations-desk' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'audit' | 'settings'>('financials');
 
   // --- Approvals Desk State ---
   const [pendingSalaryRequests, setPendingSalaryRequests] = useState<any[]>([]);
@@ -828,7 +828,6 @@ const AdminBIDashboard: React.FC = () => {
               {[
                 { id: 'financials', label: 'Financial Ratios & Trends', icon: DollarSign },
                 { id: 'operations-desk', label: 'Daily Operations Desk ✍️', icon: ClipboardList },
-                { id: 'live-gps-tracking', label: 'Live GPS Commutes 📍', icon: Map },
                 { id: 'operations', label: 'Operations & Target Planning', icon: CheckCircle2 },
                 { id: 'workers', label: 'Worker Performance & Attendance', icon: Award },
                 { id: 'goals', label: 'Projections & AI recommendations', icon: Zap },
@@ -1263,37 +1262,6 @@ const AdminBIDashboard: React.FC = () => {
 
               </div>
 
-            </div>
-          )}
-
-          {/* Tab 4.3: Live GPS Map Tracking embedded Command tab */}
-          {activeTab === 'live-gps-tracking' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Live Commuting Crews GPS Tracker</h3>
-                  <p className="text-[10px] text-slate-400">View coordinates and commuting locations of active workers on the maps.</p>
-                </div>
-                
-                <div className="relative w-full sm:w-64">
-                  <input
-                    type="text"
-                    placeholder="Search crew worker by name..."
-                    value={mapSearchQuery}
-                    onChange={(e) => setMapSearchQuery(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-secondary"
-                  />
-                </div>
-              </div>
-
-              {/* Embedded Interactive Maps */}
-              <div className="glass-card p-6 h-[72vh] min-h-[500px]">
-                <MapView 
-                  pins={mapPins.filter((pin: any) => 
-                    pin.name.toLowerCase().includes(mapSearchQuery.toLowerCase())
-                  )} 
-                />
-              </div>
             </div>
           )}
 
