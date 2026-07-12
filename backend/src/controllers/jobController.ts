@@ -89,6 +89,9 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     timeSlot,
     location,
     fuelKmsTravelled,
+    fuelAllowance,
+    fromLocation,
+    toLocation,
 
     alternatePhone,
     clientEmail,
@@ -117,7 +120,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     }
     const fuelRate = settings.fuelAllowanceRate || 5;
     const kms = Number(fuelKmsTravelled) || 0;
-    const fuelAllowance = kms * fuelRate;
+    const calculatedFuelAllowance = fuelAllowance !== undefined ? Number(fuelAllowance) : (kms * fuelRate);
 
     // Generate unique Visit ID automatically
     const rand = Math.floor(1000 + Math.random() * 9000);
@@ -151,7 +154,9 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       timeSlot,
       location,
       fuelKmsTravelled: kms,
-      fuelAllowance: fuelAllowance,
+      fuelAllowance: calculatedFuelAllowance,
+      fromLocation: fromLocation || '',
+      toLocation: toLocation || '',
       status: 'pending',
       notificationSentAt: new Date(),
 
@@ -578,6 +583,9 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     timeSlot,
     location,
     fuelKmsTravelled,
+    fuelAllowance,
+    fromLocation,
+    toLocation,
     paymentStatus,
     rating
   } = req.body;
@@ -615,10 +623,20 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     }
     if (fuelKmsTravelled !== undefined) {
       job.fuelKmsTravelled = Number(fuelKmsTravelled);
+    }
+    if (fuelAllowance !== undefined) {
+      job.fuelAllowance = Number(fuelAllowance);
+    } else if (fuelKmsTravelled !== undefined) {
       // Re-calculate fuel allowance using configured rate
       const settings = await Settings.findOne({ settingsId: 'global' });
       const fuelRate = settings ? (settings.fuelAllowanceRate || 5) : 5;
       job.fuelAllowance = job.fuelKmsTravelled * fuelRate;
+    }
+    if (fromLocation !== undefined) {
+      job.fromLocation = fromLocation;
+    }
+    if (toLocation !== undefined) {
+      job.toLocation = toLocation;
     }
     if (paymentStatus !== undefined) {
       job.paymentStatus = paymentStatus;

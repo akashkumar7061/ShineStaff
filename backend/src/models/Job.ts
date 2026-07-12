@@ -57,6 +57,8 @@ export interface IJob extends Document {
   specialInstructions?: string;
   createdBy?: mongoose.Types.ObjectId;
   attachments?: string[];
+  fromLocation?: string;
+  toLocation?: string;
 }
 
 const JobSchema = new Schema<IJob>({
@@ -115,7 +117,9 @@ const JobSchema = new Schema<IJob>({
   notes: { type: String, default: '' },
   specialInstructions: { type: String, default: '' },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
-  attachments: { type: [String], default: [] }
+  attachments: { type: [String], default: [] },
+  fromLocation: { type: String, default: '' },
+  toLocation: { type: String, default: '' }
 }, {
   timestamps: true
 });
