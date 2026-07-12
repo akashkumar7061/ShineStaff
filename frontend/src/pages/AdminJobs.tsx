@@ -1132,28 +1132,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-slate-450 mb-1">Latitude</label>
-                    <input
-                      type="text"
-                      value={latitude}
-                      onChange={(e) => setLatitude(e.target.value)}
-                      placeholder="e.g. 28.6139"
-                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">Longitude</label>
-                    <input
-                      type="text"
-                      value={longitude}
-                      onChange={(e) => setLongitude(e.target.value)}
-                      placeholder="e.g. 77.2090"
-                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                    />
-                  </div>
-                </div>
+
                 <div>
                   <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">GPS Location Link / Landmark</label>
                   <input
