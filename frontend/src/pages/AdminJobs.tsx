@@ -294,6 +294,25 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setPhotoModalOpen(true);
   };
 
+  const handleDownloadImage = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Failed to download image:', err);
+      // Fallback: Open in new tab
+      window.open(url, '_blank');
+    }
+  };
+
   // Grid calculation: filter jobs strictly matching the selected date
   const dayJobs = jobs.filter((j) => j.date === selectedDate);
   const totalBookings = dayJobs.length;
@@ -759,41 +778,67 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none text-left">Photo Compliance</span>
                   
                   <div className="grid grid-cols-2 gap-2 text-center">
-                    <div>
-                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Before Snap</span>
+                    <div className="space-y-1">
+                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Before Snap</span>
                       {selectedJobForDrawer.beforePhoto ? (
-                        <img 
-                          src={selectedJobForDrawer.beforePhoto} 
-                          alt="Before" 
-                          onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
-                          className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
-                        />
+                        <div className="relative group">
+                          <img 
+                            src={selectedJobForDrawer.beforePhoto} 
+                            alt="Before" 
+                            onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                            className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
+                          />
+                          <button
+                            onClick={() => handleDownloadImage(selectedJobForDrawer.beforePhoto, `before_${selectedJobForDrawer._id}.jpg`)}
+                            className="absolute bottom-1 right-1 bg-slate-900/70 hover:bg-slate-900 backdrop-blur text-white p-1 rounded shadow cursor-pointer opacity-85 hover:opacity-100 transition-opacity"
+                            title="Download before photo"
+                          >
+                            <Download className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
                       ) : (
                         <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
                       )}
                     </div>
                     
-                    <div>
-                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">After Snap ({selectedJobForDrawer.afterPhotos?.length || (selectedJobForDrawer.afterPhoto ? 1 : 0)})</span>
+                    <div className="space-y-1">
+                      <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">After Snap ({selectedJobForDrawer.afterPhotos?.length || (selectedJobForDrawer.afterPhoto ? 1 : 0)})</span>
                       {selectedJobForDrawer.afterPhotos && selectedJobForDrawer.afterPhotos.length > 0 ? (
                         <div className="grid grid-cols-2 gap-1 max-h-[58px] overflow-y-auto">
                           {selectedJobForDrawer.afterPhotos.map((url: string, idx: number) => (
-                            <img 
-                              key={url}
-                              src={url} 
-                              alt={`After ${idx+1}`} 
-                              onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
-                              className="h-6 w-full object-cover rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-80 transition-opacity" 
-                            />
+                            <div key={url} className="relative group">
+                              <img 
+                                src={url} 
+                                alt={`After ${idx+1}`} 
+                                onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                                className="h-6 w-full object-cover rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-80 transition-opacity" 
+                              />
+                              <button
+                                onClick={() => handleDownloadImage(url, `after_${selectedJobForDrawer._id}_${idx+1}.jpg`)}
+                                className="absolute bottom-0.5 right-0.5 bg-slate-900/70 hover:bg-slate-900 backdrop-blur text-white p-0.5 rounded shadow cursor-pointer opacity-85 hover:opacity-100 transition-opacity"
+                                title={`Download photo ${idx+1}`}
+                              >
+                                <Download className="h-2 w-2" />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       ) : selectedJobForDrawer.afterPhoto ? (
-                        <img 
-                          src={selectedJobForDrawer.afterPhoto} 
-                          alt="After" 
-                          onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
-                          className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
-                        />
+                        <div className="relative group">
+                          <img 
+                            src={selectedJobForDrawer.afterPhoto} 
+                            alt="After" 
+                            onClick={() => handleOpenPhotoComparison(selectedJobForDrawer)}
+                            className="h-14 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" 
+                          />
+                          <button
+                            onClick={() => handleDownloadImage(selectedJobForDrawer.afterPhoto, `after_${selectedJobForDrawer._id}.jpg`)}
+                            className="absolute bottom-1 right-1 bg-slate-900/70 hover:bg-slate-900 backdrop-blur text-white p-1 rounded shadow cursor-pointer opacity-85 hover:opacity-100 transition-opacity"
+                            title="Download after photo"
+                          >
+                            <Download className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
                       ) : (
                         <div className="h-14 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold bg-white dark:bg-slate-900/20">None</div>
                       )}
@@ -1051,27 +1096,53 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               <div className="space-y-3 flex flex-col items-center">
                 <span className="bg-amber-500/10 text-amber-500 font-extrabold text-[10px] px-3 py-1 rounded-full uppercase">Before Cleanup</span>
                 {selectedJobPhotos.beforePhoto ? (
-                  <img src={selectedJobPhotos.beforePhoto} alt="Before" className="rounded-xl object-contain max-h-80 border shadow-md w-full" />
+                  <div className="relative group w-full flex flex-col items-center">
+                    <img src={selectedJobPhotos.beforePhoto} alt="Before" className="rounded-xl object-contain max-h-80 border shadow-md w-full" />
+                    <button
+                      onClick={() => handleDownloadImage(selectedJobPhotos.beforePhoto, `before_${selectedJobPhotos._id}.jpg`)}
+                      className="absolute bottom-2 right-2 bg-slate-900/80 hover:bg-slate-900 backdrop-blur text-white text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center space-x-1.5 shadow transition-all cursor-pointer"
+                    >
+                      <Download className="h-3 w-3" />
+                      <span>Download</span>
+                    </button>
+                  </div>
                 ) : (
                   <div className="h-64 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 font-bold w-full bg-slate-50 dark:bg-slate-950/20">No Before Photo Uploaded</div>
                 )}
               </div>
+              
               {/* After snapshot */}
               <div className="space-y-3 flex flex-col items-center">
                 <span className="bg-emerald-500/10 text-emerald-500 font-extrabold text-[10px] px-3 py-1 rounded-full uppercase">After Cleanup Completed</span>
                 {selectedJobPhotos.afterPhotos && selectedJobPhotos.afterPhotos.length > 0 ? (
                   <div className="grid grid-cols-2 gap-2 w-full max-h-80 overflow-y-auto">
                     {selectedJobPhotos.afterPhotos.map((url: string, idx: number) => (
-                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm group">
                         <img src={url} alt={`After Clean ${idx + 1}`} className="h-full w-full object-cover" />
-                        <span className="absolute bottom-1 left-1 bg-slate-950/70 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Photo {idx + 1}</span>
+                        <span className="absolute bottom-1 left-1 bg-slate-955/70 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Photo {idx + 1}</span>
+                        <button
+                          onClick={() => handleDownloadImage(url, `after_${selectedJobPhotos._id}_${idx + 1}.jpg`)}
+                          className="absolute bottom-1 right-1 bg-slate-900/80 hover:bg-slate-900 backdrop-blur text-white p-1 rounded-lg shadow transition-all cursor-pointer"
+                          title="Download photo"
+                        >
+                          <Download className="h-3 w-3" />
+                        </button>
                       </div>
                     ))}
                   </div>
                 ) : selectedJobPhotos.afterPhoto ? (
-                  <img src={selectedJobPhotos.afterPhoto} alt="After" className="rounded-xl object-contain max-h-80 border shadow-md w-full" />
+                  <div className="relative group w-full flex flex-col items-center">
+                    <img src={selectedJobPhotos.afterPhoto} alt="After" className="rounded-xl object-contain max-h-80 border shadow-md w-full" />
+                    <button
+                      onClick={() => handleDownloadImage(selectedJobPhotos.afterPhoto, `after_${selectedJobPhotos._id}.jpg`)}
+                      className="absolute bottom-2 right-2 bg-slate-900/80 hover:bg-slate-900 backdrop-blur text-white text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center space-x-1.5 shadow transition-all cursor-pointer"
+                    >
+                      <Download className="h-3 w-3" />
+                      <span>Download</span>
+                    </button>
+                  </div>
                 ) : (
-                  <div className="h-64 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 font-bold w-full bg-slate-50 dark:bg-slate-950/20">No After Photo Uploaded</div>
+                  <div className="h-64 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 font-bold w-full bg-slate-50 dark:bg-slate-955/20">No After Photo Uploaded</div>
                 )}
               </div>
             </div>
