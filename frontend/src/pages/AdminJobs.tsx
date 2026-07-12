@@ -668,7 +668,16 @@ GST included in all prices.`,
             </tbody>
           </table>
 
-          <div class="summary-area">
+          <div class="summary-area" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+            <!-- Signature Block -->
+            <div style="text-align: left; font-size: 12px; color: #475569;">
+              <div style="margin-bottom: 45px;">For <strong>${comp.name}</strong></div>
+              <div style="border-top: 1px dashed #cbd5e1; width: 180px; padding-top: 5px; font-weight: 600; color: #0f172a; font-size: 11px;">
+                Authorised Signature
+              </div>
+            </div>
+
+            <!-- Summary Table -->
             <div class="summary-table">
               <div class="summary-row">
                 <span>Subtotal</span>
