@@ -327,7 +327,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   };
 
   return (
-    <div className="space-y-4 px-1.5 md:px-2.5 text-left h-[calc(100vh-140px)] flex flex-col overflow-hidden pb-2 w-full max-w-full">
+    <div className="space-y-4 px-1.5 md:px-2.5 text-left pb-6 w-full max-w-full">
       
       {/* Page Title & View Site Header */}
       <div className="flex justify-between items-center py-2 shrink-0">
@@ -403,10 +403,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       </div>
 
       {/* 3. Main Split Panel Container: Grid + Drawer Drawer */}
-      <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-4 overflow-hidden min-h-0 w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
-        <div className={`h-full overflow-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${
+        <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${
           selectedJobForDrawer ? 'xl:col-span-3' : 'xl:col-span-4'
         }`}>
           <table className="w-full text-left text-xs table-fixed min-w-0 border-collapse">
@@ -609,7 +609,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
         {/* Right Side: Interactive Slide-in Details/Status Drawer */}
         {selectedJobForDrawer && (
-          <div className="xl:col-span-1 h-full overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-5 space-y-4 flex flex-col justify-between text-xs animate-slide-in select-none">
+          <div className="xl:col-span-1 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-5 space-y-4 flex flex-col justify-between text-xs animate-slide-in select-none">
             
             <div className="space-y-4">
               {/* Drawer Header */}
