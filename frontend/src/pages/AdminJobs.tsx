@@ -351,10 +351,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       {/* Page Title & View Site Header */}
       <div className="flex justify-between items-center py-2 shrink-0">
         <h1 className="text-xl font-bold text-slate-800 dark:text-white">Schedule</h1>
-        <div className="flex items-center space-x-3 text-xs font-bold text-slate-500">
-          <a href="/" className="text-[#2563eb] hover:underline">View Site</a>
-          <div className="h-7 w-7 rounded-full bg-[#dbeafe] text-[#1e40af] flex items-center justify-center font-bold">A</div>
-        </div>
       </div>
 
       {/* 1. Header Date Selection Ribbon */}
