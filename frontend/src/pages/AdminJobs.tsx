@@ -380,7 +380,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
           <button
             onClick={() => { resetForm(); setCreateModalOpen(true); }}
-            className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] px-3.5 py-2 rounded-xl shadow cursor-pointer"
+            className="flex items-center space-x-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-extrabold text-[11px] px-3.5 py-2 rounded-lg shadow cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>+ New Booking</span>
@@ -390,10 +390,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
       {/* 2. Count Badges */}
       <div className="flex space-x-3 text-[11px] font-bold mt-1 shrink-0">
-        <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-slate-600 dark:text-slate-350">
+        <span className="bg-[#e2e8f0] text-[#475569] px-3.5 py-1.5 rounded-lg">
           {totalBookings} bookings
         </span>
-        <span className="bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full text-indigo-600 dark:text-indigo-400">
+        <span className="bg-[#dbeafe] text-[#1e40af] px-3.5 py-1.5 rounded-lg">
           {confirmedBookings} confirmed
         </span>
       </div>
@@ -402,28 +402,28 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-4 overflow-hidden min-h-0 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
-        <div className={`h-full overflow-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 transition-all ${
+        <div className={`h-full overflow-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${
           selectedJobForDrawer ? 'xl:col-span-3' : 'xl:col-span-4'
         }`}>
-          <table className="w-full text-left text-xs table-fixed min-w-[800px]">
-            <thead className="bg-slate-55 dark:bg-slate-900/40 text-[10px] font-bold text-slate-455 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/80 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <tr>
-                <th className="px-4 py-3 w-48">Time Slot</th>
+          <table className="w-full text-left text-xs table-fixed min-w-[800px] border-collapse">
+            <thead className="text-[10px] font-semibold text-white uppercase tracking-widest sticky top-0 z-10">
+              <tr className="bg-[#1e293b]">
+                <th className="px-4 py-4 w-48 bg-[#1e293b] text-white">Time Slot</th>
                 {workers.map((w: any) => (
-                  <th key={w._id} className="px-4 py-3 border-l border-slate-100 dark:border-slate-850 w-56">
+                  <th key={w._id} className="px-4 py-4 border-l border-slate-700 bg-[#1e293b] text-white w-56 text-left">
                     <div className="space-y-1">
-                      <span className="block text-slate-800 dark:text-white font-black text-xs normal-case">{w.name}</span>
-                      <span className="block text-[10px] text-slate-400 font-sans tracking-normal font-semibold leading-none">{w.phone}</span>
-                      <div className="flex items-center space-x-2 pt-2 text-[9px] font-black uppercase tracking-wider">
+                      <span className="block text-white font-bold text-xs normal-case">{w.name}</span>
+                      <span className="block text-[10px] text-slate-350 font-normal font-sans leading-none">{w.phone}</span>
+                      <div className="flex items-center space-x-2 pt-2 text-[9.5px] font-bold uppercase tracking-wider">
                         <button
                           onClick={() => window.open(getWhatsAppWorkerScheduleUrl(w), '_blank')}
-                          className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2 py-1 rounded cursor-pointer hover:bg-emerald-500/20 flex items-center space-x-1"
+                          className="bg-[#22c55e] text-white px-2.5 py-1 rounded text-[9.5px] font-bold flex items-center space-x-1 hover:bg-[#16a34a] transition-colors cursor-pointer"
                         >
                           <span>Schedule</span>
                         </button>
                         <button
                           onClick={() => window.open(`https://wa.me/91${w.phone || ''}`, '_blank')}
-                          className="bg-indigo-500/10 text-indigo-600 border border-indigo-500/30 px-2 py-1 rounded cursor-pointer hover:bg-indigo-500/20 flex items-center space-x-1"
+                          className="bg-[#2563eb] text-white px-2.5 py-1 rounded text-[9.5px] font-bold flex items-center space-x-1 hover:bg-[#1d4ed8] transition-colors cursor-pointer"
                         >
                           <span>Ping</span>
                         </button>
@@ -431,19 +431,19 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </div>
                   </th>
                 ))}
-                <th className="px-4 py-3 border-l border-slate-100 dark:border-slate-850 w-56">
-                  <span className="block text-slate-400 font-black text-xs italic">Unassigned</span>
+                <th className="px-4 py-4 border-l border-slate-700 bg-[#1e293b] text-slate-300 w-56 italic">
+                  <span>Unassigned</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {timeSlots.map((slot) => (
                 <tr key={slot} className="hover:bg-slate-50/20 dark:hover:bg-slate-900/10">
                   
                   {/* Row Time Slot Cell */}
-                  <td className="px-4 py-5 font-bold text-slate-700 dark:text-slate-350">
-                    <div className="flex items-center space-x-1.5 text-indigo-500 font-extrabold">
-                      <Clock className="h-3.5 w-3.5 animate-pulse" />
+                  <td className="px-4 py-5 font-bold text-slate-800 text-[11px] leading-snug">
+                    <div className="flex items-center space-x-1.5 text-slate-700 font-extrabold">
+                      <Clock className="h-3.5 w-3.5 text-slate-500" />
                       <span>{slot}</span>
                     </div>
                   </td>
@@ -459,33 +459,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               <div
                                 key={j._id}
                                 onClick={() => setSelectedJobForDrawer(j)}
-                                className={`relative text-left p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
+                                className={`relative text-left p-3.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
                                   selectedJobForDrawer?._id === j._id
-                                    ? 'bg-indigo-50/65 dark:bg-indigo-950/25 border-indigo-500 shadow-md'
-                                    : 'bg-indigo-500/[0.03] hover:bg-indigo-500/[0.07] border-indigo-500/15 dark:border-indigo-500/10'
+                                    ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
+                                    : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700'
                                 }`}
                               >
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
-                                  className="absolute top-2 right-2 text-slate-400 hover:text-indigo-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
+                                  className="absolute top-2 right-2 text-slate-400 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
                                   title="Edit details"
                                 >
                                   <Edit className="h-3 w-3" />
                                 </button>
 
-                                <div className="space-y-1.5 pr-3">
-                                  <span className="block font-black text-slate-800 dark:text-white text-xs tracking-tight">{j.clientName || 'N/A'}</span>
-                                  <span className="block text-[9px] font-bold text-slate-450 uppercase leading-snug">{j.title}</span>
+                                <div className="space-y-1 pr-2">
+                                  <span className="block font-bold text-[#1e3a8a] dark:text-blue-300 text-[11.5px] leading-tight">{j.clientName || 'N/A'}</span>
+                                  <span className="block text-[10.5px] text-[#334155] dark:text-slate-350 leading-snug font-normal">{j.title}</span>
                                   
-                                  <div className="flex items-center justify-between pt-2 border-t border-indigo-500/10 text-[9px] font-black">
+                                  <div className="flex items-center justify-between pt-2 border-t border-[#bfdbfe]/40 text-[10px] font-bold mt-2">
                                     <a
                                       href={`tel:${j.clientPhone}`}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="flex items-center space-x-0.5 text-indigo-600 hover:underline"
+                                      className="flex items-center space-x-0.5 text-[#2563eb] hover:underline"
                                     >
                                       <span>📞 Call</span>
                                     </a>
-                                    <span className="text-slate-800 dark:text-white">₹{j.price}</span>
+                                    <span className="text-[#1e3a8a] dark:text-blue-200 font-extrabold">₹{j.price}</span>
                                   </div>
                                 </div>
                               </div>
@@ -511,7 +511,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               }
                               setCreateModalOpen(true);
                             }}
-                            className="h-16 border border-dashed border-slate-205 dark:border-slate-800 hover:border-indigo-500 rounded-2xl flex items-center justify-center text-slate-350 hover:text-indigo-500 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-all font-bold text-base"
+                            className="h-14 border border-dashed border-[#cbd5e1] hover:border-blue-500 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center text-[#94a3b8] hover:text-blue-500 cursor-pointer transition-colors text-base"
                           >
                             +
                           </div>
@@ -521,39 +521,39 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   })}
 
                   {/* Unassigned Cell */}
-                  <td className="px-3 py-3 border-l border-slate-100 dark:border-slate-850 align-top">
+                  <td className="px-3 py-3 border-l border-slate-105 dark:border-slate-850 align-top">
                     {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).length > 0 ? (
                       <div className="space-y-2">
                         {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).map((j) => (
                           <div
                             key={j._id}
                             onClick={() => setSelectedJobForDrawer(j)}
-                            className={`relative text-left p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
+                            className={`relative text-left p-3.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
                               selectedJobForDrawer?._id === j._id
-                                ? 'bg-indigo-50/65 dark:bg-indigo-950/25 border-indigo-500 shadow-md'
-                                : 'bg-slate-500/[0.03] hover:bg-slate-500/[0.07] border-slate-500/15 dark:border-slate-500/10'
+                                ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
+                                : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700'
                             }`}
                           >
                             <button
                               onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
-                              className="absolute top-2 right-2 text-slate-450 hover:text-indigo-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
+                              className="absolute top-2 right-2 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-lg shadow-sm"
                             >
                               <Edit className="h-3 w-3" />
                             </button>
 
-                            <div className="space-y-1.5 pr-3">
-                              <span className="block font-black text-slate-800 dark:text-white text-xs tracking-tight">{j.clientName || 'N/A'}</span>
-                              <span className="block text-[9px] font-bold text-slate-450 uppercase leading-snug">{j.title}</span>
+                            <div className="space-y-1 pr-2">
+                              <span className="block font-bold text-[#1e3a8a] dark:text-blue-300 text-[11.5px] leading-tight">{j.clientName || 'N/A'}</span>
+                              <span className="block text-[10.5px] text-[#334155] dark:text-slate-350 leading-snug font-normal">{j.title}</span>
                               
-                              <div className="flex items-center justify-between pt-2 border-t border-indigo-500/10 text-[9px] font-black">
+                              <div className="flex items-center justify-between pt-2 border-t border-[#bfdbfe]/40 text-[10px] font-bold mt-2">
                                 <a
                                   href={`tel:${j.clientPhone}`}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-0.5 text-slate-500 hover:underline"
+                                  className="flex items-center space-x-0.5 text-[#2563eb] hover:underline"
                                 >
                                   <span>📞 Call</span>
                                 </a>
-                                <span className="text-slate-800 dark:text-white">₹{j.price}</span>
+                                <span className="text-[#1e3a8a] dark:text-blue-200 font-extrabold">₹{j.price}</span>
                               </div>
                             </div>
                           </div>
@@ -567,7 +567,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           setTimeSlot(slot);
                           setCreateModalOpen(true);
                         }}
-                        className="h-16 border border-dashed border-slate-205 dark:border-slate-800 hover:border-slate-400 rounded-2xl flex items-center justify-center text-slate-350 hover:text-slate-500 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-all font-bold text-base"
+                        className="h-14 border border-dashed border-[#cbd5e1] hover:border-blue-500 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center text-[#94a3b8] hover:text-blue-500 cursor-pointer transition-colors text-base"
                       >
                         +
                       </div>
