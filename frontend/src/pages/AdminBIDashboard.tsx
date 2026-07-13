@@ -979,7 +979,7 @@ const AdminBIDashboard: React.FC = () => {
               </div>
 
               {/* Sub-Section 1: Daily Quick Logging Forms Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+              <div className="max-w-xl text-xs font-bold text-slate-655 dark:text-slate-350">
                 
                 {/* Form B: Expense & Inventory Logger */}
                 <div className="glass-card p-6 border-t-4 border-t-rose-500">
@@ -1045,72 +1045,6 @@ const AdminBIDashboard: React.FC = () => {
                     >
                       <Plus className="h-4.5 w-4.5" />
                       <span>Log Cost Log</span>
-                    </button>
-                  </form>
-                </div>
-
-                {/* Form C: Direct Fuel & Travel commute distance logger */}
-                <div className="glass-card p-6 border-t-4 border-t-amber-500">
-                  <h4 className="text-xs font-black uppercase text-amber-655 tracking-wider mb-4 flex items-center space-x-1">
-                    <Flame className="h-4.5 w-4.5 animate-bounce" />
-                    <span>Log Daily Travel & Fuel commutes</span>
-                  </h4>
-                  <form onSubmit={handleAddTravel} className="space-y-4">
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Commuted Crew Worker:</label>
-                      <select
-                        required
-                        value={travelWorker}
-                        onChange={(e) => setTravelWorker(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500"
-                      >
-                        <option value="">Select crew member...</option>
-                        {workers.map((w: any) => (
-                          <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">KMs Travelled:</label>
-                      <input
-                        type="number"
-                        required
-                        placeholder="e.g. 45"
-                        value={travelKms}
-                        onChange={(e) => setTravelKms(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Travel Date:</label>
-                      <input
-                        type="date"
-                        required
-                        value={travelDate}
-                        onChange={(e) => setTravelDate(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500 dark:color-scheme-dark"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Allowance (Optional, Leave blank for auto calculations):</label>
-                      <input
-                        type="number"
-                        placeholder="Calculates automatically at ₹5/km"
-                        value={travelAllowance}
-                        onChange={(e) => setTravelAllowance(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-855 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-amber-500"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
-                    >
-                      <Plus className="h-4.5 w-4.5" />
-                      <span>Log Commute Kms</span>
                     </button>
                   </form>
                 </div>
