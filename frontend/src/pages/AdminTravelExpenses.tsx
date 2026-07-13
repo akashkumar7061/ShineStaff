@@ -59,8 +59,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [travelLogs, setTravelLogs] = useState<any[]>([]);
   
   // Search & Suggestions State
-  const [searchWorker, setSearchWorker] = useState('');
-  const [selectedWorker, setSelectedWorker] = useState<any>(null);
+  const [searchWorker, setSearchWorker] = useState('All Workers');
+  const [selectedWorker, setSelectedWorker] = useState<any>({ _id: 'all', name: 'All Workers', company: 'All' });
   const [showWorkersDropdown, setShowWorkersDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -169,8 +169,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     return jobs.filter(j => {
       // Worker ID filter
       if (!selectedWorker) return false;
-      const workerMatch = j.workerId?._id === selectedWorker._id || j.workerId === selectedWorker._id;
-      if (!workerMatch) return false;
+      if (selectedWorker._id !== 'all') {
+        const workerMatch = j.workerId?._id === selectedWorker._id || j.workerId === selectedWorker._id;
+        if (!workerMatch) return false;
+      }
 
       // Status completed filter
       if (j.status !== 'completed') return false;
@@ -186,8 +188,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const getFilteredTravelLogs = () => {
     return travelLogs.filter(log => {
       if (!selectedWorker) return false;
-      const workerMatch = log.workerId?._id === selectedWorker._id || log.workerId === selectedWorker._id;
-      if (!workerMatch) return false;
+      if (selectedWorker._id !== 'all') {
+        const workerMatch = log.workerId?._id === selectedWorker._id || log.workerId === selectedWorker._id;
+        if (!workerMatch) return false;
+      }
 
       if (log.date) {
         return log.date >= startDate && log.date <= endDate;
@@ -484,8 +488,19 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
           
           {showWorkersDropdown && (
             <div className="absolute left-0 right-0 mt-1.5 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800 animate-fade-in">
+              <button
+                onClick={() => {
+                  setSelectedWorker({ _id: 'all', name: 'All Workers', company: 'All' });
+                  setSearchWorker('All Workers');
+                  setShowWorkersDropdown(false);
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs font-black text-secondary hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 bg-secondary/5 dark:bg-secondary/10"
+              >
+                <Compass className="h-4 w-4 text-secondary" />
+                <span>All Workers (All Companies)</span>
+              </button>
               {workers
-                .filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()))
+                .filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()) || searchWorker.toLowerCase() === 'all workers')
                 .map(w => (
                   <button
                     key={w._id}
@@ -500,7 +515,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     <span>{w.name} ({w.company})</span>
                   </button>
                 ))}
-              {workers.filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase())).length === 0 && (
+              {workers.filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()) || searchWorker.toLowerCase() === 'all workers').length === 0 && (
                 <div className="p-3.5 text-center text-xs text-slate-400">No worker match found.</div>
               )}
             </div>
@@ -692,6 +707,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Job ID</th>
+                        {selectedWorker._id === 'all' && <th className="px-4 py-3">Worker</th>}
                         <th className="px-4 py-3">Date</th>
                         <th className="px-4 py-3">Customer & Location</th>
                         <th className="px-4 py-3">Timing Slot</th>
@@ -704,6 +720,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       {workerJobs.map(job => (
                         <tr key={job._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                           <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">#{job.visitId || job._id.substring(18)}</td>
+                          {selectedWorker._id === 'all' && (
+                            <td className="px-4 py-3.5">
+                              <span className="block text-slate-800 dark:text-white font-extrabold">{job.workerId?.name || 'Unassigned'}</span>
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{job.workerId?.company || 'N/A'}</span>
+                            </td>
+                          )}
                           <td className="px-4 py-3.5">{job.date}</td>
                           <td className="px-4 py-3.5">
                             <span className="block text-slate-800 dark:text-white">{job.clientName}</span>
@@ -743,6 +765,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Job Info</th>
+                        {selectedWorker._id === 'all' && <th className="px-4 py-3">Worker</th>}
                         <th className="px-4 py-3">Customer</th>
                         <th className="px-4 py-3">Default Price</th>
                         <th className="px-4 py-3 text-right">Actions</th>
@@ -755,6 +778,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             <span className="block text-slate-800 dark:text-white font-extrabold">{job.title}</span>
                             <span className="text-[9px] text-slate-400">ID: #{job.visitId || job._id}</span>
                           </td>
+                          {selectedWorker._id === 'all' && (
+                            <td className="px-4 py-3.5">
+                              <span className="block text-slate-800 dark:text-white font-extrabold">{job.workerId?.name || 'Unassigned'}</span>
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{job.workerId?.company || 'N/A'}</span>
+                            </td>
+                          )}
                           <td className="px-4 py-3.5">{job.clientName}</td>
                           <td className="px-4 py-3.5">
                             {editingJobId === job._id ? (
@@ -819,6 +848,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
                       <tr>
                         <th className="px-4 py-3">Date</th>
+                        {selectedWorker._id === 'all' && <th className="px-4 py-3">Worker</th>}
                         <th className="px-4 py-3">Type</th>
                         <th className="px-4 py-3">From Location</th>
                         <th className="px-4 py-3">To Location</th>
@@ -830,6 +860,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       {workerTravel.map(log => (
                         <tr key={log._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
                           <td className="px-4 py-3.5">{log.date}</td>
+                          {selectedWorker._id === 'all' && (
+                            <td className="px-4 py-3.5">
+                              <span className="block text-slate-800 dark:text-white font-extrabold">{log.workerId?.name || 'Unassigned'}</span>
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{log.workerId?.company || 'N/A'}</span>
+                            </td>
+                          )}
                           <td className="px-4 py-3.5">
                             <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
                               log.type === 'job' 
