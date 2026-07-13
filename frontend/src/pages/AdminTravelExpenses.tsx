@@ -1340,31 +1340,32 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Reports Console</h3>
                   <p className="text-[10px] text-slate-400">Generate formatted spreadsheets or print travel expenses statement.</p>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">Excel Spreadsheet (.xls)</h4>
                       <p className="text-[10px] text-slate-400">Export formatted work log sheet compatible with Microsoft Excel.</p>
                     </div>
                     <button
                       onClick={() => handleExportSpreadsheet('xls')}
-                      className="p-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 cursor-pointer shadow-sm transition-all"
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase shadow-md flex items-center justify-center space-x-1.5 cursor-pointer transition-all whitespace-nowrap self-start sm:self-auto"
                     >
-                      <Download className="h-4.5 w-4.5" />
+                      <Download className="h-4 w-4" />
+                      <span>Download Excel</span>
                     </button>
                   </div>
 
-                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">CSV Data File (.csv)</h4>
                       <p className="text-[10px] text-slate-400">Download raw comma-separated values database export file.</p>
                     </div>
                     <button
                       onClick={() => handleExportSpreadsheet('csv')}
-                      className="p-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 cursor-pointer shadow-sm transition-all"
+                      className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs uppercase shadow-md flex items-center justify-center space-x-1.5 cursor-pointer transition-all whitespace-nowrap self-start sm:self-auto"
                     >
-                      <Download className="h-4.5 w-4.5" />
+                      <Download className="h-4 w-4" />
+                      <span>Download CSV</span>
                     </button>
                   </div>
 
