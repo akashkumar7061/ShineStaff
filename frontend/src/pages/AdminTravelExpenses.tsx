@@ -408,18 +408,18 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <td>${j.visitId || j._id}</td>
                   <td>${j.title || ''}</td>
                   <td>${j.clientName || ''}</td>
-                  <td>${j.price || 0}</td>
-                  <td>${j.fuelKmsTravelled || 0}</td>
-                  <td>${(j.fuelKmsTravelled || 0) * globalFuelRate}</td>
+                  <td>${Number(j.price || 0).toFixed(2)}</td>
+                  <td>${Number(j.fuelKmsTravelled || 0).toFixed(2)}</td>
+                  <td>${Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2)}</td>
                   <td>${j.fromLocation || ''}</td>
                   <td>${j.toLocation || ''}</td>
                 </tr>
               `).join('')}
               <tr>
                 <td colspan="4"><b>Totals</b></td>
-                <td><b>₹${totalWorkEarnings}</b></td>
-                <td><b>${totalDistance} KM</b></td>
-                <td><b>₹${totalFuelCost}</b></td>
+                <td><b>₹${totalWorkEarnings.toFixed(2)}</b></td>
+                <td><b>${totalDistance.toFixed(2)} KM</b></td>
+                <td><b>₹${totalFuelCost.toFixed(2)}</b></td>
                 <td colspan="2"></td>
               </tr>
             </tbody>
@@ -435,9 +435,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         j.visitId || j._id,
         j.title || '',
         j.clientName || '',
-        j.price || 0,
-        j.fuelKmsTravelled || 0,
-        (j.fuelKmsTravelled || 0) * globalFuelRate,
+        Number(j.price || 0).toFixed(2),
+        Number(j.fuelKmsTravelled || 0).toFixed(2),
+        Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2),
         j.fromLocation || '',
         j.toLocation || ''
       ]);
@@ -594,11 +594,11 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:grid-cols-6">
               {[
                 { label: 'Completed Jobs', val: totalJobsCount, desc: 'jobs done', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20' },
-                { label: 'Work Earnings', val: `₹${totalWorkEarnings}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' },
-                { label: 'Travel Distance', val: `${totalDistance} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20' },
-                { label: 'Fuel Costs', val: `₹${totalFuelCost}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20' },
+                { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' },
+                { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20' },
+                { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20' },
                 { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20' },
-                { label: 'Grand Payout', val: `₹${totalPayout}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20' }
+                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20' }
               ].map((kpi, idx) => (
                 <div key={idx} className="glass-card p-4 flex flex-col justify-between hover:scale-[1.02] transition-all">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
@@ -658,8 +658,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1 border border-slate-100 dark:border-slate-800">
                       <span className="text-[9px] uppercase tracking-wider text-slate-400">Total Route Travel:</span>
-                      <p className="text-sm font-extrabold text-slate-800 dark:text-white">{totalDistance} KMs Traveled</p>
-                      <span className="text-[9px] text-emerald-500 font-bold block">₹{totalFuelCost} Fuel Allowance Earned</span>
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-white">{totalDistance.toFixed(2)} KMs Traveled</p>
+                      <span className="text-[9px] text-emerald-500 font-bold block">₹{totalFuelCost.toFixed(2)} Fuel Allowance Earned</span>
                     </div>
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1 border border-slate-100 dark:border-slate-800">
                       <span className="text-[9px] uppercase tracking-wider text-slate-400">Average Speed Allocation:</span>
@@ -715,8 +715,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               {job.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5">{job.fuelKmsTravelled || 0} KM</td>
-                          <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">₹{(job.fuelKmsTravelled || 0) * globalFuelRate}</td>
+                          <td className="px-4 py-3.5">{(job.fuelKmsTravelled || 0).toFixed(2)} KM</td>
+                          <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">₹{((job.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2)}</td>
                         </tr>
                       ))}
                       {workerJobs.length === 0 && (
@@ -766,7 +766,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                 className="w-24 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-855 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                               />
                             ) : (
-                              <span className="font-extrabold text-slate-800 dark:text-white">₹{job.price}</span>
+                              <span className="font-extrabold text-slate-800 dark:text-white">₹{Number(job.price || 0).toFixed(2)}</span>
                             )}
                           </td>
                           <td className="px-4 py-3.5 text-right">
@@ -851,7 +851,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                 className="w-20 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-855 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                               />
                             ) : (
-                              <span>{log.kms} KM</span>
+                              <span>{Number(log.kms || 0).toFixed(2)} KM</span>
                             )}
                           </td>
                           <td className="px-4 py-3.5 text-right">
@@ -911,7 +911,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               <ChevronRight className="h-3 w-3 text-slate-400" />
                               <span>{route.to}</span>
                             </div>
-                            <span className="text-[9px] text-slate-450 block mt-0.5">Est. Distance: {route.distance} KM | Est. Time: {route.time}</span>
+                            <span className="text-[9px] text-slate-455 block mt-0.5">Est. Distance: {Number(route.distance || 0).toFixed(2)} KM | Est. Time: {route.time}</span>
                           </div>
                         </div>
                         <a
@@ -960,9 +960,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">{row.month}</td>
                           <td className="px-4 py-3.5">{row.jobsCount}</td>
                           <td className="px-4 py-3.5 text-emerald-600 dark:text-emerald-400">{row.completed} Completed</td>
-                          <td className="px-4 py-3.5">{row.distance} KM</td>
-                          <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">₹{row.earnings}</td>
-                          <td className="px-4 py-3.5">₹{Math.round(row.earnings / 30)}/day</td>
+                          <td className="px-4 py-3.5">{Number(row.distance || 0).toFixed(2)} KM</td>
+                          <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">₹{Number(row.earnings || 0).toFixed(2)}</td>
+                          <td className="px-4 py-3.5">₹{(row.earnings / 30).toFixed(2)}/day</td>
                         </tr>
                       ))}
                     </tbody>
@@ -996,10 +996,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         <tr key={row.year} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                           <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">{row.year}</td>
                           <td className="px-4 py-3.5">{row.completed} Jobs</td>
-                          <td className="px-4 py-3.5">{row.distance} KM</td>
-                          <td className="px-4 py-3.5">₹{row.fuelCost}</td>
-                          <td className="px-4 py-3.5 text-emerald-600 dark:text-emerald-400">₹{row.earnings}</td>
-                          <td className="px-4 py-3.5 font-black text-slate-800 dark:text-white">₹{row.earnings + row.fuelCost}</td>
+                          <td className="px-4 py-3.5">{Number(row.distance || 0).toFixed(2)} KM</td>
+                          <td className="px-4 py-3.5">₹{Number(row.fuelCost || 0).toFixed(2)}</td>
+                          <td className="px-4 py-3.5 text-emerald-600 dark:text-emerald-400">₹{Number(row.earnings || 0).toFixed(2)}</td>
+                          <td className="px-4 py-3.5 font-black text-slate-800 dark:text-white">₹{Number((row.earnings || 0) + (row.fuelCost || 0)).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
