@@ -240,3 +240,41 @@ export const adminSubmitTravelLog = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const deleteTravelLog = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const log = await TravelLog.findById(id);
+    if (!log) {
+      return res.status(404).json({ message: 'Travel log not found' });
+    }
+
+    await TravelLog.findByIdAndDelete(id);
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'TravelLog',
+      entityId: id,
+      summary: `Deleted travel log (${log.kms} km, allowance ₹${log.allowance})`
+    });
+
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'TRAVEL_LOG_DELETED',
+        message: `Travel log deleted.`,
+        travelId: id
+      });
+      io.to(log.workerId.toString()).emit('notification', {
+        type: 'TRAVEL_LOG_DELETED',
+        message: `Your travel log was deleted by admin.`,
+        travelId: id
+      });
+    }
+
+    res.status(200).json({ message: 'Travel log deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

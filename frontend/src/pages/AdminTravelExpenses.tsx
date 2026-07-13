@@ -316,6 +316,18 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     }
   };
 
+  const handleDeleteTravelLog = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this travel log?')) return;
+    try {
+      await api.delete(`/travel/${id}`);
+      alert('Travel log deleted successfully!');
+      fetchData();
+    } catch (err) {
+      console.error('Failed to delete travel log:', err);
+      alert('Failed to delete travel log.');
+    }
+  };
+
   // Google Maps Dir Link Builder
   const getGoogleMapsDirLink = (from: string, to: string) => {
     if (!from || !to) return '#';
@@ -1259,13 +1271,22 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               <td className="px-4 py-3.5">{log.toLocation || 'Target/Home'}</td>
                               <td className="px-4 py-3.5">{Number(log.kms || 0).toFixed(2)} KM (₹{Number(log.allowance || 0).toFixed(2)})</td>
                               <td className="px-4 py-3.5 text-right">
-                                <button
-                                  onClick={() => setEditingLog({ ...log })}
-                                  className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                  <span className="text-[9px] uppercase font-bold text-slate-605">Edit</span>
-                                </button>
+                                <div className="flex justify-end items-center space-x-2">
+                                  <button
+                                    onClick={() => setEditingLog({ ...log })}
+                                    className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-605 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                    <span className="text-[9px] uppercase font-bold">Edit</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTravelLog(log._id)}
+                                    className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    <span className="text-[9px] uppercase font-bold">Delete</span>
+                                  </button>
+                                </div>
                               </td>
                             </>
                           )}
