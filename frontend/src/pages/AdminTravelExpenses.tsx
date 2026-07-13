@@ -553,40 +553,42 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       </div>
 
       {selectedWorker ? (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <div className="space-y-6 w-full">
           
-          {/* Sub Module navigation desk on the left */}
-          <div className="lg:col-span-1 glass-card p-4 space-y-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible pb-3 lg:pb-4 gap-2 lg:gap-0 print:hidden">
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
-              { id: 'daily-travel', label: 'Daily Travel Report', icon: MapPin },
-              { id: 'work-earnings', label: 'Work-wise Earnings', icon: DollarSign },
-              { id: 'travel-expenses', label: 'Travel Expenses', icon: Compass },
-              { id: 'monthly', label: 'Monthly Summary', icon: Calendar },
-              { id: 'yearly', label: 'Yearly Summary', icon: Award },
-              { id: 'reports', label: 'Reports & Export', icon: FileSpreadsheet },
-              { id: 'settings', label: 'Module Settings', icon: SettingsIcon }
-            ].map(sec => {
-              const Icon = sec.icon;
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`w-full text-left px-3.5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center space-x-2.5 whitespace-nowrap cursor-pointer ${
-                    activeSection === sec.id
-                      ? 'bg-secondary text-white shadow-md shadow-secondary/20'
-                      : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{sec.label}</span>
-                </button>
-              );
-            })}
+          {/* Horizontal Slideable Navigation Bar at the top */}
+          <div className="border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto scrollbar-none print:hidden">
+            <nav className="flex space-x-3.5 pb-2" aria-label="Tabs">
+              {[
+                { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+                { id: 'daily-travel', label: 'Daily Travel Report', icon: MapPin },
+                { id: 'work-earnings', label: 'Work-wise Earnings', icon: DollarSign },
+                { id: 'travel-expenses', label: 'Travel Expenses', icon: Compass },
+                { id: 'monthly', label: 'Monthly Summary', icon: Calendar },
+                { id: 'yearly', label: 'Yearly Summary', icon: Award },
+                { id: 'reports', label: 'Reports & Export', icon: FileSpreadsheet },
+                { id: 'settings', label: 'Module Settings', icon: SettingsIcon }
+              ].map(sec => {
+                const Icon = sec.icon;
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => setActiveSection(sec.id)}
+                    className={`flex items-center space-x-1.5 border-b-2 py-2.5 px-4 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                      activeSection === sec.id
+                        ? 'border-secondary text-secondary'
+                        : 'border-transparent text-slate-400 hover:border-slate-350 hover:text-slate-700 dark:hover:text-slate-205'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{sec.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Tab contents on the right */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* Tab contents below spanning full width */}
+          <div className="space-y-6 w-full">
             
             {/* KPI Cards Row */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:grid-cols-6">
