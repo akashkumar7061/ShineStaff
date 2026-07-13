@@ -65,6 +65,76 @@ GST included in all prices.`,
             background-color: #ffffff;
             -webkit-print-color-adjust: exact;
           }
+          .print-preview-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 9999;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-family: 'Outfit', sans-serif;
+            border-bottom: 2px solid ${comp.accent};
+          }
+          .preview-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+          }
+          .preview-actions {
+            display: flex;
+            gap: 12px;
+          }
+          .btn-download {
+            background-color: ${comp.accent};
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+          }
+          .btn-download:hover {
+            filter: brightness(1.1);
+          }
+          .btn-close {
+            background-color: #334155;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .btn-close:hover {
+            background-color: #475569;
+          }
+          
+          /* Adjust body padding so header doesn't cover content */
+          body {
+            padding-top: 85px !important;
+          }
+
+          /* Hide header and reset padding when printing */
+          @media print {
+            .print-preview-header {
+              display: none !important;
+            }
+            body {
+              padding-top: 0px !important;
+            }
+          }
           .invoice-box {
             width: 100%;
             max-width: 800px;
@@ -211,6 +281,14 @@ GST included in all prices.`,
         </style>
       </head>
       <body>
+        <div class="print-preview-header">
+          <div class="preview-title">${comp.name} - Invoice Preview (${invNumber})</div>
+          <div class="preview-actions">
+            <button onclick="window.print()" class="btn-download">Download PDF</button>
+            <button onclick="window.close()" class="btn-close">Close Preview</button>
+          </div>
+        </div>
+
         <div class="invoice-box">
           <div class="header-row">
             <div>
@@ -312,12 +390,7 @@ GST included in all prices.`,
         </div>
 
         <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() {
-              window.close();
-            }, 100);
-          }
+          // Preview screen scripts
         </script>
       </body>
       </html>
