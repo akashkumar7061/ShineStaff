@@ -97,24 +97,19 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [workersRes, jobsRes, travelRes] = await Promise.all([
+      const [workersRes, jobsRes, travelRes, settingsRes] = await Promise.all([
         api.get('/workers'),
         api.get('/jobs'),
-        api.get('/travel/all')
+        api.get('/travel/all'),
+        api.get('/settings').catch(() => ({ data: null }))
       ]);
 
       setWorkers(workersRes.data || []);
       setJobs(jobsRes.data || []);
       setTravelLogs(travelRes.data || []);
       
-      // Fetch settings if available
-      try {
-        const settingsRes = await api.get('/settings');
-        if (settingsRes.data && settingsRes.data.fuelAllowanceRate) {
-          setGlobalFuelRate(settingsRes.data.fuelAllowanceRate);
-        }
-      } catch (settingsErr) {
-        console.log('No backend settings endpoint, using default rates');
+      if (settingsRes && settingsRes.data && settingsRes.data.fuelAllowanceRate) {
+        setGlobalFuelRate(settingsRes.data.fuelAllowanceRate);
       }
     } catch (err) {
       console.error('Failed to load logs:', err);
@@ -789,7 +784,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           <XAxis dataKey="name" stroke="#94A3B8" fontSize={9} fontWeight="bold" />
                           <YAxis stroke="#94A3B8" fontSize={9} fontWeight="bold" />
                           <Tooltip />
-                          <Area type="monotone" dataKey="Earnings" stroke="#10b981" fillOpacity={1} fill="url(#colorEarnings)" strokeWidth={2} />
+                          <Area type="monotone" dataKey="Earnings" stroke="#10b981" fillOpacity={1} fill="url(#colorEarnings)" strokeWidth={2} isAnimationActive={false} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -805,7 +800,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           <YAxis stroke="#94A3B8" fontSize={9} fontWeight="bold" />
                           <Tooltip />
                           <Legend />
-                          <Bar dataKey="Distance" name="Distance (KM)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="Distance" name="Distance (KM)" fill="#8b5cf6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

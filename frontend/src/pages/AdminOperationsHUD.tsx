@@ -40,8 +40,8 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
     <div className="rounded-2xl border border-emerald-500/30 bg-white dark:bg-slate-900/60 p-5 space-y-4 shadow-md relative overflow-hidden text-slate-800 dark:text-white text-xs">
       <div className="absolute top-0 right-0 h-24 w-24 bg-emerald-500/5 rounded-full blur-2xl" />
       
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center space-x-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center space-x-2.5 min-w-0">
           <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-500 text-white animate-pulse shadow-sm text-sm shrink-0">
             🟢
           </div>
@@ -49,7 +49,7 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
             <span className="text-[8px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest block">
               ⚡ LIVE CLEAN IN PROGRESS
             </span>
-            <span className="font-extrabold text-slate-800 dark:text-white truncate block text-sm">
+            <span className="font-extrabold text-slate-800 dark:text-white block text-sm break-words">
               {job.title}
             </span>
           </div>
@@ -82,14 +82,14 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
               <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
             )}
           </div>
-          <span className="font-bold text-slate-850 dark:text-slate-150 truncate">
+          <span className="font-bold text-slate-850 dark:text-slate-150 break-words">
             {job.workerId?.name || 'Unassigned'}
           </span>
         </div>
 
         <div>
           <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Client Customer</span>
-          <span className="font-bold text-slate-855 dark:text-slate-150 truncate block">
+          <span className="font-bold text-slate-855 dark:text-slate-150 block break-words">
             👤 {job.clientName || 'N/A'}
           </span>
         </div>
@@ -98,7 +98,7 @@ const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
       <div className="text-[11px] text-slate-655 dark:text-slate-350 space-y-1.5 pt-1 text-left">
         <div>
           <span className="block text-[8px] text-slate-400 uppercase tracking-widest text-left">Service Address</span>
-          <span className="font-bold text-slate-800 dark:text-slate-200 block text-left truncate leading-tight">📍 {job.address || 'N/A'}</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 block text-left break-words leading-normal">📍 {job.address || 'N/A'}</span>
         </div>
         
         {lat && lng ? (
@@ -130,8 +130,8 @@ const AcceptedJobBanner: React.FC<{ job: any }> = ({ job }) => {
     <div className="rounded-2xl border border-amber-500/30 bg-white dark:bg-slate-900/60 p-5 space-y-4 shadow-md relative overflow-hidden text-slate-800 dark:text-white text-xs">
       <div className="absolute top-0 right-0 h-24 w-24 bg-amber-500/5 rounded-full blur-2xl" />
       
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center space-x-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center space-x-2.5 min-w-0">
           <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-500 text-white animate-pulse shadow-sm text-sm shrink-0">
             🟡
           </div>
@@ -139,7 +139,7 @@ const AcceptedJobBanner: React.FC<{ job: any }> = ({ job }) => {
             <span className="text-[8px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest block">
               ⚡ WORKER ACCEPTED
             </span>
-            <span className="font-extrabold text-slate-850 dark:text-white truncate block text-sm">
+            <span className="font-extrabold text-slate-850 dark:text-white block text-sm break-words">
               {job.title} ({job.company})
             </span>
           </div>
@@ -150,7 +150,7 @@ const AcceptedJobBanner: React.FC<{ job: any }> = ({ job }) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-655 dark:text-slate-350">
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-2.5 text-left min-w-0">
           <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
             {job.workerId?.avatar ? (
               <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
@@ -158,9 +158,9 @@ const AcceptedJobBanner: React.FC<{ job: any }> = ({ job }) => {
               <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
             )}
           </div>
-          <div>
+          <div className="min-w-0 text-left">
             <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Assigned Worker</span>
-            <span className="font-bold text-slate-850 dark:text-slate-150 truncate">
+            <span className="font-bold text-slate-850 dark:text-slate-150 block break-words">
               {job.workerId?.name || 'Unassigned'}
             </span>
           </div>
@@ -168,15 +168,15 @@ const AcceptedJobBanner: React.FC<{ job: any }> = ({ job }) => {
 
         <div>
           <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Client Customer</span>
-          <span className="font-bold text-slate-855 dark:text-slate-150 truncate block">
+          <span className="font-bold text-slate-855 dark:text-slate-150 block break-words">
             👤 {job.clientName || 'N/A'}
           </span>
         </div>
       </div>
 
       <div className="text-[11px] text-slate-655 dark:text-slate-350 text-left">
-        <span className="block text-[8px] text-slate-400 uppercase tracking-widest">Service Address</span>
-        <span className="font-bold text-slate-800 dark:text-slate-200 block truncate leading-tight">📍 {job.address || 'N/A'}</span>
+        <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Service Address</span>
+        <span className="font-bold text-slate-800 dark:text-slate-200 block break-words leading-normal">📍 {job.address || 'N/A'}</span>
       </div>
 
       <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 mt-1">
@@ -207,8 +207,8 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
 
   return (
     <div className="rounded-2xl border border-emerald-500/25 bg-white dark:bg-slate-900/60 p-5 space-y-4 shadow-sm relative overflow-hidden text-slate-800 dark:text-white text-xs">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center space-x-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center space-x-2.5 min-w-0">
           <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 shadow-sm text-sm shrink-0">
             ✓
           </div>
@@ -216,7 +216,7 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
             <span className="text-[8px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest block">
               ✅ CLEANUP COMPLETED
             </span>
-            <span className="font-extrabold text-slate-800 dark:text-white truncate block text-sm">
+            <span className="font-extrabold text-slate-800 dark:text-white block text-sm break-words">
               {job.title}
             </span>
           </div>
@@ -227,7 +227,7 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-655 dark:text-slate-350">
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-2.5 text-left min-w-0">
           <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
             {job.workerId?.avatar ? (
               <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
@@ -235,9 +235,9 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
               <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
             )}
           </div>
-          <div>
+          <div className="min-w-0 text-left">
             <span className="block text-[8px] text-slate-405 uppercase tracking-widest">Worker</span>
-            <span className="font-bold text-slate-850 dark:text-slate-150 truncate">
+            <span className="font-bold text-slate-850 dark:text-slate-150 block break-words">
               {job.workerId?.name || 'Worker'}
             </span>
           </div>
@@ -245,13 +245,13 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any }> = ({ job }) => {
 
         <div>
           <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Total Time Taken</span>
-          <span className="font-bold text-emerald-500 dark:text-emerald-405 block mt-0.5">
+          <span className="font-bold text-emerald-500 dark:text-emerald-455 block mt-0.5">
             ⏱️ {formatDuration()}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 mt-1">
+      <div className="flex items-center justify-between flex-wrap gap-2 text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 mt-1">
         <span className="text-slate-450 font-medium">Completed At: <strong className="text-slate-750 dark:text-slate-200">{completeTimeStr}</strong></span>
         <span className="text-slate-450 font-medium">Client: <strong className="text-slate-750 dark:text-slate-200">{job.clientName}</strong></span>
       </div>
