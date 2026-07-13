@@ -1284,7 +1284,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   <label className="block text-[9px] uppercase tracking-wider text-slate-450 mb-1">Clean Site Address</label>
                   <input
                     type="text"
-                    required
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Enter full physical address"
