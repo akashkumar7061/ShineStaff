@@ -81,6 +81,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   // Unified Editing states for Job and TravelLog
   const [editingJob, setEditingJob] = useState<any>(null);
   const [editingLog, setEditingLog] = useState<any>(null);
+  const [isTravelModalOpen, setIsTravelModalOpen] = useState<boolean>(false);
 
   // Manual Commute Logging states
   const [logWorker, setLogWorker] = useState<string>('');
@@ -791,30 +792,27 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             {/* KPI Cards Row */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:grid-cols-6">
               {[
-                { label: 'Completed Jobs', val: totalJobsCount, desc: 'jobs done', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20' },
-                { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' },
-                { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20' },
-                { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20' },
-                { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20' },
-                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20' }
+                { label: 'Completed Jobs', val: totalJobsCount, desc: 'jobs done', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20', section: 'daily-report' },
+                { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'earnings' },
+                { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
+                { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
+                { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'daily-report' },
+                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'earnings' }
               ].map((kpi, idx) => (
                 <div
                   key={idx}
                   onClick={() => {
                     if (kpi.label === 'Travel Distance') {
-                      setActiveSection('travel-expenses');
-                      setTimeout(() => {
-                        document.getElementById('manual-travel-form-container')?.scrollIntoView({ behavior: 'smooth' });
-                      }, 100);
+                      setIsTravelModalOpen(true);
+                    } else {
+                      setActiveSection(kpi.section as any);
                     }
                   }}
-                  className={`glass-card p-4 flex flex-col justify-between hover:scale-[1.02] transition-all ${
-                    kpi.label === 'Travel Distance' ? 'cursor-pointer border-l-2 border-l-violet-500 hover:bg-violet-500/5' : ''
-                  }`}
+                  className="glass-card p-4 flex flex-col justify-between hover:scale-[1.02] transition-all cursor-pointer border-l-2 border-l-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/30"
                 >
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
                   <h4 className="text-sm font-black text-slate-855 dark:text-white mt-1">{kpi.val}</h4>
-                  <span className="text-[8px] text-slate-450 mt-1 block lowercase dark:text-slate-400">{kpi.desc}</span>
+                  <span className="text-[8px] text-slate-455 mt-1 block lowercase dark:text-slate-400">{kpi.desc}</span>
                 </div>
               ))}
             </div>
@@ -1129,122 +1127,20 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             {/* TAB CONTENT: 4. Travel Expenses */}
             {activeSection === 'travel-expenses' && (
               <div className="glass-card p-6 space-y-6">
-                <div>
-                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Travel & Fuel Expenses details</h3>
-                  <p className="text-[10px] text-slate-400">Lists travel distance records logged by Selected Worker.</p>
-                </div>
-
-                {/* Form: Direct Daily Travel logger */}
-                <div id="manual-travel-form-container" className="glass-card p-5 border border-slate-150 dark:border-slate-800 bg-slate-55 dark:bg-slate-900/30 rounded-2xl max-w-full">
-                  <h4 className="text-xs font-black uppercase text-secondary tracking-wider mb-4 flex items-center space-x-1.5">
-                    <Compass className="h-4.5 w-4.5 text-secondary animate-spin-slow" />
-                    <span>Log Daily Travel commute</span>
-                  </h4>
-                  <form onSubmit={handleAddManualTravel} className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                    {selectedWorker?._id === 'all' ? (
-                      <div>
-                        <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Commuted Worker:</label>
-                        <select
-                          required
-                          value={logWorker}
-                          onChange={(e) => setLogWorker(e.target.value)}
-                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                        >
-                          <option value="">Select worker...</option>
-                          {workers.map((w: any) => (
-                            <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Crew Worker:</label>
-                        <div className="w-full text-xs font-black rounded-xl border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 p-2.5 text-slate-700 dark:text-slate-200">
-                          {selectedWorker.name}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Travel Date:</label>
-                      <input
-                        type="date"
-                        required
-                        value={logDate}
-                        onChange={(e) => setLogDate(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Commute Type:</label>
-                      <select
-                        value={logType}
-                        onChange={(e) => setLogType(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                      >
-                        <option value="job">Commute to Job</option>
-                        <option value="home">Return Home</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Distance (KMs):</label>
-                      <input
-                        type="number"
-                        step="any"
-                        required
-                        placeholder="e.g. 45"
-                        value={logKms}
-                        onChange={(e) => setLogKms(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">From Location:</label>
-                      <input
-                        type="text"
-                        required
-                        value={logFrom}
-                        onChange={(e) => setLogFrom(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">To Location:</label>
-                      <input
-                        type="text"
-                        required
-                        value={logTo}
-                        onChange={(e) => setLogTo(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Allowance (₹, Optional):</label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder={`Auto calculated at ₹${globalFuelRate}/KM`}
-                        value={logAllowance}
-                        onChange={(e) => setLogAllowance(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-855 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                      />
-                    </div>
-
-                    <div className="flex items-end">
-                      <button
-                        type="submit"
-                        className="w-full bg-secondary hover:bg-secondary-dark text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
-                      >
-                        <Plus className="h-4.5 w-4.5" />
-                        <span>Log Commute Kms</span>
-                      </button>
-                    </div>
-                  </form>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-150/40 dark:border-slate-800 pb-4">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Travel & Fuel Expenses details</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Lists travel distance records logged by Selected Worker.</p>
+                  </div>
+                  
+                  {/* Local date range summary */}
+                  <div className="flex items-center space-x-2 bg-slate-55 dark:bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-150/40 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                    <Calendar className="h-3.5 w-3.5 text-secondary" />
+                    <span>Period:</span>
+                    <span className="text-slate-800 dark:text-white font-extrabold">
+                      {new Date(startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} - {new Date(endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1302,7 +1198,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="text"
                                   value={editingLog.toLocation || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, toLocation: e.target.value })}
-                                  className="w-28 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  className="w-28 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-905 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
                               <td className="px-4 py-3.5 space-y-1">
@@ -1311,7 +1207,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   min="0"
                                   value={editingLog.kms || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, kms: e.target.value, allowance: (Number(e.target.value) * globalFuelRate).toFixed(2) })}
-                                  className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-905 p-1.5 outline-none focus:border-secondary"
                                   placeholder="KM"
                                 />
                                 <input
@@ -1319,7 +1215,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   min="0"
                                   value={editingLog.allowance || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, allowance: e.target.value })}
-                                  className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-905 p-1.5 outline-none focus:border-secondary"
                                   placeholder="Allowance"
                                 />
                               </td>
@@ -1367,7 +1263,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
                                 >
                                   <Edit className="h-3 w-3" />
-                                  <span className="text-[9px] uppercase">Edit</span>
+                                  <span className="text-[9px] uppercase font-bold text-slate-605">Edit</span>
                                 </button>
                               </td>
                             </>
@@ -1376,50 +1272,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       ))}
                       {workerTravel.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="text-center py-8 text-slate-400">No manual travel logs logged for this period.</td>
+                          <td colSpan={7} className="text-center py-8 text-slate-400">No manual travel logs logged for this period.</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-
-                {/* Route History summary list */}
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-6 space-y-4">
-                  <h4 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1">
-                    <Map className="h-4.5 w-4.5 text-secondary" />
-                    <span>Auto-calculated Route Commutes History</span>
-                  </h4>
-                  <div className="space-y-3.5">
-                    {getRouteHistory().map((route, index) => (
-                      <div key={route.id} className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
-                        <div className="flex items-center space-x-3">
-                          <span className="h-5.5 w-5.5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-extrabold text-[10px]">{index + 1}</span>
-                          <div>
-                            <div className="font-extrabold text-slate-800 dark:text-white flex items-center space-x-2 flex-wrap">
-                              <span>{route.from}</span>
-                              <ChevronRight className="h-3 w-3 text-slate-400" />
-                              <span>{route.to}</span>
-                            </div>
-                            <span className="text-[9px] text-slate-455 block mt-0.5">Est. Distance: {Number(route.distance || 0).toFixed(2)} KM | Est. Time: {route.time}</span>
-                          </div>
-                        </div>
-                        <a
-                          href={route.mapLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-3.5 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg font-bold text-[10px] uppercase shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1 self-start md:self-auto"
-                        >
-                          <Compass className="h-3 w-3" />
-                          <span>View on Google Maps</span>
-                        </a>
-                      </div>
-                    ))}
-                    {getRouteHistory().length === 0 && (
-                      <p className="text-xs text-slate-400 text-center py-4">No commute route history generated.</p>
-                    )}
-                  </div>
-                </div>
-
               </div>
             )}
 
@@ -1625,6 +1483,153 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
           <Compass className="h-14 w-14 text-slate-300 dark:text-slate-700 animate-pulse" />
           <h3 className="text-sm font-extrabold uppercase text-slate-500 tracking-wider">No Worker Selected</h3>
           <p className="text-xs max-w-md">Search and select a worker profile at the top of the console to load their travel expenses, earnings, routes, and monthly/yearly summaries.</p>
+        </div>
+      )}
+
+      {/* Modal Popup for Logging Travel Commutes */}
+      {isTravelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setIsTravelModalOpen(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+          />
+
+          <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in text-left">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="text-xs font-black uppercase text-secondary tracking-widest flex items-center space-x-2">
+                <Compass className="h-5 w-5 text-secondary animate-spin-slow" />
+                <span>Log Daily Travel Commute</span>
+              </h3>
+              <button
+                onClick={() => setIsTravelModalOpen(false)}
+                className="text-slate-400 hover:text-slate-655 dark:hover:text-white cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                await handleAddManualTravel(e);
+                setIsTravelModalOpen(false);
+              }}
+              className="p-6 space-y-4 font-bold text-xs"
+            >
+              {selectedWorker?._id === 'all' ? (
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Commuted Worker:</label>
+                  <select
+                    required
+                    value={logWorker}
+                    onChange={(e) => setLogWorker(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                  >
+                    <option value="">Select worker...</option>
+                    {workers.map((w: any) => (
+                      <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Crew Worker:</label>
+                  <div className="w-full text-xs font-black rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 text-slate-700 dark:text-slate-200">
+                    {selectedWorker.name}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Travel Date:</label>
+                  <input
+                    type="date"
+                    required
+                    value={logDate}
+                    onChange={(e) => setLogDate(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Commute Type:</label>
+                  <select
+                    value={logType}
+                    onChange={(e) => setLogType(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                  >
+                    <option value="job">Commute to Job</option>
+                    <option value="home">Return Home</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Distance (KMs):</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    placeholder="e.g. 45"
+                    value={logKms}
+                    onChange={(e) => setLogKms(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Allowance (₹, Optional):</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder={`Auto calculated at ₹${globalFuelRate}/KM`}
+                    value={logAllowance}
+                    onChange={(e) => setLogAllowance(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-855 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">From Location:</label>
+                  <input
+                    type="text"
+                    required
+                    value={logFrom}
+                    onChange={(e) => setLogFrom(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1.5 text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">To Location:</label>
+                  <input
+                    type="text"
+                    required
+                    value={logTo}
+                    onChange={(e) => setLogTo(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsTravelModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-750 dark:text-slate-200 font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-secondary hover:bg-secondary-dark text-white rounded-xl font-extrabold shadow-md transition-all cursor-pointer flex items-center space-x-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Log Commute Kms</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
