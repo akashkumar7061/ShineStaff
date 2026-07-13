@@ -17,7 +17,8 @@ Re-cleaning offered within 48 hours if unsatisfied.
 Prices may vary based on actual condition of items.
 GST included in all prices.`,
         notes: "Thank you for choosing SofaShine.",
-        signature: window.location.origin + "/logos/sofashine_sig.png"
+        signature: window.location.origin + "/logos/sofashine_sig.png",
+        stamp: window.location.origin + "/logos/sofashine_stamp.jpg"
       },
       CleanCruisers: {
         name: "CleanCruisers",
@@ -36,7 +37,8 @@ Re-clean offered within 24 hours if not satisfied.
 Prices may vary for luxury / vintage vehicles.
 GST included in all prices.`,
         notes: "Thank you for choosing CleanCruisers.",
-        signature: window.location.origin + "/logos/cleancruisers_sig.png"
+        signature: window.location.origin + "/logos/cleancruisers_sig.png",
+        stamp: window.location.origin + "/logos/cleancruisers_stamp.jpg"
       }
     };
 
@@ -290,10 +292,13 @@ GST included in all prices.`,
 
             <!-- Signature Block (Below Terms & Conditions) -->
             <div style="display: flex; justify-content: flex-start; margin-bottom: 30px; text-align: left;">
-              <div style="font-size: 12px; color: #475569; width: 220px;">
+              <div style="font-size: 12px; color: #475569; width: 320px;">
                 <div style="margin-bottom: 8px;">For <strong>${comp.name}</strong></div>
-                <div style="height: 50px; display: flex; align-items: flex-end; margin-bottom: 4px;">
-                  <img src="${comp.signature}" alt="Signature" style="height: 48px; max-width: 180px; object-fit: contain;" />
+                <div style="height: 60px; display: flex; align-items: flex-end; gap: 15px; margin-bottom: 4px;">
+                  <!-- Company Stamp (Mohar) -->
+                  <img src="${comp.stamp}" alt="Stamp" style="height: 55px; width: 55px; object-fit: contain; opacity: 0.9;" />
+                  <!-- Signature -->
+                  <img src="${comp.signature}" alt="Signature" style="height: 48px; max-width: 220px; object-fit: contain;" />
                 </div>
                 <div style="border-bottom: 1.5px solid #94a3b8; margin-bottom: 6px; width: 100%;"></div>
                 <div style="font-weight: 600; color: #0f172a; font-size: 11px; text-align: center;">
