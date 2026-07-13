@@ -803,6 +803,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   key={idx}
                   onClick={() => {
                     if (kpi.label === 'Travel Distance') {
+                      setActiveSection('travel-expenses');
                       setIsTravelModalOpen(true);
                     } else {
                       setActiveSection(kpi.section as any);
