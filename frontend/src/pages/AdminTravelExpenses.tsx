@@ -792,12 +792,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             {/* KPI Cards Row */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:grid-cols-6">
               {[
-                { label: 'Completed Jobs', val: totalJobsCount, desc: 'jobs done', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20', section: 'daily-report' },
-                { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'earnings' },
+                { label: 'Completed Jobs', val: totalJobsCount, desc: 'jobs done', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20', section: 'daily-travel' },
+                { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'work-earnings' },
                 { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
                 { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
-                { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'daily-report' },
-                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'earnings' }
+                { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'daily-travel' },
+                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
               ].map((kpi, idx) => (
                 <div
                   key={idx}
