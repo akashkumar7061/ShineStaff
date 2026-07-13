@@ -77,12 +77,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [manualAdjustment, setManualAdjustment] = useState<string>('0');
   const [travelNotes, setTravelNotes] = useState<string>('');
   const [remarks, setRemarks] = useState<string>('');
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [editingPrice, setEditingPrice] = useState<string>('');
-  
-  // Inline Travel KMs editing
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [editingKms, setEditingKms] = useState<string>('');
+  // Unified Editing states for Job and TravelLog
+  const [editingJob, setEditingJob] = useState<any>(null);
+  const [editingLog, setEditingLog] = useState<any>(null);
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -220,40 +217,62 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const totalPayout = totalWorkEarnings + totalFuelCost + Number(manualAdjustment || 0);
 
   // Inline Edits Handlers
-  const handleUpdateJobPrice = async (jobId: string) => {
-    if (Number(editingPrice) < 0) {
+  const handleSaveJob = async () => {
+    if (!editingJob) return;
+    if (Number(editingJob.price) < 0) {
       alert('Price cannot be negative.');
       return;
     }
-    try {
-      await api.put(`/jobs/${jobId}`, {
-        price: Number(editingPrice)
-      });
-      alert('Job price updated successfully!');
-      setEditingJobId(null);
-      fetchData();
-    } catch (err) {
-      console.error('Failed to update job price:', err);
-      alert('Failed to update job price.');
-    }
-  };
-
-  const handleUpdateTravelKms = async (logId: string, allowance: number) => {
-    if (Number(editingKms) < 0) {
+    if (Number(editingJob.fuelKmsTravelled) < 0) {
       alert('KMs cannot be negative.');
       return;
     }
     try {
-      await api.put(`/travel/${logId}`, {
-        kms: Number(editingKms),
-        allowance: allowance
+      await api.put(`/jobs/${editingJob._id}`, {
+        title: editingJob.title,
+        price: Number(editingJob.price),
+        fuelKmsTravelled: Number(editingJob.fuelKmsTravelled),
+        date: editingJob.date,
+        timeSlot: editingJob.timeSlot,
+        clientName: editingJob.clientName,
+        address: editingJob.address,
+        status: editingJob.status
       });
-      alert('Travel log distance updated successfully!');
-      setEditingLogId(null);
+      alert('Job record updated successfully!');
+      setEditingJob(null);
+      fetchData();
+    } catch (err) {
+      console.error('Failed to update job:', err);
+      alert('Failed to update job record.');
+    }
+  };
+
+  const handleSaveTravelLog = async () => {
+    if (!editingLog) return;
+    if (Number(editingLog.kms) < 0) {
+      alert('KMs cannot be negative.');
+      return;
+    }
+    if (Number(editingLog.allowance) < 0) {
+      alert('Allowance cannot be negative.');
+      return;
+    }
+    try {
+      await api.put(`/travel/${editingLog._id}`, {
+        date: editingLog.date,
+        type: editingLog.type,
+        kms: Number(editingLog.kms),
+        allowance: Number(editingLog.allowance),
+        status: editingLog.status,
+        fromLocation: editingLog.fromLocation,
+        toLocation: editingLog.toLocation
+      });
+      alert('Travel log record updated successfully!');
+      setEditingLog(null);
       fetchData();
     } catch (err) {
       console.error('Failed to update travel log:', err);
-      alert('Failed to update travel log KMs.');
+      alert('Failed to update travel log.');
     }
   };
 
@@ -714,31 +733,129 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3">Distance</th>
                         <th className="px-4 py-3">Fuel Cost</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {workerJobs.map(job => (
                         <tr key={job._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                          <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">#{job.visitId || job._id.substring(18)}</td>
-                          {selectedWorker._id === 'all' && (
-                            <td className="px-4 py-3.5">
-                              <span className="block text-slate-800 dark:text-white font-extrabold">{job.workerId?.name || 'Unassigned'}</span>
-                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{job.workerId?.company || 'N/A'}</span>
-                            </td>
+                          {editingJob && editingJob._id === job._id ? (
+                            <>
+                              <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">#{job.visitId || job._id.substring(18)}</td>
+                              {selectedWorker._id === 'all' && (
+                                <td className="px-4 py-3.5">
+                                  <span className="block text-slate-800 dark:text-white font-extrabold">{job.workerId?.name || 'Unassigned'}</span>
+                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{job.workerId?.company || 'N/A'}</span>
+                                </td>
+                              )}
+                              <td className="px-4 py-3.5">
+                                <input
+                                  type="date"
+                                  value={editingJob.date || ''}
+                                  onChange={(e) => setEditingJob({ ...editingJob, date: e.target.value })}
+                                  className="w-28 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5 space-y-1">
+                                <input
+                                  type="text"
+                                  value={editingJob.clientName || ''}
+                                  onChange={(e) => setEditingJob({ ...editingJob, clientName: e.target.value })}
+                                  className="w-32 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  placeholder="Customer"
+                                />
+                                <input
+                                  type="text"
+                                  value={editingJob.address || ''}
+                                  onChange={(e) => setEditingJob({ ...editingJob, address: e.target.value })}
+                                  className="w-32 block text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  placeholder="Address"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <input
+                                  type="text"
+                                  value={editingJob.timeSlot || ''}
+                                  onChange={(e) => setEditingJob({ ...editingJob, timeSlot: e.target.value })}
+                                  className="w-24 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <select
+                                  value={editingJob.status || ''}
+                                  onChange={(e) => setEditingJob({ ...editingJob, status: e.target.value })}
+                                  className="w-28 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="accepted">Accepted</option>
+                                  <option value="rejected">Rejected</option>
+                                  <option value="started">Started</option>
+                                  <option value="completed">Completed</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={editingJob.fuelKmsTravelled || ''}
+                                  onChange={(e) => setEditingJob({ ...editingJob, fuelKmsTravelled: e.target.value })}
+                                  className="w-20 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">
+                                ₹{((Number(editingJob.fuelKmsTravelled) || 0) * globalFuelRate).toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                <div className="flex justify-end space-x-2">
+                                  <button
+                                    onClick={handleSaveJob}
+                                    className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 rounded cursor-pointer transition-all"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingJob(null)}
+                                    className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 rounded cursor-pointer transition-all"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">#{job.visitId || job._id.substring(18)}</td>
+                              {selectedWorker._id === 'all' && (
+                                <td className="px-4 py-3.5">
+                                  <span className="block text-slate-800 dark:text-white font-extrabold">{job.workerId?.name || 'Unassigned'}</span>
+                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{job.workerId?.company || 'N/A'}</span>
+                                </td>
+                              )}
+                              <td className="px-4 py-3.5">{job.date}</td>
+                              <td className="px-4 py-3.5">
+                                <span className="block text-slate-800 dark:text-white">{job.clientName}</span>
+                                <span className="text-[10px] text-slate-400">{job.address}</span>
+                              </td>
+                              <td className="px-4 py-3.5">{job.timeSlot}</td>
+                              <td className="px-4 py-3.5">
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+                                  {job.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5">{(job.fuelKmsTravelled || 0).toFixed(2)} KM</td>
+                              <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">₹{((job.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2)}</td>
+                              <td className="px-4 py-3.5 text-right">
+                                <button
+                                  onClick={() => setEditingJob({ ...job })}
+                                  className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                  <span className="text-[9px] uppercase">Edit</span>
+                                </button>
+                              </td>
+                            </>
                           )}
-                          <td className="px-4 py-3.5">{job.date}</td>
-                          <td className="px-4 py-3.5">
-                            <span className="block text-slate-800 dark:text-white">{job.clientName}</span>
-                            <span className="text-[10px] text-slate-400">{job.address}</span>
-                          </td>
-                          <td className="px-4 py-3.5">{job.timeSlot}</td>
-                          <td className="px-4 py-3.5">
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
-                              {job.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5">{(job.fuelKmsTravelled || 0).toFixed(2)} KM</td>
-                          <td className="px-4 py-3.5 font-extrabold text-slate-800 dark:text-white">₹{((job.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2)}</td>
                         </tr>
                       ))}
                       {workerJobs.length === 0 && (
@@ -786,12 +903,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           )}
                           <td className="px-4 py-3.5">{job.clientName}</td>
                           <td className="px-4 py-3.5">
-                            {editingJobId === job._id ? (
+                            {editingJob && editingJob._id === job._id ? (
                               <input
                                 type="number"
-                                value={editingPrice}
+                                value={editingJob.price || ''}
                                 min="0"
-                                onChange={(e) => setEditingPrice(e.target.value)}
+                                onChange={(e) => setEditingJob({ ...editingJob, price: e.target.value })}
                                 className="w-24 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-855 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                               />
                             ) : (
@@ -799,16 +916,16 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             )}
                           </td>
                           <td className="px-4 py-3.5 text-right">
-                            {editingJobId === job._id ? (
+                            {editingJob && editingJob._id === job._id ? (
                               <div className="flex justify-end space-x-2">
                                 <button
-                                  onClick={() => handleUpdateJobPrice(job._id)}
+                                  onClick={handleSaveJob}
                                   className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 rounded cursor-pointer transition-all"
                                 >
                                   <Check className="h-3.5 w-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => setEditingJobId(null)}
+                                  onClick={() => setEditingJob(null)}
                                   className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 rounded cursor-pointer transition-all"
                                 >
                                   <X className="h-3.5 w-3.5" />
@@ -816,10 +933,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               </div>
                             ) : (
                               <button
-                                onClick={() => {
-                                  setEditingJobId(job._id);
-                                  setEditingPrice(String(job.price || ''));
-                                }}
+                                onClick={() => setEditingJob({ ...job })}
                                 className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
                               >
                                 <Edit className="h-3 w-3" />
@@ -859,66 +973,115 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {workerTravel.map(log => (
                         <tr key={log._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
-                          <td className="px-4 py-3.5">{log.date}</td>
-                          {selectedWorker._id === 'all' && (
-                            <td className="px-4 py-3.5">
-                              <span className="block text-slate-800 dark:text-white font-extrabold">{log.workerId?.name || 'Unassigned'}</span>
-                              <span className="text-[9px] text-slate-400 uppercase tracking-wider">{log.workerId?.company || 'N/A'}</span>
-                            </td>
+                          {editingLog && editingLog._id === log._id ? (
+                            <>
+                              <td className="px-4 py-3.5">
+                                <input
+                                  type="date"
+                                  value={editingLog.date || ''}
+                                  onChange={(e) => setEditingLog({ ...editingLog, date: e.target.value })}
+                                  className="w-28 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              {selectedWorker._id === 'all' && (
+                                <td className="px-4 py-3.5">
+                                  <span className="block text-slate-800 dark:text-white font-extrabold">{log.workerId?.name || 'Unassigned'}</span>
+                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{log.workerId?.company || 'N/A'}</span>
+                                </td>
+                              )}
+                              <td className="px-4 py-3.5">
+                                <select
+                                  value={editingLog.type || ''}
+                                  onChange={(e) => setEditingLog({ ...editingLog, type: e.target.value })}
+                                  className="w-24 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                >
+                                  <option value="job">Commute to Job</option>
+                                  <option value="home">Return Home</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <input
+                                  type="text"
+                                  value={editingLog.fromLocation || ''}
+                                  onChange={(e) => setEditingLog({ ...editingLog, fromLocation: e.target.value })}
+                                  className="w-28 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <input
+                                  type="text"
+                                  value={editingLog.toLocation || ''}
+                                  onChange={(e) => setEditingLog({ ...editingLog, toLocation: e.target.value })}
+                                  className="w-28 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5 space-y-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={editingLog.kms || ''}
+                                  onChange={(e) => setEditingLog({ ...editingLog, kms: e.target.value, allowance: (Number(e.target.value) * globalFuelRate).toFixed(2) })}
+                                  className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  placeholder="KM"
+                                />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={editingLog.allowance || ''}
+                                  onChange={(e) => setEditingLog({ ...editingLog, allowance: e.target.value })}
+                                  className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                  placeholder="Allowance"
+                                />
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                <div className="flex justify-end space-x-2">
+                                  <button
+                                    onClick={handleSaveTravelLog}
+                                    className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 rounded cursor-pointer transition-all"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingLog(null)}
+                                    className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 rounded cursor-pointer transition-all"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-4 py-3.5">{log.date}</td>
+                              {selectedWorker._id === 'all' && (
+                                <td className="px-4 py-3.5">
+                                  <span className="block text-slate-800 dark:text-white font-extrabold">{log.workerId?.name || 'Unassigned'}</span>
+                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{log.workerId?.company || 'N/A'}</span>
+                                </td>
+                              )}
+                              <td className="px-4 py-3.5">
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                  log.type === 'job' 
+                                    ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400' 
+                                    : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
+                                }`}>
+                                  {log.type === 'job' ? 'Commute to Job' : 'Return Home'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5">{log.fromLocation || 'Last Work Site'}</td>
+                              <td className="px-4 py-3.5">{log.toLocation || 'Target/Home'}</td>
+                              <td className="px-4 py-3.5">{Number(log.kms || 0).toFixed(2)} KM (₹{Number(log.allowance || 0).toFixed(2)})</td>
+                              <td className="px-4 py-3.5 text-right">
+                                <button
+                                  onClick={() => setEditingLog({ ...log })}
+                                  className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                  <span className="text-[9px] uppercase">Edit</span>
+                                </button>
+                              </td>
+                            </>
                           )}
-                          <td className="px-4 py-3.5">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                              log.type === 'job' 
-                                ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400' 
-                                : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
-                            }`}>
-                              {log.type === 'job' ? 'Commute to Job' : 'Return Home'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5">{log.fromLocation || 'Last Work Site'}</td>
-                          <td className="px-4 py-3.5">{log.toLocation || 'Target/Home'}</td>
-                          <td className="px-4 py-3.5">
-                            {editingLogId === log._id ? (
-                              <input
-                                type="number"
-                                value={editingKms}
-                                min="0"
-                                onChange={(e) => setEditingKms(e.target.value)}
-                                className="w-20 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-855 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
-                              />
-                            ) : (
-                              <span>{Number(log.kms || 0).toFixed(2)} KM</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5 text-right">
-                            {editingLogId === log._id ? (
-                              <div className="flex justify-end space-x-2">
-                                <button
-                                  onClick={() => handleUpdateTravelKms(log._id, Number(editingKms) * globalFuelRate)}
-                                  className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 rounded cursor-pointer transition-all"
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingLogId(null)}
-                                  className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 rounded cursor-pointer transition-all"
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setEditingLogId(log._id);
-                                  setEditingKms(String(log.kms || ''));
-                                }}
-                                className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
-                              >
-                                <Edit className="h-3 w-3" />
-                                <span className="text-[9px] uppercase">Edit</span>
-                              </button>
-                            )}
-                          </td>
                         </tr>
                       ))}
                       {workerTravel.length === 0 && (
