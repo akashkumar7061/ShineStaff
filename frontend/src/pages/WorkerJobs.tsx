@@ -389,7 +389,6 @@ const WorkerJobs: React.FC = () => {
                     <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                       <tr>
                         <th className="px-6 py-4">Job Details</th>
-                        <th className="px-6 py-4">Fuel Allowance</th>
                         <th className="px-6 py-4">Client Info</th>
                         <th className="px-6 py-4">Clean Date & Time</th>
                         <th className="px-6 py-4">Amount</th>
@@ -417,21 +416,7 @@ const WorkerJobs: React.FC = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-5">
-                            {job.fuelKmsTravelled !== undefined && job.fuelKmsTravelled > 0 ? (
-                              <div className="space-y-2.5 text-left">
-                                <div className="flex items-center space-x-1 font-black text-slate-800 dark:text-white text-xs">
-                                  <span className="text-violet-500">⛽</span>
-                                  <span>{job.fuelKmsTravelled} KM</span>
-                                </div>
-                                <div className="text-[9px] font-extrabold text-violet-600 dark:text-violet-400 tracking-wide uppercase bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20 w-fit">
-                                  ₹{job.fuelAllowance || 0} allowance
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
+
 
                           <td className="px-6 py-5">
                             <div className="space-y-1">
@@ -583,14 +568,6 @@ const WorkerJobs: React.FC = () => {
                   <div className="pb-1.5 mb-1.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Collect from Client:</span>
                     <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm bg-emerald-500/10 px-2 py-0.5 rounded">₹{selectedJob.price}</span>
-                  </div>
-                )}
-                {selectedJob.fuelKmsTravelled !== undefined && (
-                  <div className="pb-1.5 mb-1.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">⛽ Fuel Allowance KMs:</span>
-                    <span className="font-extrabold text-violet-500 dark:text-violet-400 text-xs bg-violet-500/10 px-2.5 py-1 rounded-lg">
-                      {selectedJob.fuelKmsTravelled} KM (₹{selectedJob.fuelAllowance || 0})
-                    </span>
                   </div>
                 )}
                 <div className="pb-1 border-b border-slate-200 dark:border-slate-800 flex flex-col pt-1.5 space-y-1">
@@ -808,53 +785,13 @@ const WorkerJobs: React.FC = () => {
               ) : (
                 // View Mode for completed/cancelled jobs
                 <div className="space-y-4 border-t border-slate-100 dark:border-slate-850 pt-4 text-left">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-450">Fuel Allowance Distance:</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">{selectedJob.fuelKmsTravelled} KM (+₹{selectedJob.fuelAllowance})</span>
-                  </div>
+
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-450">Cleanup Notes:</span>
                     <span className="font-bold text-slate-700 dark:text-slate-200 max-w-[250px] text-right">{selectedJob.workerNotes || 'No notes logged'}</span>
                   </div>
 
-                  {selectedJob.status === 'completed' && (
-                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-4 space-y-4">
-                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Update Travel Log (Fuel KMs)</span>
-                      
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => setTempKms(String(Math.max(0, Number(tempKms) - 1)))}
-                          className="h-10 w-10 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold flex items-center justify-center border border-slate-205 dark:border-slate-750 transition-colors text-lg shadow-sm"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          min={0}
-                          value={tempKms}
-                          onChange={(e) => setTempKms(e.target.value)}
-                          placeholder="KM"
-                          className="flex-1 text-center h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary font-bold text-base shadow-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setTempKms(String(Number(tempKms) + 1))}
-                          className="h-10 w-10 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold flex items-center justify-center border border-slate-205 dark:border-slate-750 transition-colors text-lg shadow-sm"
-                        >
-                          +
-                        </button>
-                      </div>
 
-                      <button
-                        type="button"
-                        onClick={handleUpdateCompletedFuelKms}
-                        className="w-full bg-violet-600 hover:bg-violet-750 text-white rounded-lg py-2.5 font-bold shadow text-[10px] uppercase tracking-wider transition-all"
-                      >
-                        Save Updated Fuel KMs
-                      </button>
-                    </div>
-                  )}
 
                   <div className="flex justify-between">
                     <span className="text-slate-450">Completed Time:</span>

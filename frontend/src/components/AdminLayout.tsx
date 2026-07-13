@@ -52,7 +52,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
     { name: 'Payroll & Salary', path: '/admin/salary', icon: DollarSign, color: 'text-teal-500' },
     { name: 'Overtime Charges', path: '/admin/overtime', icon: Clock, color: 'text-amber-500' },
-    { name: 'Fuel & Travel Logs', path: '/admin/fuel', icon: MapPin, color: 'text-rose-500' },
     { name: 'Worker Travel & Expenses', path: '/admin/travel-expenses', icon: Compass, color: 'text-orange-600' },
     { name: 'Export Reports', path: '/admin/reports', icon: FileSpreadsheet, color: 'text-cyan-500' },
     { name: 'Log Daily Clean Job', path: '/admin/log-daily-jobs', icon: ClipboardList, color: 'text-sky-500' },

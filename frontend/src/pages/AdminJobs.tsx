@@ -914,23 +914,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </div>
                 </div>
 
-                {/* Commute Route & Fuel */}
-                {(selectedJobForDrawer.fromLocation || selectedJobForDrawer.toLocation || selectedJobForDrawer.fuelKmsTravelled || selectedJobForDrawer.fuelAllowance) && (
-                  <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
-                    <div>
-                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Route Route Bounds</span>
-                      <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200 mt-1 block">
-                        {selectedJobForDrawer.fromLocation || 'Office'} ➔ {selectedJobForDrawer.toLocation || 'Site'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Fuel Commute</span>
-                      <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-500 mt-1 block">
-                        ₹{selectedJobForDrawer.fuelAllowance || 0} <span className="text-[9px] text-slate-400 font-normal">({selectedJobForDrawer.fuelKmsTravelled || 0} KMs)</span>
-                      </span>
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Service & Price */}
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
@@ -1303,111 +1287,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
               </div>
 
-              {/* Route Commute & Fuel Estimator Panel */}
-              <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1">Route Commute & Fuel Estimator</span>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">From Location</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={fromLocation}
-                        onChange={(e) => setFromLocation(e.target.value)}
-                        placeholder="e.g. Office or Last Work Address"
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 pr-9 outline-none focus:border-secondary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveMapField('from');
-                          setMapSearchQuery(fromLocation);
-                          setMapSelectedAddress(fromLocation);
-                          setMapPickerOpen(true);
-                        }}
-                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-[#2563eb] cursor-pointer"
-                        title="Pick from map"
-                      >
-                        <MapPin className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">To Location</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={toLocation}
-                        onChange={(e) => setToLocation(e.target.value)}
-                        placeholder="e.g. Client Address"
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 pr-9 outline-none focus:border-secondary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveMapField('to');
-                          setMapSearchQuery(toLocation || address);
-                          setMapSelectedAddress(toLocation || address);
-                          setMapPickerOpen(true);
-                        }}
-                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-[#2563eb] cursor-pointer"
-                        title="Pick from map"
-                      >
-                        <MapPin className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    disabled={isCalculatingRoute}
-                    onClick={handleCalculateDistance}
-                    className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center space-x-1"
-                  >
-                    {isCalculatingRoute ? (
-                      <span>Calculating Route...</span>
-                    ) : (
-                      <>
-                        <Compass className="h-3.5 w-3.5 animate-spin" />
-                        <span>Estimate Distance & Fuel</span>
-                      </>
-                    )}
-                  </button>
-                  <span className="text-[10px] text-slate-400 italic">Automatically computes KMs via driving route & calculates fuel allowance.</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">Calculated KMs</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={commuteKms}
-                      onChange={(e) => {
-                        setCommuteKms(e.target.value);
-                        if (e.target.value) {
-                          setFuelAllowance(String(Math.round(Number(e.target.value) * 4)));
-                        }
-                      }}
-                      placeholder="KMs travelled"
-                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">Fuel Allowance (₹)</label>
-                    <input
-                      type="number"
-                      value={fuelAllowance}
-                      onChange={(e) => setFuelAllowance(e.target.value)}
-                      placeholder="Fuel payout in INR"
-                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                    />
-                  </div>
-                </div>
-              </div>
 
               <button type="submit" className="w-full bg-secondary hover:bg-secondary-dark text-white font-extrabold p-3 rounded-xl transition-all cursor-pointer shadow-md">
                 {isEditMode ? 'Apply Modified Settings' : 'Create & Assign Booking'}
