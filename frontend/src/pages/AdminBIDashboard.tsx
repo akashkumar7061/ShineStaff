@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
+import { handleDownloadInvoice } from '../utils/invoiceGenerator';
 import MapView from '../components/MapView';
 import {
   Activity,
@@ -1710,6 +1711,7 @@ const AdminBIDashboard: React.FC = () => {
                       <th className="px-4 py-3">Price</th>
                       <th className="px-4 py-3">Rating</th>
                       <th className="px-4 py-3 text-center">Payment Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1756,6 +1758,15 @@ const AdminBIDashboard: React.FC = () => {
                             <option value="pending">Awaiting (Pending)</option>
                             <option value="outstanding">Overdue (Outstanding)</option>
                           </select>
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => handleDownloadInvoice(job)}
+                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 rounded-lg font-bold text-[10px] uppercase shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            <span>Invoice</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
