@@ -798,7 +798,20 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20' },
                 { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20' }
               ].map((kpi, idx) => (
-                <div key={idx} className="glass-card p-4 flex flex-col justify-between hover:scale-[1.02] transition-all">
+                <div
+                  key={idx}
+                  onClick={() => {
+                    if (kpi.label === 'Travel Distance') {
+                      setActiveSection('travel-expenses');
+                      setTimeout(() => {
+                        document.getElementById('manual-travel-form-container')?.scrollIntoView({ behavior: 'smooth' });
+                      }, 100);
+                    }
+                  }}
+                  className={`glass-card p-4 flex flex-col justify-between hover:scale-[1.02] transition-all ${
+                    kpi.label === 'Travel Distance' ? 'cursor-pointer border-l-2 border-l-violet-500 hover:bg-violet-500/5' : ''
+                  }`}
+                >
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
                   <h4 className="text-sm font-black text-slate-855 dark:text-white mt-1">{kpi.val}</h4>
                   <span className="text-[8px] text-slate-450 mt-1 block lowercase dark:text-slate-400">{kpi.desc}</span>
@@ -1122,7 +1135,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 </div>
 
                 {/* Form: Direct Daily Travel logger */}
-                <div className="glass-card p-5 border border-slate-150 dark:border-slate-800 bg-slate-55 dark:bg-slate-900/30 rounded-2xl max-w-full">
+                <div id="manual-travel-form-container" className="glass-card p-5 border border-slate-150 dark:border-slate-800 bg-slate-55 dark:bg-slate-900/30 rounded-2xl max-w-full">
                   <h4 className="text-xs font-black uppercase text-secondary tracking-wider mb-4 flex items-center space-x-1.5">
                     <Compass className="h-4.5 w-4.5 text-secondary animate-spin-slow" />
                     <span>Log Daily Travel commute</span>
