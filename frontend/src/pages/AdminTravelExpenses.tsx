@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { jsPDF } from 'jspdf';
 import api from '../utils/api';
 import {
   Compass,
@@ -477,8 +478,133 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = () => {
+    if (!selectedWorker) {
+      alert('Please select a worker first.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const isAll = selectedWorker._id === 'all';
+    
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(`Worker Travel & Expense Statement`, 14, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Worker: ${selectedWorker.name} (${selectedWorker.company})`, 14, 28);
+    doc.text(`Period: ${startDate} to ${endDate}`, 14, 34);
+    doc.text(`Generated At: ${new Date().toLocaleString()}`, 14, 40);
+    
+    // Summary Cards
+    doc.setFillColor(241, 245, 249);
+    doc.rect(14, 46, 182, 28, "F");
+    doc.setFont("helvetica", "bold");
+    doc.text("SUMMARY STATS", 20, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Distance: ${totalDistance.toFixed(2)} KM`, 20, 60);
+    doc.text(`Total Fuel Allowance: INR ${totalFuelCost.toFixed(2)}`, 20, 66);
+    doc.text(`Total Job Earnings: INR ${totalWorkEarnings.toFixed(2)}`, 110, 60);
+    doc.text(`Manual Adjustment: INR ${Number(manualAdjustment || 0).toFixed(2)}`, 110, 66);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Net Payout Amount: INR ${totalPayout.toFixed(2)}`, 20, 72);
+
+    // Jobs Table Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("CLEAN JOBS & COMMUTES LOGS", 14, 84);
+    
+    let y = 92;
+    doc.setFontSize(8);
+    doc.setFillColor(226, 232, 240);
+    doc.rect(14, y, 182, 6, "F");
+    
+    if (isAll) {
+      doc.text("Date", 16, y + 4.5);
+      doc.text("Worker", 34, y + 4.5);
+      doc.text("Service Title", 62, y + 4.5);
+      doc.text("Customer", 110, y + 4.5);
+      doc.text("Price", 142, y + 4.5);
+      doc.text("Dist (KM)", 160, y + 4.5);
+      doc.text("Fuel (INR)", 178, y + 4.5);
+    } else {
+      doc.text("Date", 16, y + 4.5);
+      doc.text("Job ID", 34, y + 4.5);
+      doc.text("Service Title", 54, y + 4.5);
+      doc.text("Customer", 110, y + 4.5);
+      doc.text("Price (INR)", 140, y + 4.5);
+      doc.text("Dist (KM)", 160, y + 4.5);
+      doc.text("Fuel (INR)", 178, y + 4.5);
+    }
+    
+    y += 6;
+    
+    doc.setFont("helvetica", "normal");
+    workerJobs.forEach((j) => {
+      // If we are reaching the end of the page, add a new page
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+        doc.setFillColor(226, 232, 240);
+        doc.rect(14, y, 182, 6, "F");
+        doc.setFont("helvetica", "bold");
+        if (isAll) {
+          doc.text("Date", 16, y + 4.5);
+          doc.text("Worker", 34, y + 4.5);
+          doc.text("Service Title", 62, y + 4.5);
+          doc.text("Customer", 110, y + 4.5);
+          doc.text("Price", 142, y + 4.5);
+          doc.text("Dist (KM)", 160, y + 4.5);
+          doc.text("Fuel (INR)", 178, y + 4.5);
+        } else {
+          doc.text("Date", 16, y + 4.5);
+          doc.text("Job ID", 34, y + 4.5);
+          doc.text("Service Title", 54, y + 4.5);
+          doc.text("Customer", 110, y + 4.5);
+          doc.text("Price (INR)", 140, y + 4.5);
+          doc.text("Dist (KM)", 160, y + 4.5);
+          doc.text("Fuel (INR)", 178, y + 4.5);
+        }
+        y += 6;
+        doc.setFont("helvetica", "normal");
+      }
+      
+      const cleanTitle = (j.title || '').substring(0, isAll ? 24 : 26);
+      const cleanClient = (j.clientName || '').substring(0, isAll ? 12 : 14);
+      
+      if (isAll) {
+        doc.text(j.date || '', 16, y + 4.5);
+        doc.text((j.workerId?.name || 'Unassigned').substring(0, 12), 34, y + 4.5);
+        doc.text(cleanTitle, 62, y + 4.5);
+        doc.text(cleanClient, 110, y + 4.5);
+        doc.text(Number(j.price || 0).toFixed(2), 142, y + 4.5);
+        doc.text(Number(j.fuelKmsTravelled || 0).toFixed(2), 160, y + 4.5);
+        doc.text(Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2), 178, y + 4.5);
+      } else {
+        doc.text(j.date || '', 16, y + 4.5);
+        doc.text(String(j.visitId || j._id).substring(0, 10), 34, y + 4.5);
+        doc.text(cleanTitle, 54, y + 4.5);
+        doc.text(cleanClient, 110, y + 4.5);
+        doc.text(Number(j.price || 0).toFixed(2), 140, y + 4.5);
+        doc.text(Number(j.fuelKmsTravelled || 0).toFixed(2), 160, y + 4.5);
+        doc.text(Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2), 178, y + 4.5);
+      }
+      y += 6;
+    });
+
+    // Draw total row
+    doc.line(14, y, 196, y);
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTALS", 16, y + 4.5);
+    doc.text(totalWorkEarnings.toFixed(2), isAll ? 142 : 140, y + 4.5);
+    doc.text(`${totalDistance.toFixed(2)} KM`, 160, y + 4.5);
+    doc.text(totalFuelCost.toFixed(2), 178, y + 4.5);
+
+    // Save
+    doc.save(`${selectedWorker.name}_travel_expense_report.pdf`);
   };
 
   return (
@@ -1244,15 +1370,15 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
                   <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-4 md:col-span-2">
                     <div>
-                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">Print PDF Statement</h4>
-                      <p className="text-[10px] text-slate-400">Generate formatted printable billing layout invoice and save as PDF document.</p>
+                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">PDF Statement (.pdf)</h4>
+                      <p className="text-[10px] text-slate-400">Generate formatted printable billing layout statement and download as PDF document.</p>
                     </div>
                     <button
-                      onClick={handlePrint}
+                      onClick={handleExportPDF}
                       className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase shadow-md flex items-center space-x-1.5 cursor-pointer transition-all"
                     >
-                      <Printer className="h-4 w-4" />
-                      <span>Print Document</span>
+                      <Download className="h-4 w-4" />
+                      <span>Download PDF</span>
                     </button>
                   </div>
                 </div>
