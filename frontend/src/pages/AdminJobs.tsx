@@ -1029,7 +1029,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </button>
 
           <button
-            onClick={() => { resetForm(); setCreateModalOpen(true); }}
+            onClick={() => { setCreateModalOpen(true); }}
             className="flex items-center space-x-1.5 bg-[#2563eb] hover:bg-blue-750 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -1597,8 +1597,16 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
       {/* Drafts Recovery Dialog */}
       {showDraftsPrompt && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in">
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5 text-xs text-slate-700 dark:text-slate-300">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDraftsPrompt(false);
+              setCreateModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
+        >
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5 text-xs text-slate-700 dark:text-slate-300 cursor-default">
             <div className="text-center space-y-2">
               <div className="mx-auto h-12 w-12 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl font-bold animate-bounce">
                 📝
@@ -1658,8 +1666,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       )}
 
       {createModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-850 overflow-hidden text-xs text-slate-655 dark:text-slate-350">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setCreateModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 cursor-pointer"
+        >
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-850 overflow-hidden text-xs text-slate-655 dark:text-slate-350 cursor-default">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center space-x-3">
                 <h3 className="font-extrabold text-slate-850 dark:text-white text-sm">
