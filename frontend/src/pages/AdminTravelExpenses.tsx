@@ -672,7 +672,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       });
       setModalCommissions(initialVals);
     }
-  }, [isCommissionModalOpen, workerJobs, workerCommissions]);
+  }, [isCommissionModalOpen]);
 
   // Google Maps Dir Link Builder
   const getGoogleMapsDirLink = (from: string, to: string) => {
