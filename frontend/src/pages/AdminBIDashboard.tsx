@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
-import { handleDownloadInvoice } from '../utils/invoiceGenerator';
+import { handleDownloadInvoice, handleShareInvoice } from '../utils/invoiceGenerator';
 import MapView from '../components/MapView';
 import {
   Activity,
@@ -38,7 +38,8 @@ import {
   RefreshCw,
   Settings as SettingsIcon,
   History,
-  Map
+  Map,
+  Share2
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -1694,13 +1695,24 @@ const AdminBIDashboard: React.FC = () => {
                           </select>
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => handleDownloadInvoice(job)}
-                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 rounded-lg font-bold text-[10px] uppercase shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            <span>Invoice</span>
-                          </button>
+                          <div className="inline-flex items-center space-x-1.5">
+                            <button
+                              onClick={() => handleDownloadInvoice(job)}
+                              className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 rounded-lg font-bold text-[10px] uppercase shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1"
+                              title="Download Invoice"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              <span>Download</span>
+                            </button>
+                            <button
+                              onClick={() => handleShareInvoice(job)}
+                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 rounded-lg font-bold text-[10px] uppercase shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1"
+                              title="Share Invoice PDF"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              <span>Share</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

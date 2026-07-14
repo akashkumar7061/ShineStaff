@@ -1,407 +1,331 @@
-export const handleDownloadInvoice = (job: any) => {
-    const companyInfo = {
-      SofaShine: {
-        name: "SofaShine",
-        tagline: "SofaShine",
-        logo: window.location.origin + "/logos/sofashine_logo.png",
-        address: `Plot No. 66, Upper Ground Floor, A-Block,
+import { jsPDF } from 'jspdf';
+
+// Helper to convert image url to HTMLImageElement
+const loadImage = (src: string): Promise<HTMLImageElement | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+};
+
+export const generateInvoicePDF = async (job: any): Promise<jsPDF> => {
+  const doc = new jsPDF({
+    orientation: 'p',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const companyInfo = {
+    SofaShine: {
+      name: "SofaShine",
+      tagline: "SofaShine",
+      logo: window.location.origin + "/logos/sofashine_logo.png",
+      address: `Plot No. 66, Upper Ground Floor, A-Block,
 Bhagwati Garden Road, Uttam Nagar,
 New Delhi – 110059, India`,
-        phone: "+91 89202 30357 / +91 93155 76914",
-        email: "sofashine.in@gmail.com",
-        gst: "07ERPPR3186G1Z5",
-        website: "https://sofashine.in",
-        accent: "#7c3aed",
-        terms: `Payment due on completion of service.
-Re-cleaning offered within 48 hours if unsatisfied.
-Prices may vary based on actual condition of items.
-GST included in all prices.`,
-        notes: "Thank you for choosing SofaShine.",
-        signature: window.location.origin + "/logos/sofashine_sig.png",
-        stamp: window.location.origin + "/logos/sofashine_stamp.jpg"
-      },
-      CleanCruisers: {
-        name: "CleanCruisers",
-        tagline: "CleanCruisers",
-        logo: window.location.origin + "/logos/cleancruisers_logo.png",
-        address: `Plot No. 66, Upper Ground Floor, A-Block,
+      phone: "+91 89202 30357 / +91 93155 76914",
+      email: "sofashine.in@gmail.com",
+      gst: "07ERPPR3186G1Z5",
+      website: "https://sofashine.in",
+      accent: [124, 58, 237], // #7c3aed
+      terms: [
+        "Payment due on completion of service.",
+        "Re-cleaning offered within 48 hours if unsatisfied.",
+        "Prices may vary based on actual condition of items.",
+        "GST included in all prices."
+      ],
+      notes: "Thank you for choosing SofaShine.",
+      signature: window.location.origin + "/logos/sofashine_sig.png",
+      stamp: window.location.origin + "/logos/sofashine_stamp.jpg"
+    },
+    CleanCruisers: {
+      name: "CleanCruisers",
+      tagline: "CleanCruisers",
+      logo: window.location.origin + "/logos/cleancruisers_logo.png",
+      address: `Plot No. 66, Upper Ground Floor, A-Block,
 Bhagwati Garden Road, Uttam Nagar,
 New Delhi – 110059, India`,
-        phone: "+91 89202 30357 / +91 93155 76914",
-        email: "cleancruisers.in@gmail.com",
-        gst: "07ERPPR3186G1Z5",
-        website: "https://cleancruisers.in",
-        accent: "#16a34a",
-        terms: `Payment due on completion of service.
-Re-clean offered within 24 hours if not satisfied.
-Prices may vary for luxury / vintage vehicles.
-GST included in all prices.`,
-        notes: "Thank you for choosing CleanCruisers.",
-        signature: window.location.origin + "/logos/cleancruisers_sig.png",
-        stamp: window.location.origin + "/logos/cleancruisers_stamp.jpg"
-      }
-    };
-
-    const comp = companyInfo[job.company as keyof typeof companyInfo] || companyInfo.SofaShine;
-    const invNumber = job.visitId || `INV-${job._id?.slice(-6).toUpperCase() || '101'}`;
-    const invDate = job.date ? new Date(job.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice - ${invNumber}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
-          body {
-            font-family: 'Outfit', sans-serif;
-            margin: 0;
-            padding: 0;
-            color: #334155;
-            background-color: #ffffff;
-            -webkit-print-color-adjust: exact;
-          }
-          .print-preview-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            background-color: #0f172a;
-            color: #ffffff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 30px;
-            z-index: 9999;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            font-family: 'Outfit', sans-serif;
-            border-bottom: 2px solid ${comp.accent};
-          }
-          .preview-title {
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-          }
-          .preview-actions {
-            display: flex;
-            gap: 12px;
-          }
-          .btn-download {
-            background-color: ${comp.accent};
-            color: white;
-            border: none;
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-          }
-          .btn-download:hover {
-            filter: brightness(1.1);
-          }
-          .btn-close {
-            background-color: #334155;
-            color: white;
-            border: none;
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-          .btn-close:hover {
-            background-color: #475569;
-          }
-          
-          /* Adjust body padding so header doesn't cover content */
-          body {
-            padding-top: 85px !important;
-          }
-
-          /* Hide header and reset padding when printing */
-          @media print {
-            .print-preview-header {
-              display: none !important;
-            }
-            body {
-              padding-top: 0px !important;
-            }
-          }
-          .invoice-box {
-            width: 100%;
-            max-width: 800px;
-            margin: auto;
-            padding: 25px;
-            box-sizing: border-box;
-          }
-          .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 2px solid ${comp.accent};
-            padding-bottom: 20px;
-            margin-bottom: 25px;
-          }
-          .company-tagline {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #64748b;
-            margin-bottom: 8px;
-          }
-          .info-text {
-            font-size: 11px;
-            line-height: 1.5;
-            color: #64748b;
-          }
-          .title-area {
-            text-align: right;
-          }
-          .invoice-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0 0 10px 0;
-          }
-          .meta-item {
-            font-size: 12px;
-            margin-bottom: 4px;
-          }
-          .meta-item strong {
-            color: #0f172a;
-          }
-          .bill-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            font-size: 12px;
-          }
-          .bill-to {
-            max-width: 50%;
-          }
-          .bill-to-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #64748b;
-            margin-bottom: 6px;
-            font-weight: 600;
-          }
-          .client-name {
-            font-size: 14px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 4px;
-          }
-          .client-details {
-            line-height: 1.5;
-            color: #475569;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 25px;
-            font-size: 12px;
-          }
-          .items-table th {
-            background-color: ${comp.accent};
-            color: #ffffff;
-            font-weight: 600;
-            text-align: left;
-            padding: 10px;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: 0.5px;
-          }
-          .items-table td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e2e8f0;
-            color: #334155;
-          }
-          .items-table tr:last-child td {
-            border-bottom: 2px solid ${comp.accent};
-          }
-          .summary-area {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 40px;
-          }
-          .summary-table {
-            width: 250px;
-            font-size: 12px;
-          }
-          .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-          }
-          .summary-row.total {
-            border-top: 1.5px solid #cbd5e1;
-            font-weight: 700;
-            font-size: 14px;
-            color: ${comp.accent};
-            padding-top: 10px;
-            margin-top: 5px;
-          }
-          .footer-section {
-            border-top: 1px solid #e2e8f0;
-            padding-top: 20px;
-            font-size: 10px;
-            color: #64748b;
-            line-height: 1.6;
-          }
-          .terms-title {
-            font-weight: 600;
-            color: #475569;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .notes-msg {
-            margin-top: 15px;
-            text-align: center;
-            font-style: italic;
-            color: #475569;
-            font-size: 11px;
-            font-weight: 500;
-          }
-          @media print {
-            body {
-              padding: 0;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-preview-header">
-          <div class="preview-title">${comp.name} - Invoice Preview (${invNumber})</div>
-          <div class="preview-actions">
-            <button onclick="window.print()" class="btn-download">Download PDF</button>
-            <button onclick="window.close()" class="btn-close">Close Preview</button>
-          </div>
-        </div>
-
-        <div class="invoice-box">
-          <div class="header-row">
-            <div>
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                <img src="${comp.logo}" alt="${comp.name}" style="height: 42px; width: auto; display: block;" />
-                <span style="font-size: 24px; font-weight: 700; color: ${comp.accent}; font-family: 'Outfit', sans-serif;">${comp.name}</span>
-              </div>
-              <div class="company-tagline">${comp.tagline}</div>
-              <div class="info-text" style="white-space: pre-line;">${comp.address}</div>
-              <div class="info-text" style="margin-top: 6px;">
-                <strong>Phone:</strong> ${comp.phone}<br>
-                <strong>Email:</strong> ${comp.email}<br>
-                <strong>GSTIN:</strong> ${comp.gst}
-              </div>
-            </div>
-            <div class="title-area">
-              <h1 class="invoice-title">INVOICE</h1>
-              <div class="meta-item"><strong>Invoice No:</strong> ${invNumber}</div>
-              <div class="meta-item"><strong>Date:</strong> ${invDate}</div>
-              <div class="meta-item"><strong>Due Date:</strong> ${invDate}</div>
-            </div>
-          </div>
-
-          <div class="bill-row">
-            <div class="bill-to">
-              <div class="bill-to-title">Billed To:</div>
-              <div class="client-name">${job.clientName}</div>
-              <div class="client-details">
-                <strong>Phone:</strong> ${job.clientPhone}<br>
-                <strong>Address:</strong> ${job.address}
-              </div>
-            </div>
-            <div style="text-align: right;">
-              <div class="bill-to-title">Payment Mode:</div>
-              <div style="font-weight: 600; color: #0f172a; font-size: 12px; margin-top: 4px;">UPI / Cash</div>
-            </div>
-          </div>
-
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th style="width: 55%;">Service Description</th>
-                <th style="text-align: center; width: 10%;">Qty</th>
-                <th style="text-align: right; width: 15%;">Rate (₹)</th>
-                <th style="text-align: right; width: 20%;">Amount (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${job.title}${job.description ? ' - ' + job.description : ''}</td>
-                <td style="text-align: center;">1</td>
-                <td style="text-align: right;">${job.price.toFixed(2)}</td>
-                <td style="text-align: right;">${job.price.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Summary Table -->
-          <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-            <div class="summary-table">
-              <div class="summary-row">
-                <span>Subtotal</span>
-                <span>₹${job.price.toFixed(2)}</span>
-              </div>
-              <div class="summary-row">
-                <span>Tax (GST Included)</span>
-                <span>₹0.00</span>
-              </div>
-              <div class="summary-row total">
-                <span>Total Amount</span>
-                <span>₹${job.price.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="footer-section">
-            <div class="terms-title">Terms & Conditions:</div>
-            <div style="white-space: pre-line; margin-bottom: 25px;">${comp.terms}</div>
-
-            <!-- Signature Block (Below Terms & Conditions) -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 30px; text-align: left;">
-              <div style="font-size: 12px; color: #475569; width: 320px;">
-                <div style="margin-bottom: 8px;">For <strong>${comp.name}</strong></div>
-                <div style="height: 60px; display: flex; align-items: flex-end; gap: 15px; margin-bottom: 4px;">
-                  <!-- Company Stamp (Mohar) -->
-                  <img src="${comp.stamp}" alt="Stamp" style="height: 55px; width: 55px; object-fit: contain; opacity: 0.9;" />
-                  <!-- Signature -->
-                  <img src="${comp.signature}" alt="Signature" style="height: 48px; max-width: 220px; object-fit: contain;" />
-                </div>
-                <div style="border-bottom: 1.5px solid #94a3b8; margin-bottom: 6px; width: 100%;"></div>
-                <div style="font-weight: 600; color: #0f172a; font-size: 11px; text-align: center;">
-                  Authorised Signature
-                </div>
-              </div>
-            </div>
-
-            <div class="notes-msg">${comp.notes}</div>
-          </div>
-        </div>
-
-        <script>
-          // Preview screen scripts
-        </script>
-      </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-    } else {
-      alert("Popup blocker prevented opening invoice. Please allow popups for this site.");
+      phone: "+91 89202 30357 / +91 93155 76914",
+      email: "cleancruisers.in@gmail.com",
+      gst: "07ERPPR3186G1Z5",
+      website: "https://cleancruisers.in",
+      accent: [22, 163, 74], // #16a34a
+      terms: [
+        "Payment due on completion of service.",
+        "Re-clean offered within 24 hours if not satisfied.",
+        "Prices may vary for luxury / vintage vehicles.",
+        "GST included in all prices."
+      ],
+      notes: "Thank you for choosing CleanCruisers.",
+      signature: window.location.origin + "/logos/cleancruisers_sig.png",
+      stamp: window.location.origin + "/logos/cleancruisers_stamp.jpg"
     }
   };
+
+  const comp = companyInfo[job.company as keyof typeof companyInfo] || companyInfo.SofaShine;
+  const invNumber = job.visitId || `INV-${job._id?.slice(-6).toUpperCase() || '101'}`;
+  const invDate = job.date ? new Date(job.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  // Load logo, signature and stamp images
+  const [logoImg, sigImg, stampImg] = await Promise.all([
+    loadImage(comp.logo),
+    loadImage(comp.signature),
+    loadImage(comp.stamp)
+  ]);
+
+  // Page layout variables
+  const margin = 15;
+  const accentColor = comp.accent;
+  
+  // Header accent bar
+  doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+  doc.rect(0, 0, 210, 4, 'F');
+
+  // Company Logo & Name
+  let y = 15;
+  if (logoImg) {
+    doc.addImage(logoImg, 'PNG', margin, y, 12, 12);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.text(comp.name, margin + 15, y + 9);
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.text(comp.name, margin, y + 9);
+  }
+
+  // Invoice Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(26);
+  doc.setTextColor(30, 41, 59);
+  doc.text("INVOICE", 145, y + 9);
+
+  y += 18;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(comp.tagline.toUpperCase(), margin, y);
+  
+  y += 4;
+  const addressLines = comp.address.split('\n');
+  addressLines.forEach((line) => {
+    doc.text(line, margin, y);
+    y += 4;
+  });
+  
+  doc.text(`Phone: ${comp.phone}`, margin, y);
+  y += 4;
+  doc.text(`Email: ${comp.email}`, margin, y);
+  y += 4;
+  doc.text(`GSTIN: ${comp.gst}`, margin, y);
+
+  // Invoice Metadata (Right side)
+  let rightY = 37;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(30, 41, 59);
+  
+  doc.text(`Invoice No:`, 145, rightY);
+  doc.setFont("helvetica", "normal");
+  doc.text(invNumber, 170, rightY);
+  
+  rightY += 5;
+  doc.setFont("helvetica", "bold");
+  doc.text(`Date:`, 145, rightY);
+  doc.setFont("helvetica", "normal");
+  doc.text(invDate, 170, rightY);
+
+  rightY += 5;
+  doc.setFont("helvetica", "bold");
+  doc.text(`Due Date:`, 145, rightY);
+  doc.setFont("helvetica", "normal");
+  doc.text(invDate, 170, rightY);
+
+  // Draw separator line
+  y = Math.max(y, rightY) + 6;
+  doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, 210 - margin, y);
+
+  // Billed To & Payment Mode
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text("BILLED TO:", margin, y);
+  doc.text("PAYMENT MODE:", 145, y);
+
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text(job.clientName, margin, y);
+  doc.text("UPI / Cash", 145, y);
+
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Phone: ${job.clientPhone}`, margin, y);
+  
+  y += 4;
+  const clientAddrLines = doc.splitTextToSize(job.address, 100);
+  clientAddrLines.forEach((line: string) => {
+    doc.text(line, margin, y);
+    y += 4;
+  });
+
+  // Items Table
+  y += 6;
+  doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+  doc.rect(margin, y, 180, 7, 'F');
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(255, 255, 255);
+  doc.text("SERVICE DESCRIPTION", margin + 2, y + 4.5);
+  doc.text("QTY", margin + 105, y + 4.5, { align: 'center' });
+  doc.text("RATE (INR)", margin + 135, y + 4.5, { align: 'right' });
+  doc.text("AMOUNT (INR)", margin + 175, y + 4.5, { align: 'right' });
+
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(51, 65, 85);
+  
+  // Row content
+  const descText = `${job.title}${job.description ? ' - ' + job.description : ''}`;
+  const descLines = doc.splitTextToSize(descText, 95);
+  let rowHeight = descLines.length * 5 + 4;
+  
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y + rowHeight, margin + 180, y + rowHeight);
+
+  // Draw cells
+  let tempY = y + 4.5;
+  descLines.forEach((line: string) => {
+    doc.text(line, margin + 2, tempY);
+    tempY += 5;
+  });
+  
+  doc.text("1", margin + 105, y + 4.5, { align: 'center' });
+  doc.text(job.price.toFixed(2), margin + 135, y + 4.5, { align: 'right' });
+  doc.text(job.price.toFixed(2), margin + 175, y + 4.5, { align: 'right' });
+
+  // Summary section
+  y += rowHeight + 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(71, 85, 105);
+  
+  doc.text("Subtotal", 130, y);
+  doc.text(`INR ${job.price.toFixed(2)}`, 195, y, { align: 'right' });
+  
+  y += 5;
+  doc.text("Tax (GST Included)", 130, y);
+  doc.text("INR 0.00", 195, y, { align: 'right' });
+  
+  y += 3;
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.4);
+  doc.line(130, y, 195, y);
+  
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+  doc.text("Total Amount", 130, y);
+  doc.text(`INR ${job.price.toFixed(2)}`, 195, y, { align: 'right' });
+
+  // Terms and Conditions
+  y += 12;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text("TERMS & CONDITIONS:", margin, y);
+  
+  y += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  comp.terms.forEach((term) => {
+    doc.text(`- ${term}`, margin, y);
+    y += 3.5;
+  });
+
+  // Signature Block
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`For ${comp.name}`, margin, y);
+
+  if (stampImg) {
+    doc.addImage(stampImg, 'JPEG', margin, y + 2, 14, 14);
+  }
+  if (sigImg) {
+    doc.addImage(sigImg, 'PNG', margin + 16, y + 2, 35, 12);
+  }
+
+  y += 18;
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.4);
+  doc.line(margin, y, margin + 65, y);
+  
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Authorised Signature", margin + 12, y);
+
+  // Footer notes
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  doc.setTextColor(71, 85, 105);
+  doc.text(comp.notes, 105, 280, { align: 'center' });
+
+  return doc;
+};
+
+export const handleDownloadInvoice = async (job: any) => {
+  try {
+    const doc = await generateInvoicePDF(job);
+    const invNumber = job.visitId || `INV-${job._id?.slice(-6).toUpperCase() || '101'}`;
+    const filename = `${job.clientName.replace(/\s+/g, '_')}_invoice_${invNumber}.pdf`;
+    doc.save(filename);
+  } catch (err) {
+    console.error('Failed to generate and download PDF invoice:', err);
+    alert('Failed to generate and download PDF invoice.');
+  }
+};
+
+export const handleShareInvoice = async (job: any) => {
+  try {
+    const doc = await generateInvoicePDF(job);
+    const invNumber = job.visitId || `INV-${job._id?.slice(-6).toUpperCase() || '101'}`;
+    const pdfData = doc.output('blob');
+    const filename = `${job.clientName.replace(/\s+/g, '_')}_invoice_${invNumber}.pdf`;
+    const file = new File([pdfData], filename, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `${job.company} Invoice`,
+        text: `Please find attached the invoice for the service.`
+      });
+    } else {
+      // Fallback: download the file
+      doc.save(filename);
+      alert('PDF direct sharing is not supported on this device/browser. The invoice has been downloaded instead.');
+    }
+  } catch (err) {
+    console.error('Failed to share invoice:', err);
+    alert('Failed to share invoice.');
+  }
+};

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../utils/api';
-import { handleDownloadInvoice } from '../utils/invoiceGenerator';
+import { handleDownloadInvoice, handleShareInvoice } from '../utils/invoiceGenerator';
 import MapView from '../components/MapView';
 import GPSAddress from '../components/GPSAddress';
 import {
@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Send,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  Share2
 } from 'lucide-react';
 
 const formatTimeTo12Hour = (timeStr: string) => {
@@ -1134,13 +1135,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <span>Compare Photos Fullscreen</span>
                   </button>
 
-                  <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/60 mt-1">
+                  <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/60 mt-1 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => handleDownloadInvoice(selectedJobForDrawer)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs shadow-md transition-all cursor-pointer"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs shadow-md transition-all cursor-pointer"
                     >
                       <Download className="h-4 w-4" />
-                      <span>Download Corporate Invoice</span>
+                      <span>Download</span>
+                    </button>
+                    <button
+                      onClick={() => handleShareInvoice(selectedJobForDrawer)}
+                      className="bg-indigo-650 hover:bg-indigo-700 text-white font-extrabold py-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs shadow-md transition-all cursor-pointer"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span>Share PDF</span>
                     </button>
                   </div>
                 </div>
