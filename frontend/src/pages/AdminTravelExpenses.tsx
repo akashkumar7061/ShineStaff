@@ -91,6 +91,16 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [editingCommAmount, setEditingCommAmount] = useState<string>('');
   const [editingCommRemarks, setEditingCommRemarks] = useState<string>('');
 
+  // Dashboard Salary Tables States
+  const [searchWorkerSummary, setSearchWorkerSummary] = useState('');
+  const [sortFieldSummary, setSortFieldSummary] = useState('name');
+  const [sortAscSummary, setSortAscSummary] = useState(true);
+
+  const [searchDetailedSalary, setSearchDetailedSalary] = useState('');
+  const [sortFieldDetailed, setSortFieldDetailed] = useState('date');
+  const [sortAscDetailed, setSortAscDetailed] = useState(false);
+  const [detailedPage, setDetailedPage] = useState(1);
+
   // Manual Commute Logging states
   const [logWorker, setLogWorker] = useState<string>('');
   const [logKms, setLogKms] = useState<string>('');
@@ -277,12 +287,110 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
   const totalFuelCost = totalDistance * globalFuelRate;
   const totalCommission = workerCommissions.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+
+  // Worker-wise Summary Aggregator for "All Workers"
+  const getWorkerWiseSummary = () => {
+    return workers.map(w => {
+      const jobsForWorker = jobs.filter(j => 
+        (j.workerId?._id === w._id || j.workerId === w._id) &&
+        j.status === 'completed' &&
+        j.date && j.date >= startDate && j.date <= endDate
+      );
+      
+      const travelForWorker = travelLogs.filter(log => 
+        (log.workerId?._id === w._id || log.workerId === w._id) &&
+        log.date && log.date >= startDate && log.date <= endDate
+      );
+
+      const commForWorker = commissions.filter(c => 
+        (c.workerId?._id === w._id || c.workerId === w._id) &&
+        c.jobDate && c.jobDate >= startDate && c.jobDate <= endDate
+      );
+
+      const jobsCount = jobsForWorker.length;
+      const earnings = jobsForWorker.reduce((sum, j) => sum + (j.price || 0), 0);
+      const distance = travelForWorker.reduce((sum, log) => sum + (log.kms || 0), 0) + 
+                       jobsForWorker.reduce((sum, j) => sum + (j.fuelKmsTravelled || 0), 0);
+      const fuelCost = distance * globalFuelRate;
+      const commission = commForWorker.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+      const netSalary = earnings - commission - fuelCost;
+
+      return {
+        _id: w._id,
+        name: w.name,
+        jobsCount,
+        earnings,
+        commission,
+        fuelCost,
+        netSalary
+      };
+    });
+  };
+
+  const workerSummaries = getWorkerWiseSummary();
+  
+  // Grand totals
+  const grandCompletedJobs = workerSummaries.reduce((sum, s) => sum + s.jobsCount, 0);
+  const grandWorkEarnings = workerSummaries.reduce((sum, s) => sum + s.earnings, 0);
+  const grandCommission = workerSummaries.reduce((sum, s) => sum + s.commission, 0);
+  const grandFuelCost = workerSummaries.reduce((sum, s) => sum + s.fuelCost, 0);
+  const grandNetSalary = workerSummaries.reduce((sum, s) => sum + s.netSalary, 0);
+
+  // Salary Analytics Calculations
+  const highestPaid = workerSummaries.length > 0 && workerSummaries.some(s => s.jobsCount > 0)
+    ? [...workerSummaries].filter(s => s.jobsCount > 0).sort((a, b) => b.netSalary - a.netSalary)[0] 
+    : null;
+  const lowestPaid = workerSummaries.length > 0 && workerSummaries.some(s => s.jobsCount > 0)
+    ? [...workerSummaries].filter(s => s.jobsCount > 0).sort((a, b) => a.netSalary - b.netSalary)[0] 
+    : null;
+  const averageSalary = grandNetSalary / (workerSummaries.filter(s => s.jobsCount > 0).length || 1);
+  const averageEarningsPerJob = grandWorkEarnings / (grandCompletedJobs || 1);
+  const averageCommission = grandCommission / (grandCompletedJobs || 1);
+  const averageFuelCost = grandFuelCost / (grandCompletedJobs || 1);
   
   // Total travel time in minutes (estimated 2 mins per KM + 15 mins buffer per job)
   const totalTravelTimeMinutes = Math.round(totalDistance * 1.8 + totalJobsCount * 12);
   const formattedTravelTime = `${Math.floor(totalTravelTimeMinutes / 60)}h ${totalTravelTimeMinutes % 60}m`;
 
   const totalPayout = totalWorkEarnings - totalCommission - totalFuelCost;
+
+  const getSortedWorkerSummaries = () => {
+    let list = [...workerSummaries];
+    if (searchWorkerSummary) {
+      list = list.filter(s => s.name.toLowerCase().includes(searchWorkerSummary.toLowerCase()));
+    }
+    list.sort((a: any, b: any) => {
+      let valA = a[sortFieldSummary];
+      let valB = b[sortFieldSummary];
+      if (typeof valA === 'string') {
+        return sortAscSummary ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return sortAscSummary ? (valA - valB) : (valB - valA);
+    });
+    return list;
+  };
+
+  const getSortedDetailedRecords = () => {
+    let list = getCommissionReportData();
+    if (searchDetailedSalary) {
+      list = list.filter(r => 
+        r.workerName.toLowerCase().includes(searchDetailedSalary.toLowerCase()) ||
+        r.customer.toLowerCase().includes(searchDetailedSalary.toLowerCase()) ||
+        r.service.toLowerCase().includes(searchDetailedSalary.toLowerCase()) ||
+        r.jobId.toLowerCase().includes(searchDetailedSalary.toLowerCase()) ||
+        r.remarks.toLowerCase().includes(searchDetailedSalary.toLowerCase())
+      );
+    }
+    list.sort((a: any, b: any) => {
+      let valA = a[sortFieldDetailed];
+      let valB = b[sortFieldDetailed];
+      if (typeof valA === 'string') {
+        return sortAscDetailed ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return sortAscDetailed ? (valA - valB) : (valB - valA);
+    });
+    return list;
+  };
 
   // Inline Edits Handlers
   const handleSaveJob = async () => {
@@ -388,6 +496,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     return workerJobs.map(j => {
       const comm = workerCommissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
       const commAmt = comm ? comm.commissionAmount : 0;
+      const commRemarks = comm ? comm.remarks : '';
       const fuelCost = (j.fuelKmsTravelled || 0) * globalFuelRate;
       const payout = (j.price || 0) - commAmt - fuelCost;
       return {
@@ -400,7 +509,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         commission: commAmt,
         fuelCost,
         grandPayout: payout,
-        date: j.date || ''
+        date: j.date || '',
+        paymentStatus: j.paymentStatus || 'pending',
+        remarks: commRemarks || ''
       };
     });
   };
@@ -413,18 +524,18 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     const html = `
       <html>
         <head>
-          <title>Commission & Payout Report - ${selectedWorker.name}</title>
+          <title>Worker Salary & Profit Report - ${selectedWorker.name}</title>
           <style>
             body { font-family: sans-serif; padding: 20px; color: #1e293b; }
             h2 { margin-bottom: 5px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
             th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
             th { background-color: #f8fafc; font-weight: bold; }
             .total-row { font-weight: bold; background-color: #f1f5f9; }
           </style>
         </head>
         <body>
-          <h2>Commission & Payout Statement - ${selectedWorker.name}</h2>
+          <h2>Worker Salary & Profit Statement - ${selectedWorker.name}</h2>
           <p>Period: ${startDate} to ${endDate} | Company: ${companyFilter}</p>
           <table>
             <thead>
@@ -438,7 +549,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <th>Work Amount</th>
                 <th>Commission</th>
                 <th>Fuel Cost</th>
-                <th>Grand Payout</th>
+                <th>Profit</th>
+                <th>Status</th>
+                <th>Remarks</th>
               </tr>
             </thead>
             <tbody>
@@ -454,6 +567,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <td>₹${item.commission.toFixed(2)}</td>
                   <td>₹${item.fuelCost.toFixed(2)}</td>
                   <td>₹${item.grandPayout.toFixed(2)}</td>
+                  <td>${item.paymentStatus}</td>
+                  <td>${item.remarks}</td>
                 </tr>
               `).join('')}
               <tr class="total-row">
@@ -462,6 +577,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <td>₹${totalCommission.toFixed(2)}</td>
                 <td>₹${totalFuelCost.toFixed(2)}</td>
                 <td>₹${totalPayout.toFixed(2)}</td>
+                <td colspan="2"></td>
               </tr>
             </tbody>
           </table>
@@ -481,7 +597,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       return;
     }
 
-    const filename = `${selectedWorker.name}_commission_report.${format}`;
+    const filename = `${selectedWorker.name}_salary_report.${format}`;
     let content = '';
     const data = getCommissionReportData();
 
@@ -494,7 +610,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             <x:ExcelWorkbook>
               <x:ExcelWorksheets>
                 <x:ExcelWorksheet>
-                  <x:Name>Commission Report</x:Name>
+                  <x:Name>Salary Report</x:Name>
                   <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
                 </x:ExcelWorksheet>
               </x:ExcelWorksheets>
@@ -504,7 +620,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
           <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
         </head>
         <body>
-          <h2>Worker Commission & Payout Statement - ${selectedWorker.name}</h2>
+          <h2>Worker Salary & Profit Statement - ${selectedWorker.name}</h2>
           <p>Period: ${startDate} to ${endDate}</p>
           <table border="1">
             <thead>
@@ -518,7 +634,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <th>Work Amount (INR)</th>
                 <th>Commission (INR)</th>
                 <th>Fuel Cost (INR)</th>
-                <th>Grand Payout (INR)</th>
+                <th>Profit (INR)</th>
+                <th>Payment Status</th>
+                <th>Remarks</th>
               </tr>
             </thead>
             <tbody>
@@ -534,6 +652,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <td>${item.commission.toFixed(2)}</td>
                   <td>${item.fuelCost.toFixed(2)}</td>
                   <td>${item.grandPayout.toFixed(2)}</td>
+                  <td>${item.paymentStatus}</td>
+                  <td>${item.remarks}</td>
                 </tr>
               `).join('')}
               <tr style="font-weight: bold; background-color: #e2e8f0;">
@@ -542,6 +662,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <td>₹${totalCommission.toFixed(2)}</td>
                 <td>₹${totalFuelCost.toFixed(2)}</td>
                 <td>₹${totalPayout.toFixed(2)}</td>
+                <td colspan="2"></td>
               </tr>
             </tbody>
           </table>
@@ -550,7 +671,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       `;
     } else {
       // CSV Export
-      const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Grand Payout"];
+      const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Profit", "Payment Status", "Remarks"];
       const rows = data.map(item => [
         item.date,
         item.workerName,
@@ -561,7 +682,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         item.workAmount.toFixed(2),
         item.commission.toFixed(2),
         item.fuelCost.toFixed(2),
-        item.grandPayout.toFixed(2)
+        item.grandPayout.toFixed(2),
+        item.paymentStatus,
+        item.remarks
       ]);
       content = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
     }
@@ -582,13 +705,13 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       return;
     }
 
-    const doc = new jsPDF();
+    const doc = new jsPDF('l', 'mm', 'a4');
     const data = getCommissionReportData();
     
     // Title
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text(`Worker Commission & Payout Statement`, 14, 20);
+    doc.text(`Worker Salary & Profit Statement`, 14, 20);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
@@ -599,65 +722,79 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     // Table headers
     let y = 50;
     doc.setFillColor(226, 232, 240);
-    doc.rect(14, y, 182, 6, "F");
+    doc.rect(14, y, 269, 6, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.text("Date", 16, y + 4.5);
-    doc.text("Job ID", 32, y + 4.5);
-    doc.text("Service", 50, y + 4.5);
-    doc.text("Customer", 94, y + 4.5);
-    doc.text("Work Amt", 124, y + 4.5);
-    doc.text("Comm", 144, y + 4.5);
-    doc.text("Fuel", 164, y + 4.5);
-    doc.text("Payout", 182, y + 4.5);
+    doc.text("Worker Name", 36, y + 4.5);
+    doc.text("Job ID", 66, y + 4.5);
+    doc.text("Company", 82, y + 4.5);
+    doc.text("Customer", 97, y + 4.5);
+    doc.text("Service", 127, y + 4.5);
+    doc.text("Work Amt", 167, y + 4.5);
+    doc.text("Comm", 187, y + 4.5);
+    doc.text("Fuel", 207, y + 4.5);
+    doc.text("Net Salary", 227, y + 4.5);
+    doc.text("Status", 247, y + 4.5);
+    doc.text("Remarks", 262, y + 4.5);
     
     y += 6;
     doc.setFont("helvetica", "normal");
 
     data.forEach(item => {
-      if (y > 270) {
+      if (y > 185) {
         doc.addPage();
         y = 20;
         doc.setFillColor(226, 232, 240);
-        doc.rect(14, y, 182, 6, "F");
+        doc.rect(14, y, 269, 6, "F");
         doc.setFont("helvetica", "bold");
         doc.text("Date", 16, y + 4.5);
-        doc.text("Job ID", 32, y + 4.5);
-        doc.text("Service", 50, y + 4.5);
-        doc.text("Customer", 94, y + 4.5);
-        doc.text("Work Amt", 124, y + 4.5);
-        doc.text("Comm", 144, y + 4.5);
-        doc.text("Fuel", 164, y + 4.5);
-        doc.text("Payout", 182, y + 4.5);
+        doc.text("Worker Name", 36, y + 4.5);
+        doc.text("Job ID", 66, y + 4.5);
+        doc.text("Company", 82, y + 4.5);
+        doc.text("Customer", 97, y + 4.5);
+        doc.text("Service", 127, y + 4.5);
+        doc.text("Work Amt", 167, y + 4.5);
+        doc.text("Comm", 187, y + 4.5);
+        doc.text("Fuel", 207, y + 4.5);
+        doc.text("Net Salary", 227, y + 4.5);
+        doc.text("Status", 247, y + 4.5);
+        doc.text("Remarks", 262, y + 4.5);
         y += 6;
         doc.setFont("helvetica", "normal");
       }
 
+      const cleanWorker = item.workerName.substring(0, 16);
       const cleanService = item.service.substring(0, 20);
       const cleanCustomer = item.customer.substring(0, 14);
+      const cleanRemarks = item.remarks.substring(0, 15);
 
       doc.text(item.date, 16, y + 4.5);
-      doc.text(String(item.jobId).substring(0, 8), 32, y + 4.5);
-      doc.text(cleanService, 50, y + 4.5);
-      doc.text(cleanCustomer, 94, y + 4.5);
-      doc.text(Number(item.workAmount).toFixed(2), 124, y + 4.5);
-      doc.text(Number(item.commission).toFixed(2), 144, y + 4.5);
-      doc.text(Number(item.fuelCost).toFixed(2), 164, y + 4.5);
-      doc.text(Number(item.grandPayout).toFixed(2), 182, y + 4.5);
+      doc.text(cleanWorker, 36, y + 4.5);
+      doc.text(String(item.jobId).substring(0, 8), 66, y + 4.5);
+      doc.text(item.company, 82, y + 4.5);
+      doc.text(cleanCustomer, 97, y + 4.5);
+      doc.text(cleanService, 127, y + 4.5);
+      doc.text(Number(item.workAmount).toFixed(2), 167, y + 4.5);
+      doc.text(Number(item.commission).toFixed(2), 187, y + 4.5);
+      doc.text(Number(item.fuelCost).toFixed(2), 207, y + 4.5);
+      doc.text(Number(item.grandPayout).toFixed(2), 227, y + 4.5);
+      doc.text(item.paymentStatus, 247, y + 4.5);
+      doc.text(cleanRemarks, 262, y + 4.5);
       y += 6;
     });
 
     // Totals row
-    doc.line(14, y, 196, y);
+    doc.line(14, y, 283, y);
     y += 2;
     doc.setFont("helvetica", "bold");
     doc.text("TOTALS", 16, y + 4.5);
-    doc.text(totalWorkEarnings.toFixed(2), 124, y + 4.5);
-    doc.text(totalCommission.toFixed(2), 144, y + 4.5);
-    doc.text(totalFuelCost.toFixed(2), 164, y + 4.5);
-    doc.text(totalPayout.toFixed(2), 182, y + 4.5);
+    doc.text(totalWorkEarnings.toFixed(2), 167, y + 4.5);
+    doc.text(totalCommission.toFixed(2), 187, y + 4.5);
+    doc.text(totalFuelCost.toFixed(2), 207, y + 4.5);
+    doc.text(totalPayout.toFixed(2), 227, y + 4.5);
 
-    doc.save(`${selectedWorker.name}_commission_payout_report.pdf`);
+    doc.save(`${selectedWorker.name}_salary_report.pdf`);
   };
 
   useEffect(() => {
@@ -1158,9 +1295,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'work-earnings' },
                 { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
                 { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
-                { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'daily-travel' },
+                { label: 'Net Salary', val: `₹${totalPayout.toFixed(2)}`, desc: 'worker payout', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'work-earnings' },
                 { label: 'Commission', val: `₹${totalCommission.toFixed(2)}`, desc: 'commission paid', color: 'text-amber-500 bg-amber-50/50 dark:bg-amber-950/10', section: 'commissions' },
-                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
+                { label: 'Profit', val: `₹${totalPayout.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
               ].map((kpi, idx) => (
                 <div
                   key={idx}
@@ -1229,28 +1366,329 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                  </div>
-                </div>
+                      {/* 1. If All Workers is selected: show Worker Salary Summary & Analytics */}
+                {selectedWorker._id === 'all' && (
+                  <div className="space-y-6">
+                    {/* Worker Salary Summary Table Card */}
+                    <div className="glass-card p-6 space-y-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                          <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center space-x-1.5">
+                            <span>💼</span>
+                            <span>Worker Salary Summary</span>
+                          </h3>
+                          <p className="text-[10px] text-slate-400">Worker-wise consolidated completed jobs, earnings, commissions, fuel, and net salaries.</p>
+                        </div>
+                        {/* Search Input for Summary */}
+                        <div className="relative w-full sm:w-64">
+                          <input
+                            type="text"
+                            placeholder="Search worker name..."
+                            value={searchWorkerSummary}
+                            onChange={(e) => setSearchWorkerSummary(e.target.value)}
+                            className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-2 pl-8 outline-none focus:border-secondary"
+                          />
+                          <span className="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
+                        </div>
+                      </div>
 
-                {/* Performance Highlights desk */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs font-semibold text-slate-655 dark:text-slate-350 min-w-[700px]">
+                          <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400 font-black">
+                            <tr>
+                              {[
+                                { key: 'name', label: 'Worker Name' },
+                                { key: 'jobsCount', label: 'Completed Jobs' },
+                                { key: 'earnings', label: 'Work Earnings' },
+                                { key: 'commission', label: 'Commission' },
+                                { key: 'fuelCost', label: 'Fuel Cost' },
+                                { key: 'netSalary', label: 'Net Salary' }
+                              ].map(col => (
+                                <th
+                                  key={col.key}
+                                  onClick={() => {
+                                    if (sortFieldSummary === col.key) {
+                                      setSortAscSummary(!sortAscSummary);
+                                    } else {
+                                      setSortFieldSummary(col.key);
+                                      setSortAscSummary(true);
+                                    }
+                                  }}
+                                  className="px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                  <div className="flex items-center space-x-1">
+                                    <span>{col.label}</span>
+                                    <span>{sortFieldSummary === col.key ? (sortAscSummary ? '▲' : '▼') : '↕'}</span>
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {getSortedWorkerSummaries().map((summary, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
+                                <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{summary.name}</td>
+                                <td className="px-4 py-3">{summary.jobsCount}</td>
+                                <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-extrabold">₹{summary.earnings.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-rose-500 font-bold">₹{summary.commission.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{summary.fuelCost.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{summary.netSalary.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                            {/* Grand Total Row */}
+                            <tr className="bg-slate-100 dark:bg-slate-900/60 font-black text-slate-800 dark:text-white uppercase tracking-wider text-[10px]">
+                              <td className="px-4 py-3 font-extrabold text-xs">Grand Total</td>
+                              <td className="px-4 py-3">{grandCompletedJobs}</td>
+                              <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 text-xs">₹{grandWorkEarnings.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-rose-500 text-xs">₹{grandCommission.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-violet-600 dark:text-violet-400 text-xs">₹{grandFuelCost.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 text-xs">₹{grandNetSalary.toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Salary Analytics Grid */}
+                    <div className="glass-card p-6 space-y-4">
+                      <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center space-x-1.5">
+                        <span>📊</span>
+                        <span>Salary Analytics</span>
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+                        <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100/50 dark:border-emerald-955/30 flex flex-col justify-between space-y-2">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400">Highest Paid Worker</span>
+                          <p className="text-lg font-black text-slate-855 dark:text-white">
+                            {highestPaid ? highestPaid.name : 'N/A'}
+                          </p>
+                          <span className="text-sm text-emerald-600 dark:text-emerald-400 font-extrabold">
+                            ₹{highestPaid ? highestPaid.netSalary.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
+                        
+                        <div className="p-4 bg-rose-50/50 dark:bg-rose-955/15 rounded-2xl border border-rose-100/50 dark:border-rose-955/30 flex flex-col justify-between space-y-2">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400">Lowest Paid Worker</span>
+                          <p className="text-lg font-black text-slate-855 dark:text-white">
+                            {lowestPaid ? lowestPaid.name : 'N/A'}
+                          </p>
+                          <span className="text-sm text-rose-600 dark:text-rose-450 font-extrabold">
+                            ₹{lowestPaid ? lowestPaid.netSalary.toFixed(2) : '0.00'}
+                          </span>
+                        </div>
+
+                        <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100/50 dark:border-indigo-955/30 flex flex-col justify-between space-y-2">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400">Average Salary</span>
+                          <p className="text-lg font-black text-slate-855 dark:text-white">All Workers</p>
+                          <span className="text-sm text-indigo-600 dark:text-indigo-400 font-extrabold">
+                            ₹{isNaN(averageSalary) ? '0.00' : averageSalary.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col space-y-1">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400">Avg Earnings Per Job</span>
+                          <p className="text-base font-extrabold text-slate-800 dark:text-white">
+                            ₹{isNaN(averageEarningsPerJob) ? '0.00' : averageEarningsPerJob.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col space-y-1">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400">Avg Commission Per Job</span>
+                          <p className="text-base font-extrabold text-slate-800 dark:text-white">
+                            ₹{isNaN(averageCommission) ? '0.00' : averageCommission.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col space-y-1">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400">Avg Fuel Cost Per Job</span>
+                          <p className="text-base font-extrabold text-slate-800 dark:text-white">
+                            ₹{isNaN(averageFuelCost) ? '0.00' : averageFuelCost.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Detailed Salary Records Section (shown in both specific worker & All Workers cases) */}
                 <div className="glass-card p-6 space-y-4">
-                  <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest">Commutes Summary Desk</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[9px] uppercase tracking-wider text-slate-400">Total Route Travel:</span>
-                      <p className="text-sm font-extrabold text-slate-800 dark:text-white">{totalDistance.toFixed(2)} KMs Traveled</p>
-                      <span className="text-[9px] text-emerald-500 font-bold block">₹{totalFuelCost.toFixed(2)} Fuel Allowance Earned</span>
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div>
+                      <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center space-x-1.5">
+                        <span>📝</span>
+                        <span>Detailed Salary Records</span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400">Detailed list of individual cleaning job salary components, payouts, and payment status.</p>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[9px] uppercase tracking-wider text-slate-400">Average Speed Allocation:</span>
-                      <p className="text-sm font-extrabold text-slate-800 dark:text-white">~45 KM/Hour</p>
-                      <span className="text-[9px] text-slate-455 block">Standard billing commute rate</span>
+
+                    <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                      {/* Search box */}
+                      <div className="relative w-full sm:w-60">
+                        <input
+                          type="text"
+                          placeholder="Search customer, worker, service..."
+                          value={searchDetailedSalary}
+                          onChange={(e) => {
+                            setSearchDetailedSalary(e.target.value);
+                            setDetailedPage(1);
+                          }}
+                          className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2 pl-8 outline-none focus:border-secondary"
+                        />
+                        <span className="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
+                      </div>
+
+                      {/* Export buttons */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleExportCommissionSpreadsheet('xls')}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-xs font-bold transition-all text-slate-655 dark:text-slate-350 flex items-center space-x-1 cursor-pointer"
+                          title="Excel Spreadsheet"
+                        >
+                          <span>🟢</span>
+                          <span>Excel</span>
+                        </button>
+                        <button
+                          onClick={() => handleExportCommissionSpreadsheet('csv')}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-xs font-bold transition-all text-slate-655 dark:text-slate-350 flex items-center space-x-1 cursor-pointer"
+                          title="CSV Document"
+                        >
+                          <span>📄</span>
+                          <span>CSV</span>
+                        </button>
+                        <button
+                          onClick={handleExportCommissionPDF}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-xs font-bold transition-all text-slate-655 dark:text-slate-350 flex items-center space-x-1 cursor-pointer"
+                          title="PDF Statement"
+                        >
+                          <span>🔴</span>
+                          <span>PDF</span>
+                        </button>
+                        <button
+                          onClick={handlePrintCommission}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-xs font-bold transition-all text-slate-655 dark:text-slate-350 flex items-center space-x-1 cursor-pointer"
+                          title="Print Table"
+                        >
+                          <span>🖨️</span>
+                          <span>Print</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[9px] uppercase tracking-wider text-slate-400">Manual adjustments:</span>
-                      <p className="text-sm font-extrabold text-slate-800 dark:text-white">₹{manualAdjustment}</p>
-                      <span className="text-[9px] text-slate-455 block">Adjustable in Travel Settings</span>
-                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-semibold text-slate-655 dark:text-slate-350 min-w-[1200px]">
+                      <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400 font-black">
+                        <tr>
+                          {[
+                            { key: 'date', label: 'Date' },
+                            { key: 'workerName', label: 'Worker Name' },
+                            { key: 'jobId', label: 'Job ID' },
+                            { key: 'company', label: 'Company' },
+                            { key: 'customer', label: 'Customer Name' },
+                            { key: 'service', label: 'Service Name' },
+                            { key: 'workAmount', label: 'Work Amount' },
+                            { key: 'commission', label: 'Commission' },
+                            { key: 'fuelCost', label: 'Fuel Cost' },
+                            { key: 'grandPayout', label: 'Net Salary' },
+                            { key: 'paymentStatus', label: 'Payment Status' },
+                            { key: 'remarks', label: 'Remarks' }
+                          ].map(col => (
+                            <th
+                              key={col.key}
+                              onClick={() => {
+                                if (sortFieldDetailed === col.key) {
+                                  setSortAscDetailed(!sortAscDetailed);
+                                } else {
+                                  setSortFieldDetailed(col.key);
+                                  setSortAscDetailed(true);
+                                }
+                              }}
+                              className="px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              <div className="flex items-center space-x-1">
+                                <span>{col.label}</span>
+                                <span>{sortFieldDetailed === col.key ? (sortAscDetailed ? '▲' : '▼') : '↕'}</span>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {(() => {
+                          const sortedList = getSortedDetailedRecords();
+                          const paginatedList = sortedList.slice((detailedPage - 1) * 10, detailedPage * 10);
+                          if (paginatedList.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={12} className="px-4 py-8 text-center text-slate-400 font-medium">
+                                  No salary records found matching filters.
+                                </td>
+                              </tr>
+                            );
+                          }
+                          return paginatedList.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
+                              <td className="px-4 py-3 font-semibold whitespace-nowrap">{item.date}</td>
+                              <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{item.workerName}</td>
+                              <td className="px-4 py-3 font-bold text-[10px] uppercase text-slate-400">#{String(item.jobId).substring(0, 8)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-655 dark:text-slate-350">
+                                  {item.company}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">{item.customer}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">{item.service}</td>
+                              <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-extrabold">₹{item.workAmount.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-rose-500 font-bold">₹{item.commission.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{item.fuelCost.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{item.grandPayout.toFixed(2)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                  item.paymentStatus === 'paid'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600'
+                                    : 'bg-amber-50 dark:bg-amber-955/15 text-amber-600'
+                                }`}>
+                                  {item.paymentStatus}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 max-w-[120px] truncate text-slate-400 text-[10px] font-medium" title={item.remarks}>{item.remarks || '-'}</td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination control */}
+                  {(() => {
+                    const sortedList = getSortedDetailedRecords();
+                    const totalPages = Math.ceil(sortedList.length / 10);
+                    if (totalPages <= 1) return null;
+                    return (
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="text-[10px] text-slate-400">
+                          Showing {(detailedPage - 1) * 10 + 1} to {Math.min(detailedPage * 10, sortedList.length)} of {sortedList.length} rows
+                        </span>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            disabled={detailedPage === 1}
+                            onClick={() => setDetailedPage(detailedPage - 1)}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-50 text-[10px] font-extrabold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                          >
+                            ◀ Prev
+                          </button>
+                          <span className="px-3 text-xs font-black">{detailedPage} / {totalPages}</span>
+                          <button
+                            disabled={detailedPage === totalPages}
+                            onClick={() => setDetailedPage(detailedPage + 1)}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-50 text-[10px] font-extrabold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                          >
+                            Next ▶
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
                   </div>
                 </div>
 
@@ -1922,8 +2360,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <div className="border-t border-slate-100 dark:border-slate-800 my-6" />
 
                 <div>
-                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest font-black">Commission & Payout Statements</h3>
-                  <p className="text-[10px] text-slate-400">Generate formatted spreadsheets or statements specifically for worker commissions and final grand payouts.</p>
+                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest font-black">Salary & Profit Statements</h3>
+                  <p className="text-[10px] text-slate-400">Generate formatted spreadsheets or statements specifically for worker commissions and final company net profits.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
