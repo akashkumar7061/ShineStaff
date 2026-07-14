@@ -1019,7 +1019,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
               type="text"
               placeholder="Type worker name (e.g. Akash, Rahul...)"
               value={searchWorker}
-              onFocus={() => setShowWorkersDropdown(true)}
+              onFocus={(e) => {
+                e.target.select();
+                setShowWorkersDropdown(true);
+              }}
               onChange={(e) => {
                 setSearchWorker(e.target.value);
                 setShowWorkersDropdown(true);
@@ -1042,7 +1045,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <span>All Workers (All Companies)</span>
               </button>
               {workers
-                .filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()) || searchWorker.toLowerCase() === 'all workers')
+                .filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()) || searchWorker.toLowerCase() === 'all workers' || searchWorker === selectedWorker.name)
                 .map(w => (
                   <button
                     key={w._id}
@@ -1057,7 +1060,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     <span>{w.name} ({w.company})</span>
                   </button>
                 ))}
-              {workers.filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()) || searchWorker.toLowerCase() === 'all workers').length === 0 && (
+              {workers.filter(w => w.name.toLowerCase().includes(searchWorker.toLowerCase()) || searchWorker.toLowerCase() === 'all workers' || searchWorker === selectedWorker.name).length === 0 && (
                 <div className="p-3.5 text-center text-xs text-slate-400">No worker match found.</div>
               )}
             </div>
