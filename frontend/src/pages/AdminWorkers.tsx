@@ -450,11 +450,31 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Daily Salary (₹)</label>
-                  <input type="number" required value={dailySalary} onChange={(e) => setDailySalary(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+                  <input
+                    type="number"
+                    required
+                    value={dailySalary}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDailySalary(val);
+                      setMonthlySalary(val ? String(Number(Number(val) * 30).toFixed(2)) : '');
+                    }}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Monthly Salary (₹)</label>
-                  <input type="number" required value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
+                  <input
+                    type="number"
+                    required
+                    value={monthlySalary}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setMonthlySalary(val);
+                      setDailySalary(val ? String(Number(Number(val) / 30).toFixed(2)) : '');
+                    }}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary"
+                  />
                 </div>
               </div>
 

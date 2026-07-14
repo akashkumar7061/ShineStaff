@@ -129,8 +129,8 @@ export const addWorker = async (req: Request, res: Response) => {
       phone,
       address,
       aadhaarNumber,
-      dailySalary: Number(dailySalary) || 0,
-      monthlySalary: Number(monthlySalary) || 0,
+      dailySalary: Number(dailySalary) || Number((Number(monthlySalary || 0) / 30).toFixed(2)),
+      monthlySalary: Number(monthlySalary) || Number((Number(dailySalary || 0) * 30).toFixed(2)),
       photo: photoUrl,
       status: 'active',
       joiningDate: new Date()
@@ -178,8 +178,19 @@ export const editWorker = async (req: AuthRequest, res: Response) => {
     worker.phone = phone || worker.phone;
     worker.address = address !== undefined ? address : worker.address;
     worker.aadhaarNumber = aadhaarNumber !== undefined ? aadhaarNumber : worker.aadhaarNumber;
-    worker.dailySalary = dailySalary !== undefined ? Number(dailySalary) : worker.dailySalary;
-    worker.monthlySalary = monthlySalary !== undefined ? Number(monthlySalary) : worker.monthlySalary;
+    let finalMonthly = monthlySalary !== undefined ? Number(monthlySalary) : worker.monthlySalary;
+    let finalDaily = dailySalary !== undefined ? Number(dailySalary) : worker.dailySalary;
+
+    if (monthlySalary !== undefined && Number(monthlySalary) !== worker.monthlySalary) {
+      finalMonthly = Number(monthlySalary);
+      finalDaily = Number((finalMonthly / 30).toFixed(2));
+    } else if (dailySalary !== undefined && Number(dailySalary) !== worker.dailySalary) {
+      finalDaily = Number(dailySalary);
+      finalMonthly = Number((finalDaily * 30).toFixed(2));
+    }
+
+    worker.dailySalary = finalDaily;
+    worker.monthlySalary = finalMonthly;
     worker.company = company || worker.company;
     worker.status = status || worker.status;
 
