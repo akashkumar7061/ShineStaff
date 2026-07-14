@@ -421,8 +421,8 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Use manual KMs entered by worker, otherwise pre-calculated, otherwise GPS distance
-    const finalKms = Number(manualFuelKms) >= 0 ? Number(manualFuelKms) : (job.fuelKmsTravelled || calculatedKms || 0);
+    // Default to 0 when completed by worker, until admin enters it
+    const finalKms = Number(manualFuelKms) >= 0 ? Number(manualFuelKms) : 0;
     const fuelRate = settings.fuelAllowanceRate || 4; // e.g. ₹4/KM
     const fuelAllowance = finalKms * fuelRate;
 
