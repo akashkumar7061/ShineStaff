@@ -727,37 +727,6 @@ const WorkerJobs: React.FC = () => {
               {selectedJob.status !== 'completed' && selectedJob.status !== 'cancelled' ? (
                 <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                   
-                  {/* Fuel distance input */}
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Fuel KMs Travelled</label>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        disabled={!tempBeforePhoto || Number(tempKms) <= 0}
-                        onClick={() => setTempKms(String(Math.max(0, Number(tempKms) - 1)))}
-                        className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold flex items-center justify-center border border-slate-205 dark:border-slate-700 transition-colors disabled:opacity-40 text-lg"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min={0}
-                        value={tempKms}
-                        disabled={!tempBeforePhoto}
-                        onChange={(e) => setTempKms(e.target.value)}
-                        placeholder="KM (Optional)"
-                        className="flex-1 text-center h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955 p-2.5 outline-none focus:border-secondary disabled:opacity-40 font-bold text-base"
-                      />
-                      <button
-                        type="button"
-                        disabled={!tempBeforePhoto}
-                        onClick={() => setTempKms(String(Number(tempKms) + 1))}
-                        className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold flex items-center justify-center border border-slate-205 dark:border-slate-700 transition-colors disabled:opacity-40 text-lg"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
 
                   {/* Remarks input */}
                   <div>
