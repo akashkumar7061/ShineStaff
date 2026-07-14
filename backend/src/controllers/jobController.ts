@@ -921,3 +921,57 @@ export const logNotificationDelivered = async (req: AuthRequest, res: Response) 
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const getCustomerDetailsByPhone = async (req: AuthRequest, res: Response) => {
+  const { phone } = req.params;
+  try {
+    const latestJob = await Job.findOne({ clientPhone: phone })
+      .sort({ createdAt: -1 })
+      .populate('workerId');
+
+    if (!latestJob) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const allJobs = await Job.find({ clientPhone: phone }).sort({ date: -1 });
+
+    res.status(200).json({
+      clientName: latestJob.clientName,
+      address: latestJob.address,
+      locationName: latestJob.locationName || '',
+      company: latestJob.company,
+      price: latestJob.price,
+      notes: latestJob.description || '',
+      lastService: latestJob.title,
+      previousBookingsCount: allJobs.length,
+      latitude: latestJob.location?.lat || null,
+      longitude: latestJob.location?.lng || null
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+export const getFormSuggestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const jobs = await Job.find({}, 'clientName clientPhone address locationName title description company');
+    
+    const names = Array.from(new Set(jobs.map(j => j.clientName).filter(Boolean)));
+    const services = Array.from(new Set(jobs.map(j => j.title).filter(Boolean)));
+    const addresses = Array.from(new Set(jobs.map(j => j.address).filter(Boolean)));
+    const locations = Array.from(new Set(jobs.map(j => j.locationName).filter(Boolean)));
+    const descriptions = Array.from(new Set(jobs.map(j => j.description).filter(Boolean)));
+    const phones = Array.from(new Set(jobs.map(j => j.clientPhone).filter(Boolean)));
+
+    res.status(200).json({
+      names,
+      services,
+      addresses,
+      locations,
+      descriptions,
+      phones
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

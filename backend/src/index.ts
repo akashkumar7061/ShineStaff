@@ -30,6 +30,7 @@ import auditRoutes from './routes/auditRoutes';
 import biRoutes from './routes/biRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import commissionRoutes from './routes/commissionRoutes';
+import draftRoutes from './routes/draftRoutes';
 
 dotenv.config();
 
@@ -118,6 +119,7 @@ app.use('/api/audit-logs', auditRoutes);
 app.use('/api/bi', biRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/commissions', commissionRoutes);
+app.use('/api/drafts', draftRoutes);
 
 // Base route
 app.get('/', (req, res) => {

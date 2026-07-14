@@ -116,6 +116,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [recDropdownOpen, setRecDropdownOpen] = useState<boolean>(false);
   const [recSearchQuery, setRecSearchQuery] = useState<string>('');
 
+  // Drafts State
+  const [draftId, setDraftId] = useState<string>('');
+  const [saveStatus, setSaveStatus] = useState<string>('');
+  const [draftsList, setDraftsList] = useState<any[]>([]);
+  const [showDraftsPrompt, setShowDraftsPrompt] = useState<boolean>(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Suggestions State
+  const [suggestions, setSuggestions] = useState<{
+    names: string[];
+    services: string[];
+    addresses: string[];
+    locations: string[];
+    descriptions: string[];
+    phones: string[];
+  }>({
+    names: [],
+    services: [],
+    addresses: [],
+    locations: [],
+    descriptions: [],
+    phones: []
+  });
+
+  // Highlight message for auto-filled customer info
+  const [autoFillMessage, setAutoFillMessage] = useState<string>('');
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
 
@@ -189,6 +216,289 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setSelectedJobForDrawer(null);
   };
 
+  // Load suggestions on mount
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const res = await api.get('/jobs/suggestions/all');
+        if (res.data) {
+          setSuggestions({
+            names: res.data.names || [],
+            services: res.data.services || [],
+            addresses: res.data.addresses || [],
+            locations: res.data.locations || [],
+            descriptions: res.data.descriptions || [],
+            phones: res.data.phones || []
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load suggestions:', err);
+      }
+    };
+    fetchSuggestions();
+  }, []);
+
+  // Fetch drafts list when New Booking form modal opens
+  useEffect(() => {
+    if (createModalOpen && !isEditMode) {
+      const fetchDrafts = async () => {
+        try {
+          // Get local drafts
+          const localDraftsIndexRaw = localStorage.getItem('shinestaff_drafts_index');
+          let localDrafts: any[] = [];
+          if (localDraftsIndexRaw) {
+            try {
+              const index = JSON.parse(localDraftsIndexRaw);
+              localDrafts = index.map((id: string) => {
+                const dataRaw = localStorage.getItem(`shinestaff_draft_${id}`);
+                return dataRaw ? JSON.parse(dataRaw) : null;
+              }).filter(Boolean);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          // Get DB drafts
+          const res = await api.get('/drafts');
+          const dbDrafts = res.data || [];
+
+          // Merge lists uniquely by draftId
+          const allDraftsMap = new Map();
+          localDrafts.forEach(d => allDraftsMap.set(d.draftId, d));
+          dbDrafts.forEach((d: any) => {
+            allDraftsMap.set(d.draftId, {
+              draftId: d.draftId,
+              clientName: d.clientName,
+              formData: d.formData,
+              updatedAt: d.updatedAt
+            });
+          });
+
+          const mergedDrafts = Array.from(allDraftsMap.values()).sort(
+            (a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
+          );
+
+          setDraftsList(mergedDrafts);
+
+          // Prompt the user if there are existing drafts and we haven't selected one
+          if (mergedDrafts.length > 0 && !draftId) {
+            setShowDraftsPrompt(true);
+          } else if (!draftId) {
+            const newId = 'draft_' + Math.random().toString(36).substring(2, 9);
+            setDraftId(newId);
+          }
+        } catch (err) {
+          console.error('Failed to load drafts:', err);
+          // Fallback to local
+          const localDraftsIndexRaw = localStorage.getItem('shinestaff_drafts_index');
+          let localDrafts: any[] = [];
+          if (localDraftsIndexRaw) {
+            try {
+              const index = JSON.parse(localDraftsIndexRaw);
+              localDrafts = index.map((id: string) => {
+                const dataRaw = localStorage.getItem(`shinestaff_draft_${id}`);
+                return dataRaw ? JSON.parse(dataRaw) : null;
+              }).filter(Boolean);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          if (localDrafts.length > 0 && !draftId) {
+            setDraftsList(localDrafts);
+            setShowDraftsPrompt(true);
+          } else if (!draftId) {
+            const newId = 'draft_' + Math.random().toString(36).substring(2, 9);
+            setDraftId(newId);
+          }
+        }
+      };
+      fetchDrafts();
+    }
+  }, [createModalOpen, isEditMode]);
+
+  // Debounced Auto-Save Draft
+  useEffect(() => {
+    if (!createModalOpen || isEditMode || !draftId) return;
+
+    setSaveStatus('Saving...');
+
+    const delayDebounceFn = setTimeout(async () => {
+      const formData = {
+        draftId,
+        title,
+        description,
+        company,
+        workerId,
+        clientName,
+        clientPhone,
+        address,
+        locationName,
+        price,
+        date,
+        startTime,
+        endTime,
+        latitude,
+        longitude,
+        fromLocation,
+        toLocation,
+        commuteKms,
+        fuelAllowance,
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        // Save locally
+        localStorage.setItem(`shinestaff_draft_${draftId}`, JSON.stringify(formData));
+        
+        // Update local index
+        const localIndexRaw = localStorage.getItem('shinestaff_drafts_index');
+        let index = localIndexRaw ? JSON.parse(localIndexRaw) : [];
+        if (!index.includes(draftId)) {
+          index.push(draftId);
+          localStorage.setItem('shinestaff_drafts_index', JSON.stringify(index));
+        }
+
+        // Save to DB
+        await api.post('/drafts', {
+          draftId,
+          clientName: clientName || 'Untitled Draft',
+          formData
+        });
+
+        const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        setSaveStatus(`Saved at ${timeStr}`);
+      } catch (err) {
+        console.error('Failed to save draft:', err);
+        const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        setSaveStatus(`Saved locally at ${timeStr} (Offline)`);
+      }
+    }, 1500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [
+    title,
+    description,
+    company,
+    workerId,
+    clientName,
+    clientPhone,
+    address,
+    locationName,
+    price,
+    date,
+    startTime,
+    endTime,
+    latitude,
+    longitude,
+    fromLocation,
+    toLocation,
+    commuteKms,
+    fuelAllowance,
+    draftId,
+    createModalOpen,
+    isEditMode
+  ]);
+
+  // Previous Customer Detection phone listener
+  useEffect(() => {
+    if (clientPhone.length === 10) {
+      const detectCustomer = async () => {
+        try {
+          const res = await api.get(`/jobs/customer/${clientPhone}`);
+          if (res.data) {
+            const cust = res.data;
+            setClientName(cust.clientName || '');
+            setAddress(cust.address || '');
+            setLocationName(cust.locationName || '');
+            setCompany(cust.company || 'SofaShine');
+            setPrice(cust.price ? String(cust.price) : '');
+            if (cust.latitude && cust.longitude) {
+              setLatitude(String(cust.latitude));
+              setLongitude(String(cust.longitude));
+            }
+            
+            const countStr = cust.previousBookingsCount > 1 
+              ? `${cust.previousBookingsCount} bookings` 
+              : '1 booking';
+            setAutoFillMessage(
+              `✨ Returning Customer Detected! "${cust.clientName}" (${countStr}, Last service: "${cust.lastService}"). Form details autofilled.`
+            );
+            setTimeout(() => {
+              setAutoFillMessage('');
+            }, 6000);
+          }
+        } catch (err) {
+          console.log('Customer not detected or error fetching:', err);
+        }
+      };
+      detectCustomer();
+    }
+  }, [clientPhone]);
+
+  const handleRestoreDraft = (draft: any) => {
+    setDraftId(draft.draftId);
+    const data = draft.formData || {};
+    setTitle(data.title || '');
+    setDescription(data.description || '');
+    setCompany(data.company || 'SofaShine');
+    setWorkerId(data.workerId || '');
+    setClientName(data.clientName || '');
+    setClientPhone(data.clientPhone || '');
+    setAddress(data.address || '');
+    setLocationName(data.locationName || '');
+    setPrice(data.price || '');
+    setDate(data.date || selectedDate);
+    setStartTime(data.startTime || '08:00');
+    setEndTime(data.endTime || '14:00');
+    setLatitude(data.latitude || '');
+    setLongitude(data.longitude || '');
+    setFromLocation(data.fromLocation || 'Office');
+    setToLocation(data.toLocation || '');
+    setCommuteKms(data.commuteKms || '');
+    setFuelAllowance(data.fuelAllowance || '');
+    
+    setShowDraftsPrompt(false);
+    setSaveStatus('Draft restored successfully.');
+    setTimeout(() => {
+      setSaveStatus('Saved');
+    }, 3000);
+  };
+
+  const handleStartFreshBooking = () => {
+    resetForm();
+    const newId = 'draft_' + Math.random().toString(36).substring(2, 9);
+    setDraftId(newId);
+    setShowDraftsPrompt(false);
+    setSaveStatus('New Draft Started');
+    setTimeout(() => {
+      setSaveStatus('Saved');
+    }, 2000);
+  };
+
+  const renderSuggestions = (fieldKey: keyof typeof suggestions, value: string, onSelect: (val: string) => void) => {
+    if (focusedField !== fieldKey || !value) return null;
+    const list = suggestions[fieldKey] || [];
+    const filtered = list.filter(item => item && item.toLowerCase().includes(value.toLowerCase()) && item.toLowerCase() !== value.toLowerCase()).slice(0, 5);
+    if (filtered.length === 0) return null;
+
+    return (
+      <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 max-h-40 overflow-y-auto">
+        {filtered.map((item, idx) => (
+          <div
+            key={idx}
+            onMouseDown={() => {
+              onSelect(item);
+              setFocusedField(null);
+            }}
+            className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200 transition-all text-left"
+          >
+            {item}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const getFormattedDateString = (dateStr: string) => {
     if (!dateStr) return '';
     const dateObj = new Date(dateStr);
@@ -202,6 +512,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       alert('Price cannot be negative.');
       return;
     }
+
+    // Duplicate check
+    if (!isEditMode) {
+      const formattedSlot = `${formatTimeTo12Hour(startTime)} - ${formatTimeTo12Hour(endTime)}`;
+      const isDuplicate = jobs.some(j => 
+        j.clientPhone === clientPhone &&
+        j.date === date &&
+        j.timeSlot === formattedSlot
+      );
+
+      if (isDuplicate) {
+        const confirmCreate = window.confirm(
+          `⚠️ Duplicate Booking Warning!\n\nA booking for client phone "${clientPhone}" is already scheduled on ${date} during ${formattedSlot}.\n\nAre you sure you want to create this duplicate booking?`
+        );
+        if (!confirmCreate) {
+          return;
+        }
+      }
+    }
+
     try {
       const payload = {
         title,
@@ -228,6 +558,23 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       } else {
         await api.post('/jobs', payload);
         alert('Cleanup job created and worker notified!');
+      }
+
+      // If we saved a new booking, delete the draft
+      if (!isEditMode && draftId) {
+        try {
+          await api.delete(`/drafts/${draftId}`);
+          localStorage.removeItem(`shinestaff_draft_${draftId}`);
+          const indexRaw = localStorage.getItem('shinestaff_drafts_index');
+          if (indexRaw) {
+            let index = JSON.parse(indexRaw);
+            index = index.filter((id: string) => id !== draftId);
+            localStorage.setItem('shinestaff_drafts_index', JSON.stringify(index));
+          }
+        } catch (err) {
+          console.error('Failed to delete draft:', err);
+        }
+        setDraftId('');
       }
 
       setCreateModalOpen(false);
@@ -1248,22 +1595,107 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         </div>
       )}
 
-      {/* 5. Existing Modal forms and images comparators completely unchanged to preserve all features */}
+      {/* Drafts Recovery Dialog */}
+      {showDraftsPrompt && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5 text-xs text-slate-700 dark:text-slate-300">
+            <div className="text-center space-y-2">
+              <div className="mx-auto h-12 w-12 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl font-bold animate-bounce">
+                📝
+              </div>
+              <h3 className="font-black text-slate-850 dark:text-white text-base">Unfinished Drafts Found</h3>
+              <p className="text-[11px] text-slate-400 font-semibold">You have one or more unsaved booking drafts. Would you like to resume one or start fresh?</p>
+            </div>
+
+            <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+              <span className="block text-[9px] font-black uppercase text-slate-400 tracking-wider">Unsaved Booking Drafts</span>
+              {draftsList.map((draft, idx) => {
+                const dateStr = new Date(draft.updatedAt || draft.formData?.updatedAt || new Date()).toLocaleString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                });
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleRestoreDraft(draft)}
+                    className="p-3 bg-slate-50 hover:bg-indigo-50/50 dark:bg-slate-955/50 dark:hover:bg-slate-955/75 border border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-950 rounded-2xl cursor-pointer flex justify-between items-center transition-all group"
+                  >
+                    <div className="space-y-0.5 text-left">
+                      <span className="font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-indigo-650 transition-colors block truncate max-w-[180px]">
+                        {draft.clientName || 'Untitled Client'}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold block">
+                        {draft.formData?.title || 'No Title'}
+                      </span>
+                    </div>
+                    <div className="text-right text-[9px] text-slate-400 font-bold">
+                      <span>{dateStr}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={handleStartFreshBooking}
+                className="w-full bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/50 dark:hover:bg-slate-950/80 text-slate-655 dark:text-slate-350 border border-slate-200 dark:border-slate-850 font-bold py-3 rounded-2xl cursor-pointer transition-all text-xs"
+              >
+                Create New Booking
+              </button>
+              <button
+                onClick={() => handleRestoreDraft(draftsList[0])}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/15 transition-all text-xs"
+              >
+                Resume Latest
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {createModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-850 overflow-hidden text-xs text-slate-655 dark:text-slate-350">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-extrabold text-slate-850 dark:text-white text-sm">
-                {isEditMode ? 'Modify Cleanup Job Settings' : 'Assign New Cleanup Schedule'}
-              </h3>
+              <div className="flex items-center space-x-3">
+                <h3 className="font-extrabold text-slate-850 dark:text-white text-sm">
+                  {isEditMode ? 'Modify Cleanup Job Settings' : 'Assign New Cleanup Schedule'}
+                </h3>
+                {!isEditMode && saveStatus && (
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[8.5px] font-black uppercase tracking-wider animate-pulse">
+                    {saveStatus}
+                  </span>
+                )}
+              </div>
               <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-650 text-xs font-black">✕</button>
             </div>
             
             <form onSubmit={handleCreateJob} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto font-bold text-left">
+              {autoFillMessage && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-150/40 dark:border-emerald-900/50 rounded-xl text-emerald-650 dark:text-emerald-400 text-[10px] font-extrabold flex items-center space-x-2 animate-pulse">
+                  <span>✨</span>
+                  <span>{autoFillMessage}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Job Title</label>
-                  <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Sofa Foam Scrubbing" className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary" />
+                  <input
+                    type="text"
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onFocus={() => setFocusedField('services')}
+                    onBlur={() => setTimeout(() => setFocusedField(null), 250)}
+                    placeholder="e.g. Sofa Foam Scrubbing"
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                  />
+                  {renderSuggestions('services', title, setTitle)}
                 </div>
                 <div>
                   <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Company Branch</label>
@@ -1473,13 +1905,31 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Client Name</label>
-                  <input type="text" required value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary" />
+                  <input
+                    type="text"
+                    required
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    onFocus={() => setFocusedField('names')}
+                    onBlur={() => setTimeout(() => setFocusedField(null), 250)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                  />
+                  {renderSuggestions('names', clientName, setClientName)}
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-[9px] uppercase tracking-wider text-slate-405 mb-1.5">Client Phone</label>
-                  <input type="text" required value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary" />
+                  <input
+                    type="text"
+                    required
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    onFocus={() => setFocusedField('phones')}
+                    onBlur={() => setTimeout(() => setFocusedField(null), 250)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                  />
+                  {renderSuggestions('phones', clientPhone, setClientPhone)}
                 </div>
               </div>
 
@@ -1500,34 +1950,50 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Service Description Details</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter details..." className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 h-16 outline-none focus:border-secondary resize-none" />
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  onFocus={() => setFocusedField('descriptions')}
+                  onBlur={() => setTimeout(() => setFocusedField(null), 250)}
+                  placeholder="Enter details..."
+                  className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 h-16 outline-none focus:border-secondary resize-none"
+                />
+                {renderSuggestions('descriptions', description, setDescription)}
               </div>
 
               <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1">Geocoding & GPS Location Data</span>
-                <div>
+                <div className="relative">
                   <label className="block text-[9px] uppercase tracking-wider text-slate-450 mb-1">Clean Site Address</label>
                   <input
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    onBlur={handleAddressBlur}
+                    onFocus={() => setFocusedField('addresses')}
+                    onBlur={() => {
+                      handleAddressBlur();
+                      setTimeout(() => setFocusedField(null), 250);
+                    }}
                     placeholder="Enter full physical address"
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   />
+                  {renderSuggestions('addresses', address, setAddress)}
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">GPS Location Link / Landmark</label>
                   <input
                     type="text"
                     value={locationName}
                     onChange={(e) => setLocationName(e.target.value)}
+                    onFocus={() => setFocusedField('locations')}
+                    onBlur={() => setTimeout(() => setFocusedField(null), 250)}
                     placeholder="Landmark or Google Map URL link"
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   />
+                  {renderSuggestions('locations', locationName, setLocationName)}
                 </div>
               </div>
 

@@ -11,7 +11,9 @@ import {
   updateJobFuel,
   acceptJob,
   rejectJob,
-  logNotificationDelivered
+  logNotificationDelivered,
+  getCustomerDetailsByPhone,
+  getFormSuggestions
 } from '../controllers/jobController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -20,6 +22,8 @@ const router = Router();
 router.use(authenticateJWT);
 
 router.get('/', getJobs);
+router.get('/customer/:phone', authorizeRoles('admin'), getCustomerDetailsByPhone);
+router.get('/suggestions/all', authorizeRoles('admin'), getFormSuggestions);
 router.get('/:id', getJobById);
 
 // Worker job action triggers
