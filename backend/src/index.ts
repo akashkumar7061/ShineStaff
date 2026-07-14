@@ -187,21 +187,18 @@ const backfillTravelLogs = async () => {
   }
 };
 
-const resetAllWorkerDistancesToday = async () => {
+const clearAllDistancesAndLogsEver = async () => {
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
-    // Reset jobs
+    // Reset all jobs ever
     const jobUpdate = await Job.updateMany(
-      { date: todayStr },
+      {},
       { $set: { fuelKmsTravelled: 0, fuelAllowance: 0 } }
     );
-    // Delete travel logs
-    const travelDelete = await TravelLog.deleteMany(
-      { date: todayStr }
-    );
-    console.log(`Reset completed for all workers today (${todayStr}). Jobs reset: ${jobUpdate.modifiedCount}, Travel logs deleted: ${travelDelete.deletedCount}`);
+    // Delete all travel logs ever
+    const travelDelete = await TravelLog.deleteMany({});
+    console.log(`Successfully cleared all travel distances and logs ever from the database. Jobs reset: ${jobUpdate.modifiedCount}, Travel logs deleted: ${travelDelete.deletedCount}`);
   } catch (err) {
-    console.error('Failed to reset all worker distances today:', err);
+    console.error('Failed to clear all travel data:', err);
   }
 };
 
@@ -209,7 +206,7 @@ const startServer = async () => {
   await connectDB();
   await seedAdmin();
   await backfillTravelLogs();
-  await resetAllWorkerDistancesToday();
+  await clearAllDistancesAndLogsEver();
   server.listen(PORT, () => {
     console.log(`ShineStaff Server running on port ${PORT}`);
   });

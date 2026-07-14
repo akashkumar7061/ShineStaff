@@ -294,9 +294,8 @@ const slotsOverlap = (slotA: string, slotB: string): boolean => {
   const rangeA = parseSlotToMinutes(slotA);
   const rangeB = parseSlotToMinutes(slotB);
   if (!rangeA || !rangeB) return false;
-  // Check overlap with 30 minutes travel buffer between jobs
-  const travelBuffer = 30; 
-  return (rangeA.start < rangeB.end + travelBuffer) && (rangeA.end + travelBuffer > rangeB.start);
+  // Strictly overlap check: A starts before B ends, and A ends after B starts
+  return (rangeA.start < rangeB.end) && (rangeA.end > rangeB.start);
 };
 
 export const getWorkerRecommendations = async (req: Request, res: Response) => {
