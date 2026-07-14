@@ -11,6 +11,38 @@ import { getIO } from '../index';
 import { sendPushNotification, sendPushToAdmins } from '../utils/push';
 import { logAudit } from '../utils/auditLog';
 
+const parseTimeToMinutes = (timeStr: string): number => {
+  const cleanStr = timeStr.trim().toUpperCase();
+  const match = cleanStr.match(/^(\d+):(\d+)\s*(AM|PM)$/);
+  if (!match) return 0;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3];
+  
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  
+  return hours * 60 + minutes;
+};
+
+const parseSlotToMinutes = (slotStr: string) => {
+  const parts = slotStr.split('-');
+  if (parts.length < 2) return null;
+  const start = parseTimeToMinutes(parts[0]);
+  const end = parseTimeToMinutes(parts[1]);
+  return { start, end };
+};
+
+const slotsOverlap = (slotA: string, slotB: string): boolean => {
+  const rangeA = parseSlotToMinutes(slotA);
+  const rangeB = parseSlotToMinutes(slotB);
+  if (!rangeA || !rangeB) return false;
+  // Allow a 30 minutes travel buffer between jobs
+  const travelBuffer = 30; 
+  return (rangeA.start < rangeB.end + travelBuffer) && (rangeA.end + travelBuffer > rangeB.start);
+};
+
 // Calculate distance between two GPS coordinates in KM (Haversine formula)
 const calculateDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371; // Radius of the earth in km
@@ -117,6 +149,23 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       worker = await User.findById(workerId);
       if (!worker || worker.role !== 'worker') {
         return res.status(404).json({ message: 'Assigned worker not found' });
+      }
+
+      // Check for overlapping slots on the same date to prevent double booking
+      if (date && timeSlot) {
+        const overlappingJobs = await Job.find({
+          workerId: worker._id,
+          date,
+          status: { $ne: 'cancelled' }
+        });
+        
+        for (const job of overlappingJobs) {
+          if (job.timeSlot && slotsOverlap(job.timeSlot, timeSlot)) {
+            return res.status(400).json({
+              message: `Double Booking Alert! ${worker.name} is already assigned to a conflicting job: "${job.title}" (${job.timeSlot}) on this day.`
+            });
+          }
+        }
       }
     }
 
@@ -609,16 +658,60 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    // Check worker eligibility
-    if (workerId) {
-      if (workerId === 'unassigned') {
-        job.workerId = undefined as any;
-      } else if (workerId !== job.workerId?.toString()) {
+    // Check worker eligibility & conflict check
+    if (workerId && workerId !== 'unassigned') {
+      const targetWorkerId = workerId;
+      const targetDate = date !== undefined ? date : job.date;
+      const targetTimeSlot = timeSlot !== undefined ? timeSlot : job.timeSlot;
+
+      if (targetDate && targetTimeSlot) {
+        const overlappingJobs = await Job.find({
+          _id: { $ne: job._id },
+          workerId: targetWorkerId,
+          date: targetDate,
+          status: { $ne: 'cancelled' }
+        });
+        
+        for (const oJob of overlappingJobs) {
+          if (oJob.timeSlot && slotsOverlap(oJob.timeSlot, targetTimeSlot)) {
+            return res.status(400).json({
+              message: `Double Booking Alert! Selected worker is already assigned to a conflicting job: "${oJob.title}" (${oJob.timeSlot}) on this day.`
+            });
+          }
+        }
+      }
+
+      if (workerId !== job.workerId?.toString()) {
         const worker = await User.findById(workerId);
         if (!worker || worker.role !== 'worker') {
           return res.status(404).json({ message: 'Worker not found' });
         }
         job.workerId = workerId;
+      }
+    } else if (workerId === 'unassigned') {
+      job.workerId = undefined as any;
+    } else {
+      // If workerId is not passed, but date/time changes, check conflict on current worker
+      if (job.workerId && (date !== undefined || timeSlot !== undefined)) {
+        const targetDate = date !== undefined ? date : job.date;
+        const targetTimeSlot = timeSlot !== undefined ? timeSlot : job.timeSlot;
+
+        if (targetDate && targetTimeSlot) {
+          const overlappingJobs = await Job.find({
+            _id: { $ne: job._id },
+            workerId: job.workerId,
+            date: targetDate,
+            status: { $ne: 'cancelled' }
+          });
+          
+          for (const oJob of overlappingJobs) {
+            if (oJob.timeSlot && slotsOverlap(oJob.timeSlot, targetTimeSlot)) {
+              return res.status(400).json({
+                message: `Double Booking Alert! Assigned worker is already assigned to a conflicting job: "${oJob.title}" (${oJob.timeSlot}) on this day.`
+              });
+            }
+          }
+        }
       }
     }
 

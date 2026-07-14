@@ -108,6 +108,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [resolvingGPS, setResolvingGPS] = useState(false);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isAnalyzingRecs, setIsAnalyzingRecs] = useState<boolean>(false);
+  const [showAllWorkers, setShowAllWorkers] = useState<boolean>(false);
+  const [alternativeSuggestion, setAlternativeSuggestion] = useState<string>('');
+  const [recDropdownOpen, setRecDropdownOpen] = useState<boolean>(false);
+  const [recSearchQuery, setRecSearchQuery] = useState<string>('');
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
 
@@ -154,6 +161,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       const type = customEvent.detail?.type;
       if (['JOB_COMPLETED', 'JOB_STARTED', 'JOB_CREATED', 'JOB_CANCELLED', 'JOB_DELETED'].includes(type)) {
         fetchJobsAndWorkers();
+        fetchWorkerRecommendations();
       }
     };
     window.addEventListener('socket-update', handleSocketUpdate);
@@ -406,6 +414,52 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setIsCalculatingRoute(false);
     }
   };
+
+  const fetchWorkerRecommendations = async () => {
+    if (!date || !startTime || !endTime) return;
+    setIsAnalyzingRecs(true);
+    try {
+      const response = await api.post('/workers/recommend', {
+        date,
+        startTime: formatTimeTo12Hour(startTime),
+        endTime: formatTimeTo12Hour(endTime),
+        lat: latitude ? Number(latitude) : undefined,
+        lng: longitude ? Number(longitude) : undefined,
+        company: company || undefined
+      });
+      const recs = response.data.recommendations || [];
+      setRecommendations(recs);
+      setAlternativeSuggestion(response.data.alternativeSuggestion || '');
+      
+      // Auto-select top available worker if only one available worker
+      const availableOnly = recs.filter((w: any) => w.status === 'Available');
+      if (availableOnly.length === 1 && !workerId) {
+        setWorkerId(availableOnly[0]._id);
+      }
+    } catch (err) {
+      console.error('Failed to load worker recommendations:', err);
+    } finally {
+      setIsAnalyzingRecs(false);
+    }
+  };
+
+  const handleAddressBlur = async () => {
+    if (!address || (latitude && longitude)) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setLatitude(data[0].lat);
+        setLongitude(data[0].lon);
+      }
+    } catch (err) {
+      console.error('Failed to geocode address on blur:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchWorkerRecommendations();
+  }, [date, startTime, endTime, latitude, longitude, company]);
 
   const handleMapSearch = async () => {
     if (!mapSearchQuery) return;
@@ -1214,14 +1268,195 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Assign Crew Worker</label>
-                  <select required value={workerId} onChange={(e) => setWorkerId(e.target.value)} className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary">
-                    <option value="">-- Choose Worker --</option>
-                    <option value="unassigned">Unassigned (Omit Crew Assignment)</option>
-                    {workers.map((w) => (
-                      <option key={w._id} value={w._id}>{w.name} ({w.company})</option>
-                    ))}
-                  </select>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+                    <span>Assign Crew Worker</span>
+                    {isAnalyzingRecs && (
+                      <span className="text-[8px] text-secondary font-black animate-pulse uppercase">Analyzing suitability...</span>
+                    )}
+                  </label>
+                  
+                  {/* Custom Searchable Dropdown */}
+                  <div className="relative">
+                    <div
+                      onClick={() => setRecDropdownOpen(!recDropdownOpen)}
+                      className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary cursor-pointer flex items-center justify-between text-slate-800 dark:text-slate-100"
+                    >
+                      {workerId ? (
+                        (() => {
+                          if (workerId === 'unassigned') {
+                            return <span className="text-slate-500 font-bold uppercase text-[10px]">Unassigned (Omit Crew Assignment)</span>;
+                          }
+                          const match = recommendations.find((w: any) => w._id === workerId) || workers.find((w: any) => w._id === workerId);
+                          if (!match) return <span>-- Choose Worker --</span>;
+                          return (
+                            <div className="flex items-center space-x-2">
+                              {match.photo ? (
+                                <img src={match.photo} className="h-5 w-5 rounded-full object-cover border border-slate-200" />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-black text-[9px]">
+                                  {match.name ? match.name.charAt(0).toUpperCase() : 'W'}
+                                </div>
+                              )}
+                              <span className="font-extrabold">{match.name}</span>
+                              {match.matchScore > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 text-[8px] font-black">{match.matchScore}% Match</span>
+                              )}
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-slate-400">-- Choose Worker --</span>
+                      )}
+                      <span className="text-slate-400">▼</span>
+                    </div>
+
+                    {recDropdownOpen && (
+                      <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 p-3 space-y-3 max-h-80 overflow-y-auto text-xs animate-fade-in">
+                        {/* Search & Show All controls */}
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                          <input
+                            type="text"
+                            placeholder="Search worker by name..."
+                            value={recSearchQuery}
+                            onChange={(e) => setRecSearchQuery(e.target.value)}
+                            className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-lg p-2 text-xs outline-none focus:border-secondary dark:text-white"
+                          />
+                          <label className="flex items-center space-x-1 cursor-pointer select-none text-[9px] uppercase tracking-wider text-slate-400 font-extrabold whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={showAllWorkers}
+                              onChange={(e) => setShowAllWorkers(e.target.checked)}
+                              className="rounded border-slate-300 text-secondary focus:ring-secondary h-3 w-3 cursor-pointer"
+                            />
+                            <span>Show All</span>
+                          </label>
+                        </div>
+
+                        {/* List items */}
+                        <div className="space-y-1.5 text-left">
+                          <div
+                            onClick={() => {
+                              setWorkerId('unassigned');
+                              setRecDropdownOpen(false);
+                            }}
+                            className={`p-2 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 flex items-center justify-between transition-all ${
+                              workerId === 'unassigned' ? 'bg-secondary/5 border-l-2 border-l-secondary' : ''
+                            }`}
+                          >
+                            <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Unassigned (Omit Crew Assignment)</span>
+                          </div>
+
+                          {(() => {
+                            const filteredRecs = recommendations.filter((w: any) => {
+                              // Filter by search query
+                              if (recSearchQuery && !w.name.toLowerCase().includes(recSearchQuery.toLowerCase())) {
+                                return false;
+                              }
+                              // Filter by availability unless showAllWorkers is active
+                              if (!showAllWorkers && w.status !== 'Available') {
+                                return false;
+                              }
+                              return true;
+                            });
+
+                            if (filteredRecs.length === 0) {
+                              return (
+                                <p className="text-slate-400 text-center py-2 text-[10px]">No workers match search criteria.</p>
+                              );
+                            }
+
+                            // Keep track of Available index for medals
+                            let availableIndex = 0;
+
+                            return filteredRecs.map((w: any) => {
+                              // Medals order for top Available workers
+                              let medal = '';
+                              if (w.status === 'Available') {
+                                if (availableIndex === 0) medal = '🥇';
+                                else if (availableIndex === 1) medal = '🥈';
+                                else if (availableIndex === 2) medal = '🥉';
+                                availableIndex++;
+                              }
+                              
+                              let statusColor = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400';
+                              if (w.status === 'Busy') statusColor = 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400';
+                              if (w.status === 'On Leave') statusColor = 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400';
+                              if (w.status === 'Offline') statusColor = 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400';
+
+                              return (
+                                <div
+                                  key={w._id}
+                                  onClick={() => {
+                                    setWorkerId(w._id);
+                                    setRecDropdownOpen(false);
+                                  }}
+                                  className={`p-2.5 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent transition-all flex items-center justify-between gap-3 ${
+                                    workerId === w._id ? 'bg-secondary/5 border-slate-200 dark:border-slate-800' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center space-x-2.5">
+                                    {w.photo ? (
+                                      <img src={w.photo} className="h-7 w-7 rounded-full object-cover border border-slate-200 dark:border-slate-800" />
+                                    ) : (
+                                      <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-655 dark:text-slate-205 flex items-center justify-center font-black text-xs">
+                                        {w.name.charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <div className="text-left">
+                                      <div className="font-extrabold text-slate-805 dark:text-white flex items-center space-x-1 flex-wrap">
+                                        <span>{medal} {w.name}</span>
+                                        <span className="text-[8px] text-slate-400 font-bold lowercase">({w.company})</span>
+                                      </div>
+                                      
+                                      {/* Travel / Proximity detail */}
+                                      {w.status === 'Available' && w.distance !== null && (
+                                        <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
+                                          🚗 {w.distance.toFixed(1)} KM Away | ETA {w.eta} mins
+                                        </span>
+                                      )}
+                                      
+                                      {/* Conflict/Leave details */}
+                                      {w.status === 'Busy' && (
+                                        <span className="text-[9px] text-rose-500 font-bold block mt-0.5 truncate max-w-[180px]">
+                                          ⚠️ {w.conflictDetails}
+                                        </span>
+                                      )}
+
+                                      <span className="text-[8px] text-slate-400 block font-semibold mt-0.5">Today's Jobs: {w.workload}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col items-end space-y-1.5">
+                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${statusColor}`}>
+                                      {w.status}
+                                    </span>
+                                    {w.status === 'Available' && (
+                                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black">
+                                        ⭐ {w.matchScore}% Match
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Warning banner when no worker is available */}
+                  {!isAnalyzingRecs && date && startTime && endTime && recommendations.filter((w: any) => w.status === 'Available').length === 0 && (
+                    <div className="mt-2 p-2.5 bg-rose-50 dark:bg-rose-955/20 border border-rose-150/40 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-450 text-[10px] font-semibold flex flex-col space-y-1 text-left">
+                      <span className="font-extrabold flex items-center space-x-1 text-slate-800 dark:text-slate-100">
+                        <span>⚠️</span>
+                        <span>No nearby worker is available for the selected date and time.</span>
+                      </span>
+                      {alternativeSuggestion && (
+                        <span className="text-[9px] text-rose-500">{alternativeSuggestion}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[9px] uppercase tracking-wider text-slate-405 mb-1.5">Price (₹)</label>
@@ -1270,6 +1505,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
+                    onBlur={handleAddressBlur}
                     placeholder="Enter full physical address"
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   />

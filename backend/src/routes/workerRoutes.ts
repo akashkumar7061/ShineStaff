@@ -5,7 +5,8 @@ import {
   addWorker,
   editWorker,
   deleteWorker,
-  updateWorkerLocation
+  updateWorkerLocation,
+  getWorkerRecommendations
 } from '../controllers/workerController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -16,6 +17,7 @@ router.use(authenticateJWT);
 
 // Admin-only endpoints for worker CRUD
 router.get('/', authorizeRoles('admin'), getWorkers);
+router.post('/recommend', authorizeRoles('admin'), getWorkerRecommendations);
 router.post('/', authorizeRoles('admin'), addWorker);
 router.put('/:id', authorizeRoles('admin'), editWorker);
 router.delete('/:id', authorizeRoles('admin'), deleteWorker);
