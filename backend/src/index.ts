@@ -195,12 +195,11 @@ const resetAllWorkerDistancesToday = async () => {
       { date: todayStr },
       { $set: { fuelKmsTravelled: 0, fuelAllowance: 0 } }
     );
-    // Reset travel logs
-    const travelUpdate = await TravelLog.updateMany(
-      { date: todayStr },
-      { $set: { kms: 0, allowance: 0 } }
+    // Delete travel logs
+    const travelDelete = await TravelLog.deleteMany(
+      { date: todayStr }
     );
-    console.log(`Reset completed for all workers today (${todayStr}). Jobs reset: ${jobUpdate.modifiedCount}, Travel logs reset: ${travelUpdate.modifiedCount}`);
+    console.log(`Reset completed for all workers today (${todayStr}). Jobs reset: ${jobUpdate.modifiedCount}, Travel logs deleted: ${travelDelete.deletedCount}`);
   } catch (err) {
     console.error('Failed to reset all worker distances today:', err);
   }
