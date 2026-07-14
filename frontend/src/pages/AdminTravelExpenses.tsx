@@ -82,6 +82,14 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [editingJob, setEditingJob] = useState<any>(null);
   const [editingLog, setEditingLog] = useState<any>(null);
   const [isTravelModalOpen, setIsTravelModalOpen] = useState<boolean>(false);
+  
+  // Commission Management States
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [isCommissionModalOpen, setIsCommissionModalOpen] = useState<boolean>(false);
+  const [modalCommissions, setModalCommissions] = useState<{[jobId: string]: { commissionAmount: string; remarks: string }}>({});
+  const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
+  const [editingCommAmount, setEditingCommAmount] = useState<string>('');
+  const [editingCommRemarks, setEditingCommRemarks] = useState<string>('');
 
   // Manual Commute Logging states
   const [logWorker, setLogWorker] = useState<string>('');
@@ -137,20 +145,21 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch initial data
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [workersRes, jobsRes, travelRes, settingsRes] = await Promise.all([
+      const [workersRes, jobsRes, travelRes, settingsRes, commissionsRes] = await Promise.all([
         api.get('/workers'),
         api.get('/jobs'),
         api.get('/travel/all'),
-        api.get('/settings').catch(() => ({ data: null }))
+        api.get('/settings').catch(() => ({ data: null })),
+        api.get('/commissions').catch(() => ({ data: [] }))
       ]);
 
       setWorkers(workersRes.data || []);
       setJobs(jobsRes.data || []);
       setTravelLogs(travelRes.data || []);
+      setCommissions(commissionsRes.data || []);
       
       if (settingsRes && settingsRes.data && settingsRes.data.fuelAllowanceRate) {
         setGlobalFuelRate(settingsRes.data.fuelAllowanceRate);
@@ -237,9 +246,27 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     });
   };
 
+  const getFilteredCommissions = () => {
+    return commissions.filter(c => {
+      if (!selectedWorker) return false;
+      if (selectedWorker._id !== 'all') {
+        const workerMatch = c.workerId?._id === selectedWorker._id || c.workerId === selectedWorker._id;
+        if (!workerMatch) return false;
+      }
+      if (companyFilter && companyFilter !== 'All') {
+        if (c.company !== companyFilter) return false;
+      }
+      if (c.jobDate) {
+        return c.jobDate >= startDate && c.jobDate <= endDate;
+      }
+      return false;
+    });
+  };
+
   // Calculations Engine
   const workerJobs = getFilteredJobs();
   const workerTravel = getFilteredTravelLogs();
+  const workerCommissions = getFilteredCommissions();
 
   const totalJobsCount = workerJobs.length;
   const totalWorkEarnings = workerJobs.reduce((sum, j) => sum + (j.price || 0), 0);
@@ -249,12 +276,13 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         workerJobs.reduce((sum, j) => sum + (j.fuelKmsTravelled || 0), 0);
 
   const totalFuelCost = totalDistance * globalFuelRate;
+  const totalCommission = workerCommissions.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
   
   // Total travel time in minutes (estimated 2 mins per KM + 15 mins buffer per job)
   const totalTravelTimeMinutes = Math.round(totalDistance * 1.8 + totalJobsCount * 12);
   const formattedTravelTime = `${Math.floor(totalTravelTimeMinutes / 60)}h ${totalTravelTimeMinutes % 60}m`;
 
-  const totalPayout = totalWorkEarnings + totalFuelCost + Number(manualAdjustment || 0);
+  const totalPayout = totalWorkEarnings - totalCommission - totalFuelCost;
 
   // Inline Edits Handlers
   const handleSaveJob = async () => {
@@ -327,6 +355,324 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       alert('Failed to delete travel log.');
     }
   };
+
+  // Commission Management Inline & Modal Helpers
+  const handleSaveCommission = async (id: string) => {
+    try {
+      await api.put(`/commissions/${id}`, {
+        commissionAmount: Number(editingCommAmount) || 0,
+        remarks: editingCommRemarks
+      });
+      alert('Commission updated successfully!');
+      setEditingCommissionId(null);
+      fetchData();
+    } catch (err) {
+      console.error('Failed to update commission:', err);
+      alert('Failed to update commission.');
+    }
+  };
+
+  const handleDeleteCommission = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this commission record?')) return;
+    try {
+      await api.delete(`/commissions/${id}`);
+      alert('Commission deleted successfully!');
+      fetchData();
+    } catch (err) {
+      console.error('Failed to delete commission:', err);
+      alert('Failed to delete commission.');
+    }
+  };
+
+  const getCommissionReportData = () => {
+    return workerJobs.map(j => {
+      const comm = workerCommissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
+      const commAmt = comm ? comm.commissionAmount : 0;
+      const fuelCost = (j.fuelKmsTravelled || 0) * globalFuelRate;
+      const payout = (j.price || 0) - commAmt - fuelCost;
+      return {
+        workerName: j.workerId?.name || selectedWorker.name || 'N/A',
+        jobId: j.visitId || j._id,
+        company: j.company,
+        customer: j.clientName,
+        service: j.title,
+        workAmount: j.price || 0,
+        commission: commAmt,
+        fuelCost,
+        grandPayout: payout,
+        date: j.date || ''
+      };
+    });
+  };
+
+  const handlePrintCommission = () => {
+    const data = getCommissionReportData();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <html>
+        <head>
+          <title>Commission & Payout Report - ${selectedWorker.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #1e293b; }
+            h2 { margin-bottom: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+            th { background-color: #f8fafc; font-weight: bold; }
+            .total-row { font-weight: bold; background-color: #f1f5f9; }
+          </style>
+        </head>
+        <body>
+          <h2>Commission & Payout Statement - ${selectedWorker.name}</h2>
+          <p>Period: ${startDate} to ${endDate} | Company: ${companyFilter}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Worker Name</th>
+                <th>Job ID</th>
+                <th>Company</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Work Amount</th>
+                <th>Commission</th>
+                <th>Fuel Cost</th>
+                <th>Grand Payout</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(item => `
+                <tr>
+                  <td>${item.date}</td>
+                  <td>${item.workerName}</td>
+                  <td>${item.jobId}</td>
+                  <td>${item.company}</td>
+                  <td>${item.customer}</td>
+                  <td>${item.service}</td>
+                  <td>₹${item.workAmount.toFixed(2)}</td>
+                  <td>₹${item.commission.toFixed(2)}</td>
+                  <td>₹${item.fuelCost.toFixed(2)}</td>
+                  <td>₹${item.grandPayout.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td colspan="6">Totals</td>
+                <td>₹${totalWorkEarnings.toFixed(2)}</td>
+                <td>₹${totalCommission.toFixed(2)}</td>
+                <td>₹${totalFuelCost.toFixed(2)}</td>
+                <td>₹${totalPayout.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleExportCommissionSpreadsheet = (format: 'xls' | 'csv') => {
+    if (!selectedWorker) {
+      alert('Please select a worker first.');
+      return;
+    }
+
+    const filename = `${selectedWorker.name}_commission_report.${format}`;
+    let content = '';
+    const data = getCommissionReportData();
+
+    if (format === 'xls') {
+      content = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Commission Report</x:Name>
+                  <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+        </head>
+        <body>
+          <h2>Worker Commission & Payout Statement - ${selectedWorker.name}</h2>
+          <p>Period: ${startDate} to ${endDate}</p>
+          <table border="1">
+            <thead>
+              <tr style="background-color: #f1f5f9; font-weight: bold;">
+                <th>Date</th>
+                <th>Worker Name</th>
+                <th>Job ID</th>
+                <th>Company</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Work Amount (INR)</th>
+                <th>Commission (INR)</th>
+                <th>Fuel Cost (INR)</th>
+                <th>Grand Payout (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(item => `
+                <tr>
+                  <td>${item.date}</td>
+                  <td>${item.workerName}</td>
+                  <td>${item.jobId}</td>
+                  <td>${item.company}</td>
+                  <td>${item.customer}</td>
+                  <td>${item.service}</td>
+                  <td>${item.workAmount.toFixed(2)}</td>
+                  <td>${item.commission.toFixed(2)}</td>
+                  <td>${item.fuelCost.toFixed(2)}</td>
+                  <td>${item.grandPayout.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              <tr style="font-weight: bold; background-color: #e2e8f0;">
+                <td colspan="6">Totals</td>
+                <td>₹${totalWorkEarnings.toFixed(2)}</td>
+                <td>₹${totalCommission.toFixed(2)}</td>
+                <td>₹${totalFuelCost.toFixed(2)}</td>
+                <td>₹${totalPayout.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+    } else {
+      // CSV Export
+      const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Grand Payout"];
+      const rows = data.map(item => [
+        item.date,
+        item.workerName,
+        item.jobId,
+        item.company,
+        item.customer,
+        item.service,
+        item.workAmount.toFixed(2),
+        item.commission.toFixed(2),
+        item.fuelCost.toFixed(2),
+        item.grandPayout.toFixed(2)
+      ]);
+      content = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    }
+
+    const blob = new Blob([content], { type: format === 'xls' ? 'application/vnd.ms-excel;charset=utf-8;' : 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportCommissionPDF = () => {
+    if (!selectedWorker) {
+      alert('Please select a worker first.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const data = getCommissionReportData();
+    
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(`Worker Commission & Payout Statement`, 14, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Worker: ${selectedWorker.name} (${selectedWorker.company})`, 14, 28);
+    doc.text(`Period: ${startDate} to ${endDate}`, 14, 34);
+    doc.text(`Generated At: ${new Date().toLocaleString()}`, 14, 40);
+
+    // Table headers
+    let y = 50;
+    doc.setFillColor(226, 232, 240);
+    doc.rect(14, y, 182, 6, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("Date", 16, y + 4.5);
+    doc.text("Job ID", 32, y + 4.5);
+    doc.text("Service", 50, y + 4.5);
+    doc.text("Customer", 94, y + 4.5);
+    doc.text("Work Amt", 124, y + 4.5);
+    doc.text("Comm", 144, y + 4.5);
+    doc.text("Fuel", 164, y + 4.5);
+    doc.text("Payout", 182, y + 4.5);
+    
+    y += 6;
+    doc.setFont("helvetica", "normal");
+
+    data.forEach(item => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+        doc.setFillColor(226, 232, 240);
+        doc.rect(14, y, 182, 6, "F");
+        doc.setFont("helvetica", "bold");
+        doc.text("Date", 16, y + 4.5);
+        doc.text("Job ID", 32, y + 4.5);
+        doc.text("Service", 50, y + 4.5);
+        doc.text("Customer", 94, y + 4.5);
+        doc.text("Work Amt", 124, y + 4.5);
+        doc.text("Comm", 144, y + 4.5);
+        doc.text("Fuel", 164, y + 4.5);
+        doc.text("Payout", 182, y + 4.5);
+        y += 6;
+        doc.setFont("helvetica", "normal");
+      }
+
+      const cleanService = item.service.substring(0, 20);
+      const cleanCustomer = item.customer.substring(0, 14);
+
+      doc.text(item.date, 16, y + 4.5);
+      doc.text(String(item.jobId).substring(0, 8), 32, y + 4.5);
+      doc.text(cleanService, 50, y + 4.5);
+      doc.text(cleanCustomer, 94, y + 4.5);
+      doc.text(Number(item.workAmount).toFixed(2), 124, y + 4.5);
+      doc.text(Number(item.commission).toFixed(2), 144, y + 4.5);
+      doc.text(Number(item.fuelCost).toFixed(2), 164, y + 4.5);
+      doc.text(Number(item.grandPayout).toFixed(2), 182, y + 4.5);
+      y += 6;
+    });
+
+    // Totals row
+    doc.line(14, y, 196, y);
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTALS", 16, y + 4.5);
+    doc.text(totalWorkEarnings.toFixed(2), 124, y + 4.5);
+    doc.text(totalCommission.toFixed(2), 144, y + 4.5);
+    doc.text(totalFuelCost.toFixed(2), 164, y + 4.5);
+    doc.text(totalPayout.toFixed(2), 182, y + 4.5);
+
+    doc.save(`${selectedWorker.name}_commission_payout_report.pdf`);
+  };
+
+  useEffect(() => {
+    if (isCommissionModalOpen) {
+      const initialVals: any = {};
+      workerJobs.forEach(job => {
+        const comm = workerCommissions.find(c => c.jobId?._id === job._id || c.jobId === job._id);
+        initialVals[job._id] = {
+          commissionAmount: comm ? String(comm.commissionAmount) : '',
+          remarks: comm ? comm.remarks || '' : ''
+        };
+      });
+      setModalCommissions(initialVals);
+    }
+  }, [isCommissionModalOpen, workerJobs, workerCommissions]);
 
   // Google Maps Dir Link Builder
   const getGoogleMapsDirLink = (from: string, to: string) => {
@@ -774,6 +1120,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { id: 'daily-travel', label: 'Daily Travel Report', icon: MapPin },
                 { id: 'work-earnings', label: 'Work-wise Earnings', icon: DollarSign },
                 { id: 'travel-expenses', label: 'Travel Expenses', icon: Compass },
+                { id: 'commissions', label: 'Commissions', icon: DollarSign },
                 { id: 'monthly', label: 'Monthly Summary', icon: Calendar },
                 { id: 'yearly', label: 'Yearly Summary', icon: Award },
                 { id: 'reports', label: 'Reports & Export', icon: FileSpreadsheet },
@@ -802,14 +1149,15 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
           <div className="space-y-6 w-full">
             
             {/* KPI Cards Row */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:grid-cols-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 print:grid-cols-7">
               {[
                 { label: 'Completed Jobs', val: totalJobsCount, desc: 'jobs done', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20', section: 'daily-travel' },
                 { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'work-earnings' },
                 { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
                 { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
                 { label: 'Travel Duration', val: formattedTravelTime, desc: 'time on road', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'daily-travel' },
-                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'earnings + fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
+                { label: 'Commission', val: `₹${totalCommission.toFixed(2)}`, desc: 'commission paid', color: 'text-amber-500 bg-amber-50/50 dark:bg-amber-950/10', section: 'commissions' },
+                { label: 'Grand Payout', val: `₹${totalPayout.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
               ].map((kpi, idx) => (
                 <div
                   key={idx}
@@ -817,6 +1165,13 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     if (kpi.label === 'Travel Distance') {
                       setActiveSection('travel-expenses');
                       setIsTravelModalOpen(true);
+                    } else if (kpi.label === 'Commission') {
+                      setActiveSection('commissions');
+                      if (selectedWorker && selectedWorker._id !== 'all') {
+                        setIsCommissionModalOpen(true);
+                      } else {
+                        alert('Please select a specific worker first to manage commissions.');
+                      }
                     } else {
                       setActiveSection(kpi.section as any);
                     }
@@ -1303,6 +1658,139 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
               </div>
             )}
 
+            {/* TAB CONTENT: 9. Commissions History */}
+            {activeSection === 'commissions' && (
+              <div className="glass-card p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Worker Commissions History</h3>
+                    <p className="text-[10px] text-slate-400">View and manage commission payouts for crew members.</p>
+                  </div>
+                  {selectedWorker._id !== 'all' && (
+                    <button
+                      onClick={() => setIsCommissionModalOpen(true)}
+                      className="px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white font-extrabold text-xs uppercase tracking-wider shadow-md flex items-center space-x-1.5 transition-all self-start sm:self-auto cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Manage Commissions</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350 min-w-[900px]">
+                    <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3">Worker Name</th>
+                        <th className="px-4 py-3">Job ID</th>
+                        <th className="px-4 py-3">Service</th>
+                        <th className="px-4 py-3">Work Amount</th>
+                        <th className="px-4 py-3">Commission Paid</th>
+                        <th className="px-4 py-3">Remarks</th>
+                        <th className="px-4 py-3">Added By</th>
+                        <th className="px-4 py-3">Added Time</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {workerCommissions.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="text-center py-8 text-slate-400">
+                            No commissions logged for this selection/period.
+                          </td>
+                        </tr>
+                      ) : (
+                        workerCommissions.map(comm => {
+                          const isEditing = editingCommissionId === comm._id;
+                          return (
+                            <tr key={comm._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                              <td className="px-4 py-3.5">{comm.jobDate}</td>
+                              <td className="px-4 py-3.5">
+                                <span className="block text-slate-800 dark:text-white font-extrabold">{comm.workerId?.name || 'N/A'}</span>
+                                <span className="text-[8px] text-slate-400 uppercase font-black">{comm.workerId?.company || ''}</span>
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-800 dark:text-white">#{comm.jobId?.visitId || comm.jobId?._id?.substring(18) || 'N/A'}</td>
+                              <td className="px-4 py-3.5">{comm.jobId?.title || 'N/A'}</td>
+                              <td className="px-4 py-3.5">₹{Number(comm.workAmount || 0).toFixed(2)}</td>
+                              <td className="px-4 py-3.5">
+                                {isEditing ? (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={editingCommAmount}
+                                    onChange={(e) => setEditingCommAmount(e.target.value)}
+                                    className="w-20 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 outline-none focus:border-secondary"
+                                  />
+                                ) : (
+                                  <span className="text-secondary font-black">₹{Number(comm.commissionAmount || 0).toFixed(2)}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editingCommRemarks}
+                                    onChange={(e) => setEditingCommRemarks(e.target.value)}
+                                    className="w-32 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 outline-none focus:border-secondary"
+                                  />
+                                ) : (
+                                  comm.remarks || '-'
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5">{comm.createdBy?.name || 'N/A'}</td>
+                              <td className="px-4 py-3.5 text-slate-400 text-[10px]">
+                                {new Date(comm.createdAt).toLocaleDateString('en-IN')} {new Date(comm.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                <div className="flex items-center justify-end space-x-2">
+                                  {isEditing ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleSaveCommission(comm._id)}
+                                        className="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingCommissionId(null)}
+                                        className="p-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setEditingCommissionId(comm._id);
+                                          setEditingCommAmount(String(comm.commissionAmount));
+                                          setEditingCommRemarks(comm.remarks || '');
+                                        }}
+                                        className="p-1 rounded bg-slate-50 dark:bg-slate-800/80 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-755 transition-colors"
+                                      >
+                                        <Edit className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteCommission(comm._id)}
+                                        className="p-1 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* TAB CONTENT: 5. Monthly Summary */}
             {activeSection === 'monthly' && (
               <div className="glass-card p-6 space-y-4">
@@ -1425,6 +1913,65 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       <Download className="h-4 w-4" />
                       <span>Download PDF</span>
                     </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 dark:border-slate-800 my-6" />
+
+                <div>
+                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest font-black">Commission & Payout Statements</h3>
+                  <p className="text-[10px] text-slate-400">Generate formatted spreadsheets or statements specifically for worker commissions and final grand payouts.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">Excel Commission Sheet (.xls)</h4>
+                      <p className="text-[10px] text-slate-400">Export formatted commission report compatible with Microsoft Excel.</p>
+                    </div>
+                    <button
+                      onClick={() => handleExportCommissionSpreadsheet('xls')}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase shadow-md flex items-center justify-center space-x-1.5 cursor-pointer transition-all whitespace-nowrap self-start sm:self-auto"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Download Excel</span>
+                    </button>
+                  </div>
+
+                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">CSV Commission File (.csv)</h4>
+                      <p className="text-[10px] text-slate-400">Download raw CSV commission data export file.</p>
+                    </div>
+                    <button
+                      onClick={() => handleExportCommissionSpreadsheet('csv')}
+                      className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs uppercase shadow-md flex items-center justify-center space-x-1.5 cursor-pointer transition-all whitespace-nowrap self-start sm:self-auto"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Download CSV</span>
+                    </button>
+                  </div>
+
+                  <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-4 md:col-span-2">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">PDF Commission Statement (.pdf)</h4>
+                      <p className="text-[10px] text-slate-400">Download beautifully formatted PDF report of commissions and final payouts.</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleExportCommissionPDF}
+                        className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase shadow-md flex items-center space-x-1.5 cursor-pointer transition-all"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>PDF</span>
+                      </button>
+                      <button
+                        onClick={handlePrintCommission}
+                        className="px-4 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-700 text-white font-extrabold text-xs uppercase shadow-md flex items-center space-x-1.5 cursor-pointer transition-all"
+                      >
+                        <Printer className="h-4 w-4" />
+                        <span>Print</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1651,6 +2198,176 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Popup for Commission Management */}
+      {isCommissionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setIsCommissionModalOpen(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+          />
+
+          <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden animate-fade-in text-left flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center flex-shrink-0">
+              <h3 className="text-xs font-black uppercase text-secondary tracking-widest flex items-center space-x-2">
+                <DollarSign className="h-5 w-5 text-secondary animate-bounce" />
+                <span>Manage Worker Commissions</span>
+              </h3>
+              <button
+                onClick={() => setIsCommissionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-655 dark:hover:text-white cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Content */}
+            <div className="p-6 overflow-y-auto flex-1 font-bold text-xs space-y-4">
+              {/* Top Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <span className="text-[8px] uppercase text-slate-400 block tracking-wider">Worker Name</span>
+                  <span className="text-slate-800 dark:text-white font-extrabold">{selectedWorker.name}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] uppercase text-slate-400 block tracking-wider">Worker ID</span>
+                  <span className="text-slate-800 dark:text-white font-extrabold text-[10px] truncate block">{selectedWorker._id}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] uppercase text-slate-400 block tracking-wider">Date Period</span>
+                  <span className="text-slate-800 dark:text-white font-extrabold">{startDate} to {endDate}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] uppercase text-slate-400 block tracking-wider">Completed Jobs</span>
+                  <span className="text-slate-800 dark:text-white font-extrabold">{workerJobs.length}</span>
+                </div>
+              </div>
+
+              {selectedWorker._id === 'all' ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p>Please close this modal and select a specific worker account to manage their commissions.</p>
+                </div>
+              ) : workerJobs.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p>No completed jobs found for {selectedWorker.name} in this date range.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-bold text-slate-655 dark:text-slate-350 min-w-[600px]">
+                      <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
+                        <tr>
+                          <th className="px-4 py-2.5">Job ID</th>
+                          <th className="px-4 py-2.5">Company</th>
+                          <th className="px-4 py-2.5">Customer Name</th>
+                          <th className="px-4 py-2.5">Service Name</th>
+                          <th className="px-4 py-2.5">Work Amount</th>
+                          <th className="px-4 py-2.5" style={{ width: '130px' }}>Commission (₹)</th>
+                          <th className="px-4 py-2.5">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {workerJobs.map(job => {
+                          const stateVal = modalCommissions[job._id] || { commissionAmount: '', remarks: '' };
+                          return (
+                            <tr key={job._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                              <td className="px-4 py-3 text-slate-800 dark:text-white">#{job.visitId || job._id.substring(18)}</td>
+                              <td className="px-4 py-3">{job.company}</td>
+                              <td className="px-4 py-3">{job.clientName}</td>
+                              <td className="px-4 py-3">{job.title}</td>
+                              <td className="px-4 py-3">₹{Number(job.price || 0).toFixed(2)}</td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0.00"
+                                  value={stateVal.commissionAmount}
+                                  onChange={(e) => {
+                                    setModalCommissions({
+                                      ...modalCommissions,
+                                      [job._id]: {
+                                        ...stateVal,
+                                        commissionAmount: e.target.value
+                                      }
+                                    });
+                                  }}
+                                  className="w-full text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="text"
+                                  placeholder="Remarks..."
+                                  value={stateVal.remarks}
+                                  onChange={(e) => {
+                                    setModalCommissions({
+                                      ...modalCommissions,
+                                      [job._id]: {
+                                        ...stateVal,
+                                        remarks: e.target.value
+                                      }
+                                    });
+                                  }}
+                                  className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Calculations and Actions Footer */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4 gap-4">
+                    <div className="text-slate-800 dark:text-white font-extrabold text-sm">
+                      Total Commission: <span className="text-secondary">₹{
+                        Object.values(modalCommissions).reduce((sum, item) => sum + (Number(item.commissionAmount) || 0), 0).toFixed(2)
+                      }</span>
+                    </div>
+
+                    <div className="flex space-x-3 self-end sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setIsCommissionModalOpen(false)}
+                        className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer font-bold text-xs"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const payload = {
+                              workerId: selectedWorker._id,
+                              commissions: Object.entries(modalCommissions).map(([jobId, data]) => ({
+                                jobId,
+                                commissionAmount: Number(data.commissionAmount) || 0,
+                                remarks: data.remarks
+                              }))
+                            };
+                            await api.post('/commissions/bulk-upsert', payload);
+                            alert('Commissions saved successfully!');
+                            setIsCommissionModalOpen(false);
+                            fetchData();
+                          } catch (err) {
+                            console.error('Failed to save commissions:', err);
+                            alert('Failed to save commissions.');
+                          }
+                        }}
+                        className="px-5 py-2 rounded-xl bg-secondary hover:bg-secondary-dark text-white font-bold text-xs uppercase shadow-md cursor-pointer"
+                      >
+                        Save Commissions
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
