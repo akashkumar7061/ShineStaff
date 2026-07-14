@@ -187,27 +187,22 @@ const backfillTravelLogs = async () => {
   }
 };
 
-const resetRohitDistanceToday = async () => {
+const resetAllWorkerDistancesToday = async () => {
   try {
-    const workers = await User.find({ name: /rohit/i });
-    if (workers.length > 0) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      for (const worker of workers) {
-        // Reset jobs
-        const jobUpdate = await Job.updateMany(
-          { workerId: worker._id, date: todayStr },
-          { $set: { fuelKmsTravelled: 0, fuelAllowance: 0 } }
-        );
-        // Reset travel logs
-        const travelUpdate = await TravelLog.updateMany(
-          { workerId: worker._id, date: todayStr },
-          { $set: { kms: 0, allowance: 0 } }
-        );
-        console.log(`Reset completed for worker: ${worker.name}. Jobs updated: ${jobUpdate.modifiedCount}, Travel logs updated: ${travelUpdate.modifiedCount}`);
-      }
-    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    // Reset jobs
+    const jobUpdate = await Job.updateMany(
+      { date: todayStr },
+      { $set: { fuelKmsTravelled: 0, fuelAllowance: 0 } }
+    );
+    // Reset travel logs
+    const travelUpdate = await TravelLog.updateMany(
+      { date: todayStr },
+      { $set: { kms: 0, allowance: 0 } }
+    );
+    console.log(`Reset completed for all workers today (${todayStr}). Jobs reset: ${jobUpdate.modifiedCount}, Travel logs reset: ${travelUpdate.modifiedCount}`);
   } catch (err) {
-    console.error('Failed to reset Rohit distance:', err);
+    console.error('Failed to reset all worker distances today:', err);
   }
 };
 
@@ -215,7 +210,7 @@ const startServer = async () => {
   await connectDB();
   await seedAdmin();
   await backfillTravelLogs();
-  await resetRohitDistanceToday();
+  await resetAllWorkerDistancesToday();
   server.listen(PORT, () => {
     console.log(`ShineStaff Server running on port ${PORT}`);
   });
