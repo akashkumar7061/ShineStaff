@@ -1213,6 +1213,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                     </a>
                                     <span className="text-[#1e3a8a] dark:text-blue-200 font-extrabold">₹{j.price}</span>
                                   </div>
+                                  <div className="text-[9.5px] text-slate-500 font-semibold mt-1 truncate border-t border-[#bfdbfe]/30 pt-1 flex items-center space-x-0.5" title={j.address}>
+                                    <span>📍</span>
+                                    <span className="truncate">{j.address || 'No Address'}</span>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -1280,6 +1284,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                   <span>📞 Call</span>
                                 </a>
                                 <span className="text-[#1e3a8a] dark:text-blue-200 font-extrabold">₹{j.price}</span>
+                              </div>
+                              <div className="text-[9.5px] text-slate-500 font-semibold mt-1 truncate border-t border-[#bfdbfe]/30 pt-1 flex items-center space-x-0.5" title={j.address}>
+                                <span>📍</span>
+                                <span className="truncate">{j.address || 'No Address'}</span>
                               </div>
                             </div>
                           </div>
