@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Job from '../models/Job';
 import User from '../models/User';
 import Settings from '../models/Settings';
@@ -681,12 +682,14 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
           jobId: job._id,
           job: populatedJob
         });
-        io.to(job.workerId.toString()).emit('notification', {
-          type: 'JOB_CANCELLED',
-          message: `Job "${job.title}" has been cancelled.`,
-          jobId: job._id,
-          job: populatedJob
-        });
+        if (job.workerId) {
+          io.to(job.workerId.toString()).emit('notification', {
+            type: 'JOB_CANCELLED',
+            message: `Job "${job.title}" has been cancelled.`,
+            jobId: job._id,
+            job: populatedJob
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to send job cancelled socket notification:', err);
@@ -721,11 +724,13 @@ export const deleteJob = async (req: AuthRequest, res: Response) => {
           message: `Job "${job.title}" has been deleted.`,
           jobId: id
         });
-        io.to(job.workerId.toString()).emit('notification', {
-          type: 'JOB_DELETED',
-          message: `Job "${job.title}" has been deleted.`,
-          jobId: id
-        });
+        if (job.workerId) {
+          io.to(job.workerId.toString()).emit('notification', {
+            type: 'JOB_DELETED',
+            message: `Job "${job.title}" has been deleted.`,
+            jobId: id
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to send job deleted socket notification:', err);
@@ -757,7 +762,9 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     fromLocation,
     toLocation,
     paymentStatus,
-    rating
+    rating,
+    status,
+    cancelReason
   } = req.body;
 
   try {
@@ -865,6 +872,33 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     }
     if (rating !== undefined) {
       job.rating = Number(rating);
+    }
+
+    if (status !== undefined) {
+      if (job.status !== status) {
+        job.status = status as any;
+        if (status === 'cancelled') {
+          job.cancelReason = cancelReason || 'No reason specified';
+        }
+        if (status === 'completed') {
+          job.adminCompleted = true;
+          job.adminCompletedBy = req.user ? new mongoose.Types.ObjectId(req.user.id) : undefined;
+          job.adminCompletedByName = 'Admin';
+          job.adminCompletionReason = 'Manual Override by Admin';
+          job.adminCompletionRemarks = 'Admin manually updated job status to completed';
+          job.adminCompletionIP = req.ip || 'unknown';
+          job.adminCompletionWorkerConfirmed = true;
+        }
+        if (!job.timeline) job.timeline = [];
+        job.timeline.push({
+          status: status as any,
+          timestamp: new Date(),
+          remarks: status === 'cancelled'
+            ? `Job cancelled. Reason: ${cancelReason || 'No reason specified'}`
+            : `Status updated by Admin to ${status}`,
+          updatedBy: 'Admin'
+        });
+      }
     }
 
     const wasNotified = !!job.notificationSentAt;
