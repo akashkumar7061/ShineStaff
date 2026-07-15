@@ -303,8 +303,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     ? (selectedWorker.dailySalary || (selectedWorker.monthlySalary / 30) || 0) * daysCount
     : workers.reduce((sum, w) => sum + ((w.dailySalary || (w.monthlySalary / 30) || 0) * daysCount), 0);
 
-  const totalProfit = totalWorkEarnings - totalCommission - totalFuelCost;
-  const totalNetSalary = totalBaseSalary - totalProfit;
+  const totalProfit = totalWorkEarnings - totalCommission - totalFuelCost - totalBaseSalary;
+  const totalNetSalary = totalBaseSalary + totalCommission + totalFuelCost;
 
   // Worker-wise Summary Aggregator for "All Workers"
   const getWorkerWiseSummary = () => {
@@ -333,8 +333,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       const commission = commForWorker.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
       const dailySal = w.dailySalary || (w.monthlySalary / 30) || 0;
       const baseSalary = dailySal * daysCount;
-      const profit = earnings - commission - fuelCost;
-      const netSalary = baseSalary - profit;
+      const profit = earnings - commission - fuelCost - baseSalary;
+      const netSalary = baseSalary + commission + fuelCost;
 
       return {
         _id: w._id,
@@ -519,12 +519,11 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       const commAmt = comm ? comm.commissionAmount : 0;
       const commRemarks = comm ? comm.remarks : '';
       const fuelCost = (j.fuelKmsTravelled || 0) * globalFuelRate;
-      const profit = (j.price || 0) - commAmt - fuelCost;
-
       const workerId = j.workerId?._id || j.workerId;
       const workerObj = workers.find(w => w._id === workerId);
       const dailySal = workerObj ? (workerObj.dailySalary || (workerObj.monthlySalary / 30) || 0) : 0;
-      const netSalaryVal = dailySal - profit;
+      const profit = (j.price || 0) - commAmt - fuelCost - dailySal;
+      const netSalaryVal = dailySal + commAmt + fuelCost;
 
       return {
         workerName: j.workerId?.name || selectedWorker.name || 'N/A',
