@@ -38,7 +38,7 @@ New Delhi – 110059, India`,
       ],
       notes: "Thank you for choosing SofaShine.",
       signature: "",
-      stamp: ""
+      stamp: window.location.origin + "/logos/sofashine_stamp.png"
     },
     CleanCruisers: {
       name: "CleanCruisers",
