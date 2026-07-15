@@ -58,7 +58,7 @@ New Delhi – 110059, India`,
         "GST included in all prices."
       ],
       notes: "Thank you for choosing CleanCruisers.",
-      signature: window.location.origin + "/logos/cleancruisers_sig.png",
+      signature: "",
       stamp: window.location.origin + "/logos/cleancruisers_stamp.png"
     }
   };
@@ -262,16 +262,17 @@ New Delhi – 110059, India`,
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
-  doc.text(`For ${comp.name}`, margin, y);
+  doc.text(`For ${comp.name}`, margin + 5, y);
 
   if (stampImg) {
-    doc.addImage(stampImg, 'JPEG', margin, y + 2, 14, 14);
-  }
-  if (sigImg) {
-    doc.addImage(sigImg, 'PNG', margin + 16, y + 2, 35, 12);
+    const stampSize = 22; // Enlarged stamp size
+    const stampX = margin + (65 - stampSize) / 2; // Center inside the 65mm signature block
+    doc.addImage(stampImg, 'PNG', stampX, y + 2, stampSize, stampSize);
+    y += stampSize + 4;
+  } else {
+    y += 15;
   }
 
-  y += 18;
   doc.setDrawColor(148, 163, 184);
   doc.setLineWidth(0.4);
   doc.line(margin, y, margin + 65, y);
@@ -280,7 +281,7 @@ New Delhi – 110059, India`,
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
-  doc.text("Authorised Signature", margin + 12, y);
+  doc.text("Authorised Signature", margin + 18, y);
 
   // Footer notes
   doc.setFont("helvetica", "italic");
