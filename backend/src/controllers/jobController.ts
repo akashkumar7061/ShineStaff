@@ -56,6 +56,70 @@ const calculateDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(d * 100) / 100; // round to 2 decimals
 };
 
+export const shouldDelayNotification = (jobDateStr: string): boolean => {
+  if (!jobDateStr) return false;
+  
+  const utcTime = new Date().getTime();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istNow = new Date(utcTime + istOffset);
+  
+  const [year, month, day] = jobDateStr.split('-').map(Number);
+  const threshold = new Date(Date.UTC(year, month - 1, day - 1, 19, 0, 0));
+  
+  return istNow.getTime() < threshold.getTime();
+};
+
+export const sendJobNotification = async (job: any) => {
+  try {
+    if (!job.workerId) return;
+    const worker = await User.findById(job.workerId);
+    if (!worker) return;
+
+    const companyLabel = `${job.company} Services`;
+    const visitCode = `Visit #${job.visitId}`;
+    const scheduledTime = `${job.date || 'Today'} • ${job.timeSlot || 'ASAP'}`;
+
+    sendPushNotification(
+      job.workerId.toString(),
+      '🔔 New Visit Assigned',
+      `${companyLabel}\n${visitCode}\n${job.title}\nCustomer: ${job.clientName}\nCustomer Address: ${job.address || 'N/A'}\nVisit Date & Time: ${scheduledTime}`,
+      `/worker/jobs?startJobId=${job._id}`
+    );
+
+    const io = getIO();
+    if (io) {
+      io.to(job.workerId.toString()).emit('notification', {
+        type: 'NEW_JOB',
+        message: `New job "${job.title}" assigned to you for ${job.company}.`,
+        jobTitle: job.title,
+        company: job.company,
+        jobId: job._id,
+        job: job
+      });
+    }
+
+    const emailHtml = `
+      <h3>New Job Assigned - ${job.company}</h3>
+      <p>Hello ${worker.name},</p>
+      <p>A new cleaning job has been assigned to you:</p>
+      <ul>
+        <li><strong>Title:</strong> ${job.title}</li>
+        <li><strong>Client:</strong> ${job.clientName}</li>
+        <li><strong>Address:</strong> ${job.address}</li>
+        <li><strong>Company:</strong> ${job.company}</li>
+      </ul>
+      <p>Please log in to your ShineStaff app to view directions and start the job.</p>
+    `;
+    await sendMail(worker.email, 'New Job Assigned - ShineStaff', emailHtml);
+
+    job.notificationSentAt = new Date();
+    await job.save();
+    console.log(`[BACKGROUND SCHEDULED] Notification sent for job ${job._id} to worker ${worker.name}`);
+  } catch (error) {
+    console.error(`Error sending delayed job notification for ${job._id}:`, error);
+  }
+};
+
 export const getJobs = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -68,6 +132,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
     // Worker only gets their own jobs
     if (req.user.role === 'worker') {
       filter.workerId = req.user.id;
+      filter.notificationSentAt = { $exists: true, $ne: null };
     } else if (workerId) {
       filter.workerId = workerId;
     }
@@ -98,6 +163,14 @@ export const getJobById = async (req: AuthRequest, res: Response) => {
     const job = await Job.findById(id).populate('workerId', 'name email phone photo');
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
+    }
+    if (req.user && req.user.role === 'worker') {
+      if (String(job.workerId?._id || job.workerId) !== req.user.id) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      if (!job.notificationSentAt) {
+        return res.status(403).json({ message: 'Tomorrow\'s work is not accessible before 7:00 PM today.' });
+      }
     }
     res.status(200).json(job);
   } catch (error: any) {
@@ -213,7 +286,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       fromLocation: fromLocation || '',
       toLocation: toLocation || '',
       status: 'pending',
-      notificationSentAt: new Date(),
+      notificationSentAt: shouldDelayNotification(date || '') ? undefined : new Date(),
 
       visitId: generatedVisitId,
       alternatePhone: alternatePhone || '',
@@ -238,41 +311,46 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     const scheduledTime = `${date || 'Today'} • ${timeSlot || 'ASAP'}`;
 
     if (worker) {
-      // Send detailed push notification to worker matching visit specification layout
-      sendPushNotification(
-        workerId.toString(),
-        '🔔 New Visit Assigned',
-        `${companyLabel}\n${visitCode}\n${title}\nCustomer: ${clientName}\nCustomer Address: ${address || 'N/A'}\nVisit Date & Time: ${scheduledTime}`,
-        `/worker/jobs?startJobId=${job._id}`
-      );
+      const delay = shouldDelayNotification(date || '');
+      if (!delay) {
+        // Send detailed push notification to worker matching visit specification layout
+        sendPushNotification(
+          workerId.toString(),
+          '🔔 New Visit Assigned',
+          `${companyLabel}\n${visitCode}\n${title}\nCustomer: ${clientName}\nCustomer Address: ${address || 'N/A'}\nVisit Date & Time: ${scheduledTime}`,
+          `/worker/jobs?startJobId=${job._id}`
+        );
 
-      const populatedJob = await Job.findById(job._id).populate('workerId');
-      const io = getIO();
-      if (io) {
-        io.to(workerId.toString()).emit('notification', {
-          type: 'NEW_JOB',
-          message: `New job "${title}" assigned to you for ${company}.`,
-          jobTitle: title,
-          company: company,
-          jobId: job._id,
-          job: populatedJob
-        });
+        const populatedJob = await Job.findById(job._id).populate('workerId');
+        const io = getIO();
+        if (io) {
+          io.to(workerId.toString()).emit('notification', {
+            type: 'NEW_JOB',
+            message: `New job "${title}" assigned to you for ${company}.`,
+            jobTitle: title,
+            company: company,
+            jobId: job._id,
+            job: populatedJob
+          });
+        }
+
+        // 2. Email Notification to Worker
+        const emailHtml = `
+          <h3>New Job Assigned - ${company}</h3>
+          <p>Hello ${worker.name},</p>
+          <p>A new cleaning job has been assigned to you:</p>
+          <ul>
+            <li><strong>Title:</strong> ${title}</li>
+            <li><strong>Client:</strong> ${clientName}</li>
+            <li><strong>Address:</strong> ${address}</li>
+            <li><strong>Company:</strong> ${company}</li>
+          </ul>
+          <p>Please log in to your ShineStaff app to view directions and start the job.</p>
+        `;
+        await sendMail(worker.email, 'New Job Assigned - ShineStaff', emailHtml);
+      } else {
+        console.log(`[DELAYED] Job assignment notification for tomorrow/future job ${job._id} is delayed until 7:00 PM on the day before.`);
       }
-
-      // 2. Email Notification to Worker
-      const emailHtml = `
-        <h3>New Job Assigned - ${company}</h3>
-        <p>Hello ${worker.name},</p>
-        <p>A new cleaning job has been assigned to you:</p>
-        <ul>
-          <li><strong>Title:</strong> ${title}</li>
-          <li><strong>Client:</strong> ${clientName}</li>
-          <li><strong>Address:</strong> ${address}</li>
-          <li><strong>Company:</strong> ${company}</li>
-        </ul>
-        <p>Please log in to your ShineStaff app to view directions and start the job.</p>
-      `;
-      await sendMail(worker.email, 'New Job Assigned - ShineStaff', emailHtml);
     }
 
     res.status(201).json({ message: 'Job created successfully', job });
@@ -754,6 +832,15 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
       job.rating = Number(rating);
     }
 
+    const wasNotified = !!job.notificationSentAt;
+    const delay = shouldDelayNotification(job.date || '');
+    
+    if (delay) {
+      job.notificationSentAt = undefined;
+    } else if (!wasNotified && job.workerId) {
+      job.notificationSentAt = new Date();
+    }
+
     await job.save();
 
     logAudit(req, {
@@ -771,11 +858,18 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
           message: `Job "${job.title}" has been updated.`,
           jobId: job._id
         });
-        io.to(job.workerId.toString()).emit('notification', {
-          type: 'JOB_UPDATED',
-          message: `Job "${job.title}" has been updated.`,
-          jobId: job._id
-        });
+        
+        if (job.workerId && !delay) {
+          if (!wasNotified) {
+            sendJobNotification(job);
+          } else {
+            io.to(job.workerId.toString()).emit('notification', {
+              type: 'JOB_UPDATED',
+              message: `Job "${job.title}" has been updated.`,
+              jobId: job._id
+            });
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to send job updated socket notification:', err);

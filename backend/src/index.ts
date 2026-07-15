@@ -209,6 +209,31 @@ const startServer = async () => {
   await seedAdmin();
   await backfillTravelLogs();
   await clearAllDistancesAndLogsEver();
+
+  // Start delayed job notification scheduler
+  setInterval(async () => {
+    try {
+      const pendingJobs = await Job.find({
+        workerId: { $exists: true, $ne: null },
+        $or: [
+          { notificationSentAt: null },
+          { notificationSentAt: { $exists: false } }
+        ]
+      });
+
+      if (pendingJobs.length > 0) {
+        const { shouldDelayNotification, sendJobNotification } = require('./controllers/jobController');
+        for (const job of pendingJobs) {
+          if (!shouldDelayNotification(job.date || '')) {
+            await sendJobNotification(job);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error in delayed job notification scheduler:', err);
+    }
+  }, 30 * 1000); // Check every 30 seconds for responsiveness
+
   server.listen(PORT, () => {
     console.log(`ShineStaff Server running on port ${PORT}`);
   });
