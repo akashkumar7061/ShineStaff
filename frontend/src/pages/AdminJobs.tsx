@@ -1217,6 +1217,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                     <span>📍</span>
                                     <span className="truncate">{j.address || 'No Address'}</span>
                                   </div>
+                                  <div className="mt-0.5 flex items-center justify-between text-[9px] font-bold text-slate-400">
+                                    <a
+                                      href={
+                                        j.location?.lat
+                                          ? `https://www.google.com/maps/search/?api=1&query=${j.location.lat},${j.location.lng}`
+                                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address || '')}`
+                                      }
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-[#2563eb] hover:underline"
+                                    >
+                                      🗺️ View GPS / Map
+                                    </a>
+                                    {j.location?.lat && (
+                                      <span className="text-[8.5px] font-semibold text-slate-400">
+                                        {j.location.lat.toFixed(4)}, {j.location.lng.toFixed(4)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -1288,6 +1308,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               <div className="text-[9.5px] text-slate-500 font-semibold mt-1 truncate border-t border-[#bfdbfe]/30 pt-1 flex items-center space-x-0.5" title={j.address}>
                                 <span>📍</span>
                                 <span className="truncate">{j.address || 'No Address'}</span>
+                              </div>
+                              <div className="mt-0.5 flex items-center justify-between text-[9px] font-bold text-slate-400">
+                                <a
+                                  href={
+                                    j.location?.lat
+                                      ? `https://www.google.com/maps/search/?api=1&query=${j.location.lat},${j.location.lng}`
+                                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address || '')}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-[#2563eb] hover:underline"
+                                >
+                                  🗺️ View GPS / Map
+                                </a>
+                                {j.location?.lat && (
+                                  <span className="text-[8.5px] font-semibold text-slate-400">
+                                    {j.location.lat.toFixed(4)}, {j.location.lng.toFixed(4)}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
