@@ -274,6 +274,16 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   };
 
   // Calculations Engine
+  const getDaysCount = () => {
+    if (!startDate || !endDate) return 30;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return isNaN(diffDays) ? 30 : diffDays;
+  };
+  const daysCount = getDaysCount();
+
   const workerJobs = getFilteredJobs();
   const workerTravel = getFilteredTravelLogs();
   const workerCommissions = getFilteredCommissions();
@@ -287,6 +297,14 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
   const totalFuelCost = totalDistance * globalFuelRate;
   const totalCommission = workerCommissions.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+
+  // Total base salary for selected workers during the selected period
+  const totalBaseSalary = selectedWorker && selectedWorker._id !== 'all'
+    ? (selectedWorker.dailySalary || (selectedWorker.monthlySalary / 30) || 0) * daysCount
+    : workers.reduce((sum, w) => sum + ((w.dailySalary || (w.monthlySalary / 30) || 0) * daysCount), 0);
+
+  const totalProfit = totalWorkEarnings - totalCommission - totalFuelCost;
+  const totalNetSalary = totalBaseSalary - totalProfit;
 
   // Worker-wise Summary Aggregator for "All Workers"
   const getWorkerWiseSummary = () => {
@@ -313,7 +331,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                        jobsForWorker.reduce((sum, j) => sum + (j.fuelKmsTravelled || 0), 0);
       const fuelCost = distance * globalFuelRate;
       const commission = commForWorker.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
-      const netSalary = earnings - commission - fuelCost;
+      const dailySal = w.dailySalary || (w.monthlySalary / 30) || 0;
+      const baseSalary = dailySal * daysCount;
+      const profit = earnings - commission - fuelCost;
+      const netSalary = baseSalary - profit;
 
       return {
         _id: w._id,
@@ -498,7 +519,13 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       const commAmt = comm ? comm.commissionAmount : 0;
       const commRemarks = comm ? comm.remarks : '';
       const fuelCost = (j.fuelKmsTravelled || 0) * globalFuelRate;
-      const payout = (j.price || 0) - commAmt - fuelCost;
+      const profit = (j.price || 0) - commAmt - fuelCost;
+
+      const workerId = j.workerId?._id || j.workerId;
+      const workerObj = workers.find(w => w._id === workerId);
+      const dailySal = workerObj ? (workerObj.dailySalary || (workerObj.monthlySalary / 30) || 0) : 0;
+      const netSalaryVal = dailySal - profit;
+
       return {
         workerName: j.workerId?.name || selectedWorker.name || 'N/A',
         jobId: j.visitId || j._id,
@@ -508,7 +535,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         workAmount: j.price || 0,
         commission: commAmt,
         fuelCost,
-        grandPayout: payout,
+        grandPayout: profit,
+        netSalary: netSalaryVal,
         date: j.date || '',
         paymentStatus: j.paymentStatus || 'pending',
         remarks: commRemarks || ''
@@ -550,6 +578,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <th>Commission</th>
                 <th>Fuel Cost</th>
                 <th>Profit</th>
+                <th>Net Salary</th>
                 <th>Status</th>
                 <th>Remarks</th>
               </tr>
@@ -567,6 +596,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <td>₹${item.commission.toFixed(2)}</td>
                   <td>₹${item.fuelCost.toFixed(2)}</td>
                   <td>₹${item.grandPayout.toFixed(2)}</td>
+                  <td>₹${item.netSalary.toFixed(2)}</td>
                   <td>${item.paymentStatus}</td>
                   <td>${item.remarks}</td>
                 </tr>
@@ -576,7 +606,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <td>₹${totalWorkEarnings.toFixed(2)}</td>
                 <td>₹${totalCommission.toFixed(2)}</td>
                 <td>₹${totalFuelCost.toFixed(2)}</td>
-                <td>₹${totalPayout.toFixed(2)}</td>
+                <td>₹${totalProfit.toFixed(2)}</td>
+                <td>₹${totalNetSalary.toFixed(2)}</td>
                 <td colspan="2"></td>
               </tr>
             </tbody>
@@ -635,6 +666,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <th>Commission (INR)</th>
                 <th>Fuel Cost (INR)</th>
                 <th>Profit (INR)</th>
+                <th>Net Salary (INR)</th>
                 <th>Payment Status</th>
                 <th>Remarks</th>
               </tr>
@@ -652,6 +684,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <td>${item.commission.toFixed(2)}</td>
                   <td>${item.fuelCost.toFixed(2)}</td>
                   <td>${item.grandPayout.toFixed(2)}</td>
+                  <td>${item.netSalary.toFixed(2)}</td>
                   <td>${item.paymentStatus}</td>
                   <td>${item.remarks}</td>
                 </tr>
@@ -661,7 +694,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <td>₹${totalWorkEarnings.toFixed(2)}</td>
                 <td>₹${totalCommission.toFixed(2)}</td>
                 <td>₹${totalFuelCost.toFixed(2)}</td>
-                <td>₹${totalPayout.toFixed(2)}</td>
+                <td>₹${totalProfit.toFixed(2)}</td>
+                <td>₹${totalNetSalary.toFixed(2)}</td>
                 <td colspan="2"></td>
               </tr>
             </tbody>
@@ -671,7 +705,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       `;
     } else {
       // CSV Export
-      const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Profit", "Payment Status", "Remarks"];
+      const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Profit", "Net Salary", "Payment Status", "Remarks"];
       const rows = data.map(item => [
         item.date,
         item.workerName,
@@ -683,6 +717,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         item.commission.toFixed(2),
         item.fuelCost.toFixed(2),
         item.grandPayout.toFixed(2),
+        item.netSalary.toFixed(2),
         item.paymentStatus,
         item.remarks
       ]);
@@ -726,17 +761,18 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.text("Date", 16, y + 4.5);
-    doc.text("Worker Name", 36, y + 4.5);
-    doc.text("Job ID", 66, y + 4.5);
-    doc.text("Company", 82, y + 4.5);
-    doc.text("Customer", 97, y + 4.5);
-    doc.text("Service", 127, y + 4.5);
-    doc.text("Work Amt", 167, y + 4.5);
-    doc.text("Comm", 187, y + 4.5);
-    doc.text("Fuel", 207, y + 4.5);
-    doc.text("Net Salary", 227, y + 4.5);
-    doc.text("Status", 247, y + 4.5);
-    doc.text("Remarks", 262, y + 4.5);
+    doc.text("Worker Name", 32, y + 4.5);
+    doc.text("Job ID", 57, y + 4.5);
+    doc.text("Company", 72, y + 4.5);
+    doc.text("Customer", 85, y + 4.5);
+    doc.text("Service", 110, y + 4.5);
+    doc.text("Work Amt", 145, y + 4.5);
+    doc.text("Comm", 165, y + 4.5);
+    doc.text("Fuel", 185, y + 4.5);
+    doc.text("Profit", 205, y + 4.5);
+    doc.text("Net Salary", 225, y + 4.5);
+    doc.text("Status", 245, y + 4.5);
+    doc.text("Remarks", 260, y + 4.5);
     
     y += 6;
     doc.setFont("helvetica", "normal");
@@ -749,38 +785,40 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         doc.rect(14, y, 269, 6, "F");
         doc.setFont("helvetica", "bold");
         doc.text("Date", 16, y + 4.5);
-        doc.text("Worker Name", 36, y + 4.5);
-        doc.text("Job ID", 66, y + 4.5);
-        doc.text("Company", 82, y + 4.5);
-        doc.text("Customer", 97, y + 4.5);
-        doc.text("Service", 127, y + 4.5);
-        doc.text("Work Amt", 167, y + 4.5);
-        doc.text("Comm", 187, y + 4.5);
-        doc.text("Fuel", 207, y + 4.5);
-        doc.text("Net Salary", 227, y + 4.5);
-        doc.text("Status", 247, y + 4.5);
-        doc.text("Remarks", 262, y + 4.5);
+        doc.text("Worker Name", 32, y + 4.5);
+        doc.text("Job ID", 57, y + 4.5);
+        doc.text("Company", 72, y + 4.5);
+        doc.text("Customer", 85, y + 4.5);
+        doc.text("Service", 110, y + 4.5);
+        doc.text("Work Amt", 145, y + 4.5);
+        doc.text("Comm", 165, y + 4.5);
+        doc.text("Fuel", 185, y + 4.5);
+        doc.text("Profit", 205, y + 4.5);
+        doc.text("Net Salary", 225, y + 4.5);
+        doc.text("Status", 245, y + 4.5);
+        doc.text("Remarks", 260, y + 4.5);
         y += 6;
         doc.setFont("helvetica", "normal");
       }
 
-      const cleanWorker = item.workerName.substring(0, 16);
-      const cleanService = item.service.substring(0, 20);
-      const cleanCustomer = item.customer.substring(0, 14);
-      const cleanRemarks = item.remarks.substring(0, 15);
+      const cleanWorker = item.workerName.substring(0, 14);
+      const cleanService = item.service.substring(0, 18);
+      const cleanCustomer = item.customer.substring(0, 12);
+      const cleanRemarks = item.remarks.substring(0, 12);
 
       doc.text(item.date, 16, y + 4.5);
-      doc.text(cleanWorker, 36, y + 4.5);
-      doc.text(String(item.jobId).substring(0, 8), 66, y + 4.5);
-      doc.text(item.company, 82, y + 4.5);
-      doc.text(cleanCustomer, 97, y + 4.5);
-      doc.text(cleanService, 127, y + 4.5);
-      doc.text(Number(item.workAmount).toFixed(2), 167, y + 4.5);
-      doc.text(Number(item.commission).toFixed(2), 187, y + 4.5);
-      doc.text(Number(item.fuelCost).toFixed(2), 207, y + 4.5);
-      doc.text(Number(item.grandPayout).toFixed(2), 227, y + 4.5);
-      doc.text(item.paymentStatus, 247, y + 4.5);
-      doc.text(cleanRemarks, 262, y + 4.5);
+      doc.text(cleanWorker, 32, y + 4.5);
+      doc.text(String(item.jobId).substring(0, 8), 57, y + 4.5);
+      doc.text(item.company, 72, y + 4.5);
+      doc.text(cleanCustomer, 85, y + 4.5);
+      doc.text(cleanService, 110, y + 4.5);
+      doc.text(Number(item.workAmount).toFixed(2), 145, y + 4.5);
+      doc.text(Number(item.commission).toFixed(2), 165, y + 4.5);
+      doc.text(Number(item.fuelCost).toFixed(2), 185, y + 4.5);
+      doc.text(Number(item.grandPayout).toFixed(2), 205, y + 4.5);
+      doc.text(Number(item.netSalary).toFixed(2), 225, y + 4.5);
+      doc.text(item.paymentStatus, 245, y + 4.5);
+      doc.text(cleanRemarks, 260, y + 4.5);
       y += 6;
     });
 
@@ -789,10 +827,11 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     y += 2;
     doc.setFont("helvetica", "bold");
     doc.text("TOTALS", 16, y + 4.5);
-    doc.text(totalWorkEarnings.toFixed(2), 167, y + 4.5);
-    doc.text(totalCommission.toFixed(2), 187, y + 4.5);
-    doc.text(totalFuelCost.toFixed(2), 207, y + 4.5);
-    doc.text(totalPayout.toFixed(2), 227, y + 4.5);
+    doc.text(totalWorkEarnings.toFixed(2), 145, y + 4.5);
+    doc.text(totalCommission.toFixed(2), 165, y + 4.5);
+    doc.text(totalFuelCost.toFixed(2), 185, y + 4.5);
+    doc.text(totalProfit.toFixed(2), 205, y + 4.5);
+    doc.text(totalNetSalary.toFixed(2), 225, y + 4.5);
 
     doc.save(`${selectedWorker.name}_salary_report.pdf`);
   };
@@ -1295,9 +1334,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'work-earnings' },
                 { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
                 { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
-                { label: 'Net Salary', val: `₹${totalPayout.toFixed(2)}`, desc: 'worker payout', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'work-earnings' },
+                { label: 'Net Salary', val: `₹${totalNetSalary.toFixed(2)}`, desc: 'worker payout', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'work-earnings' },
                 { label: 'Commission', val: `₹${totalCommission.toFixed(2)}`, desc: 'commission paid', color: 'text-amber-500 bg-amber-50/50 dark:bg-amber-950/10', section: 'commissions' },
-                { label: 'Profit', val: `₹${totalPayout.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
+                { label: 'Profit', val: `₹${totalProfit.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
               ].map((kpi, idx) => (
                 <div
                   key={idx}
@@ -1588,7 +1627,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             { key: 'workAmount', label: 'Work Amount' },
                             { key: 'commission', label: 'Commission' },
                             { key: 'fuelCost', label: 'Fuel Cost' },
-                            { key: 'grandPayout', label: 'Net Salary' },
+                            { key: 'grandPayout', label: 'Profit' },
+                            { key: 'netSalary', label: 'Net Salary' },
                             { key: 'paymentStatus', label: 'Payment Status' },
                             { key: 'remarks', label: 'Remarks' }
                           ].map(col => (
@@ -1619,7 +1659,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           if (paginatedList.length === 0) {
                             return (
                               <tr>
-                                <td colSpan={12} className="px-4 py-8 text-center text-slate-400 font-medium">
+                                <td colSpan={13} className="px-4 py-8 text-center text-slate-400 font-medium">
                                   No salary records found matching filters.
                                 </td>
                               </tr>
@@ -1640,7 +1680,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-extrabold">₹{item.workAmount.toFixed(2)}</td>
                               <td className="px-4 py-3 text-rose-500 font-bold">₹{item.commission.toFixed(2)}</td>
                               <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{item.fuelCost.toFixed(2)}</td>
-                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{item.grandPayout.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-indigo-500 font-semibold">₹{item.grandPayout.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{item.netSalary.toFixed(2)}</td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
                                   item.paymentStatus === 'paid'
