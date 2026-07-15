@@ -104,6 +104,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [commuteKms, setCommuteKms] = useState('');
   const [fuelAllowance, setFuelAllowance] = useState('');
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [savingJob, setSavingJob] = useState(false);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [activeMapField, setActiveMapField] = useState<'from' | 'to'>('from');
   const [mapSearchQuery, setMapSearchQuery] = useState('');
@@ -515,6 +516,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingJob) return;
+
     if (Number(price) < 0) {
       alert('Price cannot be negative.');
       return;
@@ -539,6 +542,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       }
     }
 
+    setSavingJob(true);
     try {
       const payload = {
         title,
@@ -590,6 +594,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setSelectedJobForDrawer(null);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to save job');
+    } finally {
+      setSavingJob(false);
     }
   };
 
@@ -981,8 +987,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     return () => clearTimeout(delayDebounceFn);
   }, [mapSearchQuery, mapPickerOpen]);
 
-  // Grid calculation: filter jobs strictly matching the selected date
-  const dayJobs = jobs.filter((j) => j.date === selectedDate);
+  const parseTimeToMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const cleanStr = timeStr.trim().toUpperCase();
+    const match = cleanStr.match(/^(\d+):(\d+)\s*(AM|PM)$/);
+    if (!match) return 0;
+    
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const ampm = match[3];
+    
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    
+    return hours * 60 + minutes;
+  };
+
+  const getJobStartTimeMinutes = (timeSlot: string): number => {
+    if (!timeSlot) return 9999;
+    const parts = timeSlot.split('-');
+    if (parts.length === 0) return 9999;
+    return parseTimeToMinutes(parts[0]);
+  };
+
+  // Grid calculation: filter jobs strictly matching the selected date and sort chronologically
+  const dayJobs = jobs
+    .filter((j) => j.date === selectedDate)
+    .sort((a, b) => getJobStartTimeMinutes(a.timeSlot) - getJobStartTimeMinutes(b.timeSlot));
   const totalBookings = dayJobs.length;
   const confirmedBookings = dayJobs.filter((j) => ['completed', 'started', 'pending'].includes(j.status)).length;
 
@@ -1351,6 +1382,22 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Location Address</span>
                     <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-250 mt-1 block leading-normal">{selectedJobForDrawer.address}</span>
                   </div>
+                  {selectedJobForDrawer.location && selectedJobForDrawer.location.lat && (
+                    <div>
+                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">GPS Coordinates</span>
+                      <span className="text-[10px] font-extrabold text-slate-800 dark:text-white mt-1 block">
+                        {selectedJobForDrawer.location.lat}, {selectedJobForDrawer.location.lng}
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${selectedJobForDrawer.location.lat},${selectedJobForDrawer.location.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2563eb] hover:underline font-extrabold text-[10px] mt-1.5 inline-flex items-center space-x-1"
+                      >
+                        <span>📍 Open in Google Maps</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
 
 
@@ -2084,8 +2131,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
 
 
-              <button type="submit" className="w-full bg-secondary hover:bg-secondary-dark text-white font-extrabold p-3 rounded-xl transition-all cursor-pointer shadow-md">
-                {isEditMode ? 'Apply Modified Settings' : 'Create & Assign Booking'}
+              <button
+                type="submit"
+                disabled={savingJob}
+                className="w-full bg-secondary hover:bg-secondary-dark disabled:opacity-50 text-white font-extrabold p-3 rounded-xl transition-all cursor-pointer shadow-md"
+              >
+                {savingJob ? 'Saving Booking...' : isEditMode ? 'Apply Modified Settings' : 'Create & Assign Booking'}
               </button>
             </form>
           </div>

@@ -292,6 +292,31 @@ const WorkerJobs: React.FC = () => {
     }
 
     return true;
+  }).sort((a, b) => {
+    const parseTimeToMinutes = (timeStr: string): number => {
+      if (!timeStr) return 0;
+      const cleanStr = timeStr.trim().toUpperCase();
+      const match = cleanStr.match(/^(\d+):(\d+)\s*(AM|PM)$/);
+      if (!match) return 0;
+      
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3];
+      
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+      
+      return hours * 60 + minutes;
+    };
+
+    const getJobStartTimeMinutes = (timeSlot: string): number => {
+      if (!timeSlot) return 9999;
+      const parts = timeSlot.split('-');
+      if (parts.length === 0) return 9999;
+      return parseTimeToMinutes(parts[0]);
+    };
+
+    return getJobStartTimeMinutes(a.timeSlot) - getJobStartTimeMinutes(b.timeSlot);
   });
 
   return (
