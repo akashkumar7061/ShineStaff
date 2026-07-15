@@ -1024,7 +1024,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       '11:00 AM - 01:00 PM',
       ...dayJobs.map((j) => j.timeSlot).filter(Boolean)
     ])
-  ).sort();
+  ).sort((a, b) => getJobStartTimeMinutes(a) - getJobStartTimeMinutes(b));
 
   // Helper to trigger Whatsapp link pre-filled
   const getWhatsAppWorkerScheduleUrl = (worker: any) => {
