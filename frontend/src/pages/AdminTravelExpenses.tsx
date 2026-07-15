@@ -101,6 +101,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [sortAscDetailed, setSortAscDetailed] = useState(false);
   const [detailedPage, setDetailedPage] = useState(1);
 
+  // Salary Ledger & Base Salary Editing States
+  const [searchLedger, setSearchLedger] = useState('');
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [isEditingBaseSalary, setIsEditingBaseSalary] = useState(false);
+  const [newBaseSalaryValue, setNewBaseSalaryValue] = useState('');
+
   // Manual Commute Logging states
   const [logWorker, setLogWorker] = useState<string>('');
   const [logKms, setLogKms] = useState<string>('');
@@ -284,27 +290,233 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   };
   const daysCount = getDaysCount();
 
+  const getFirstDayOfMonth = (dateStr: string) => {
+    const parts = dateStr.split('-');
+    return `${parts[0]}-${parts[1]}-01`;
+  };
+
+  const getSalaryLedger = (workerId: string, startStr: string, endStr: string) => {
+    const workerObj = workers.find(w => w._id === workerId);
+    if (!workerObj) return [];
+
+    const baseSal = workerObj.monthlySalary || 0;
+
+    const filteredJobs = jobs.filter(j => 
+      (j.workerId?._id === workerId || j.workerId === workerId) &&
+      j.status === 'completed' &&
+      j.date && j.date >= startStr && j.date <= endStr
+    );
+
+    const dailyData: { [dateStr: string]: { earnings: number; commission: number; fuelCost: number } } = {};
+
+    filteredJobs.forEach(j => {
+      const dateStr = j.date;
+      if (!dailyData[dateStr]) {
+        dailyData[dateStr] = { earnings: 0, commission: 0, fuelCost: 0 };
+      }
+      dailyData[dateStr].earnings += (j.price || 0);
+      
+      const comm = commissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
+      dailyData[dateStr].commission += comm ? (comm.commissionAmount || 0) : 0;
+
+      const fuelCost = (j.fuelKmsTravelled || 0) * globalFuelRate;
+      dailyData[dateStr].fuelCost += fuelCost;
+    });
+
+    const filteredTravel = travelLogs.filter(log =>
+      (log.workerId?._id === workerId || log.workerId === workerId) &&
+      log.date && log.date >= startStr && log.date <= endStr
+    );
+
+    filteredTravel.forEach(log => {
+      const dateStr = log.date;
+      if (!dailyData[dateStr]) {
+        dailyData[dateStr] = { earnings: 0, commission: 0, fuelCost: 0 };
+      }
+      dailyData[dateStr].fuelCost += (log.kms || 0) * globalFuelRate;
+    });
+
+    const sortedDates = Object.keys(dailyData).sort();
+
+    const ledgerEntries: any[] = [];
+    const monthlyRunningProfit: { [monthStr: string]: number } = {};
+
+    sortedDates.forEach(dateStr => {
+      const yearMonth = dateStr.substring(0, 7);
+      if (monthlyRunningProfit[yearMonth] === undefined) {
+        monthlyRunningProfit[yearMonth] = 0;
+      }
+
+      const prevProfitSum = monthlyRunningProfit[yearMonth];
+      const prevRemaining = baseSal - prevProfitSum;
+
+      const dayData = dailyData[dateStr];
+      const todayProfit = dayData.earnings - dayData.commission - dayData.fuelCost;
+      const currentRemaining = prevRemaining - todayProfit;
+
+      monthlyRunningProfit[yearMonth] += todayProfit;
+
+      ledgerEntries.push({
+        date: dateStr,
+        workerName: workerObj.name,
+        baseSalary: baseSal,
+        profit: todayProfit,
+        deduction: todayProfit,
+        prevRemainingSalary: prevRemaining,
+        currentRemainingSalary: currentRemaining,
+        remarks: `Earnings: ₹${dayData.earnings.toFixed(2)}, Comm: ₹${dayData.commission.toFixed(2)}, Fuel: ₹${dayData.fuelCost.toFixed(2)}`
+      });
+    });
+
+    return ledgerEntries;
+  };
+
+  const getConsolidatedLedger = () => {
+    if (selectedWorker && selectedWorker._id !== 'all') {
+      return getSalaryLedger(selectedWorker._id, startDate, endDate);
+    } else {
+      let combined: any[] = [];
+      workers.forEach(w => {
+        combined = [...combined, ...getSalaryLedger(w._id, startDate, endDate)];
+      });
+      combined.sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.workerName.localeCompare(b.workerName);
+      });
+      return combined;
+    }
+  };
+
+  const getWorkerMetricsForRange = (w: any) => {
+    const baseSal = w.monthlySalary || 0;
+
+    const jobsInPeriod = jobs.filter(j => 
+      (j.workerId?._id === w._id || j.workerId === w._id) &&
+      j.status === 'completed' &&
+      j.date && j.date >= startDate && j.date <= endDate
+    );
+
+    const earnings = jobsInPeriod.reduce((sum, j) => sum + (j.price || 0), 0);
+    const commAmt = jobsInPeriod.reduce((sum, j) => {
+      const comm = commissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
+      return sum + (comm ? (comm.commissionAmount || 0) : 0);
+    }, 0);
+    const fuelCost = jobsInPeriod.reduce((sum, j) => sum + ((j.fuelKmsTravelled || 0) * globalFuelRate), 0);
+    
+    const travelInPeriod = travelLogs.filter(log =>
+      (log.workerId?._id === w._id || log.workerId === w._id) &&
+      log.date && log.date >= startDate && log.date <= endDate
+    );
+    const extraFuelCost = travelInPeriod.reduce((sum, log) => sum + ((log.kms || 0) * globalFuelRate), 0);
+    const totalFuelInPeriod = fuelCost + extraFuelCost;
+
+    const profitInPeriod = earnings - commAmt - totalFuelInPeriod;
+
+    let remainingSalary = baseSal - profitInPeriod;
+
+    if (datePreset === 'today' || datePreset === 'yesterday') {
+      const firstDay = getFirstDayOfMonth(endDate);
+      const jobsInMonth = jobs.filter(j => 
+        (j.workerId?._id === w._id || j.workerId === w._id) &&
+        j.status === 'completed' &&
+        j.date && j.date >= firstDay && j.date <= endDate
+      );
+      const earningsM = jobsInMonth.reduce((sum, j) => sum + (j.price || 0), 0);
+      const commM = jobsInMonth.reduce((sum, j) => {
+        const comm = commissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
+        return sum + (comm ? (comm.commissionAmount || 0) : 0);
+      }, 0);
+      const fuelM = jobsInMonth.reduce((sum, j) => sum + ((j.fuelKmsTravelled || 0) * globalFuelRate), 0);
+      const travelM = travelLogs.filter(log =>
+        (log.workerId?._id === w._id || log.workerId === w._id) &&
+        log.date && log.date >= firstDay && log.date <= endDate
+      );
+      const extraFuelM = travelM.reduce((sum, log) => sum + ((log.kms || 0) * globalFuelRate), 0);
+      const profitM = earningsM - commM - (fuelM + extraFuelM);
+      remainingSalary = baseSal - profitM;
+    }
+
+    return {
+      baseSalary: baseSal,
+      earnings,
+      commission: commAmt,
+      fuelCost: totalFuelInPeriod,
+      profit: profitInPeriod,
+      remainingSalary: remainingSalary
+    };
+  };
+
+  const getSelectedWorkerMetrics = () => {
+    if (selectedWorker && selectedWorker._id !== 'all') {
+      const activeW = workers.find(w => w._id === selectedWorker._id) || selectedWorker;
+      return getWorkerMetricsForRange(activeW);
+    } else {
+      let baseSalSum = 0;
+      let earningsSum = 0;
+      let commSum = 0;
+      let fuelSum = 0;
+      let profitSum = 0;
+      let remainingSum = 0;
+
+      workers.forEach(w => {
+        const m = getWorkerMetricsForRange(w);
+        baseSalSum += m.baseSalary;
+        earningsSum += m.earnings;
+        commSum += m.commission;
+        fuelSum += m.fuelCost;
+        profitSum += m.profit;
+        remainingSum += m.remainingSalary;
+      });
+
+      return {
+        baseSalary: baseSalSum,
+        earnings: earningsSum,
+        commission: commSum,
+        fuelCost: fuelSum,
+        profit: profitSum,
+        remainingSalary: remainingSum
+      };
+    }
+  };
+
+  const handleSaveBaseSalary = async (workerId: string, currentSalary: number) => {
+    const salaryNum = Number(newBaseSalaryValue);
+    if (isNaN(salaryNum) || salaryNum < 0) {
+      alert('Please enter a valid non-negative base salary.');
+      return;
+    }
+    try {
+      await api.put(`/workers/${workerId}`, { monthlySalary: salaryNum });
+      alert('Base salary updated successfully!');
+      setIsEditingBaseSalary(false);
+      fetchData();
+    } catch (err) {
+      console.error('Failed to update base salary:', err);
+      alert('Failed to update base salary.');
+    }
+  };
+
+  const activeWorker = selectedWorker && selectedWorker._id !== 'all'
+    ? workers.find(w => w._id === selectedWorker._id) || selectedWorker
+    : null;
+
+  const metrics = getSelectedWorkerMetrics();
+
   const workerJobs = getFilteredJobs();
   const workerTravel = getFilteredTravelLogs();
   const workerCommissions = getFilteredCommissions();
 
   const totalJobsCount = workerJobs.length;
-  const totalWorkEarnings = workerJobs.reduce((sum, j) => sum + (j.price || 0), 0);
-  
-  // Calculate total KMs from logs + jobs fuelKmsTravelled
+  const totalWorkEarnings = metrics.earnings;
   const totalDistance = workerTravel.reduce((sum, log) => sum + (log.kms || 0), 0) + 
                         workerJobs.reduce((sum, j) => sum + (j.fuelKmsTravelled || 0), 0);
-
-  const totalFuelCost = totalDistance * globalFuelRate;
-  const totalCommission = workerCommissions.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
-
-  // Total base salary for selected workers during the selected period
-  const totalBaseSalary = selectedWorker && selectedWorker._id !== 'all'
-    ? (selectedWorker.dailySalary || (selectedWorker.monthlySalary / 30) || 0) * daysCount
-    : workers.reduce((sum, w) => sum + ((w.dailySalary || (w.monthlySalary / 30) || 0) * daysCount), 0);
-
-  const totalProfit = totalWorkEarnings - totalCommission - totalFuelCost;
-  const totalNetSalary = totalBaseSalary - totalProfit;
+  const totalFuelCost = metrics.fuelCost;
+  const totalCommission = metrics.commission;
+  const totalBaseSalary = metrics.baseSalary;
+  const totalProfit = metrics.profit;
+  const totalRemainingSalary = metrics.remainingSalary;
+  const totalNetSalary = totalRemainingSalary;
 
   // Worker-wise Summary Aggregator for "All Workers"
   const getWorkerWiseSummary = () => {
@@ -334,7 +546,49 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       const dailySal = w.dailySalary || (w.monthlySalary / 30) || 0;
       const baseSalary = dailySal * daysCount;
       const profit = earnings - commission - fuelCost;
-      const netSalary = baseSalary - profit;
+
+      // Get Today's Profit
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayJobs = jobs.filter(j => 
+        (j.workerId?._id === w._id || j.workerId === w._id) &&
+        j.status === 'completed' &&
+        j.date === todayStr
+      );
+      const todayEarn = todayJobs.reduce((sum, j) => sum + (j.price || 0), 0);
+      const todayComm = todayJobs.reduce((sum, j) => {
+        const commObj = commissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
+        return sum + (commObj ? (commObj.commissionAmount || 0) : 0);
+      }, 0);
+      const todayFuel = todayJobs.reduce((sum, j) => sum + ((j.fuelKmsTravelled || 0) * globalFuelRate), 0);
+      const todayTravel = travelLogs.filter(log =>
+        (log.workerId?._id === w._id || log.workerId === w._id) &&
+        log.date === todayStr
+      );
+      const todayExtraFuel = todayTravel.reduce((sum, log) => sum + ((log.kms || 0) * globalFuelRate), 0);
+      const todayProfit = todayEarn - todayComm - (todayFuel + todayExtraFuel);
+
+      // Get Monthly Profit
+      const d = new Date();
+      const firstDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      const monthlyJobs = jobs.filter(j => 
+        (j.workerId?._id === w._id || j.workerId === w._id) &&
+        j.status === 'completed' &&
+        j.date && j.date >= firstDay && j.date <= todayStr
+      );
+      const monthlyEarn = monthlyJobs.reduce((sum, j) => sum + (j.price || 0), 0);
+      const monthlyComm = monthlyJobs.reduce((sum, j) => {
+        const commObj = commissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
+        return sum + (commObj ? (commObj.commissionAmount || 0) : 0);
+      }, 0);
+      const monthlyFuel = monthlyJobs.reduce((sum, j) => sum + ((j.fuelKmsTravelled || 0) * globalFuelRate), 0);
+      const monthlyTravel = travelLogs.filter(log =>
+        (log.workerId?._id === w._id || log.workerId === w._id) &&
+        log.date && log.date >= firstDay && log.date <= todayStr
+      );
+      const monthlyExtraFuel = monthlyTravel.reduce((sum, log) => sum + ((log.kms || 0) * globalFuelRate), 0);
+      const monthlyProfit = monthlyEarn - monthlyComm - (monthlyFuel + monthlyExtraFuel);
+
+      const metricsForRange = getWorkerMetricsForRange(w);
 
       return {
         _id: w._id,
@@ -343,7 +597,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         earnings,
         commission,
         fuelCost,
-        netSalary
+        baseSalary: w.monthlySalary || 0,
+        netSalary: metricsForRange.remainingSalary,
+        todayProfit,
+        monthlyProfit
       };
     });
   };
@@ -355,7 +612,11 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const grandWorkEarnings = workerSummaries.reduce((sum, s) => sum + s.earnings, 0);
   const grandCommission = workerSummaries.reduce((sum, s) => sum + s.commission, 0);
   const grandFuelCost = workerSummaries.reduce((sum, s) => sum + s.fuelCost, 0);
-  const grandNetSalary = workerSummaries.reduce((sum, s) => sum + s.netSalary, 0);
+  const grandBaseSalary = workerSummaries.reduce((sum, s) => sum + s.baseSalary, 0);
+  const grandRemainingSalary = workerSummaries.reduce((sum, s) => sum + s.netSalary, 0);
+  const grandTodayProfit = workerSummaries.reduce((sum, s) => sum + s.todayProfit, 0);
+  const grandMonthlyProfit = workerSummaries.reduce((sum, s) => sum + s.monthlyProfit, 0);
+  const grandNetSalary = grandRemainingSalary;
 
   // Salary Analytics Calculations
   const highestPaid = workerSummaries.length > 0 && workerSummaries.some(s => s.jobsCount > 0)
@@ -1333,7 +1594,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'work-earnings' },
                 { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
                 { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
-                { label: 'Net Salary', val: `₹${totalNetSalary.toFixed(2)}`, desc: 'worker payout', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'work-earnings' },
+                { label: 'Remaining Net Salary', val: `₹${totalRemainingSalary.toFixed(2)}`, desc: datePreset === 'today' ? `Today's Deduction: ₹${totalProfit.toFixed(2)}` : datePreset === 'this-month' ? `This Month Deduction: ₹${totalProfit.toFixed(2)}` : `Period Deduction: ₹${totalProfit.toFixed(2)}`, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'work-earnings' },
                 { label: 'Commission', val: `₹${totalCommission.toFixed(2)}`, desc: 'commission paid', color: 'text-amber-500 bg-amber-50/50 dark:bg-amber-950/10', section: 'commissions' },
                 { label: 'Profit', val: `₹${totalProfit.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
               ].map((kpi, idx) => (
@@ -1436,11 +1697,10 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             <tr>
                               {[
                                 { key: 'name', label: 'Worker Name' },
-                                { key: 'jobsCount', label: 'Completed Jobs' },
-                                { key: 'earnings', label: 'Work Earnings' },
-                                { key: 'commission', label: 'Commission' },
-                                { key: 'fuelCost', label: 'Fuel Cost' },
-                                { key: 'netSalary', label: 'Net Salary' }
+                                { key: 'baseSalary', label: 'Base Salary' },
+                                { key: 'netSalary', label: 'Remaining Salary' },
+                                { key: 'todayProfit', label: "Today's Profit" },
+                                { key: 'monthlyProfit', label: 'Monthly Profit' }
                               ].map(col => (
                                 <th
                                   key={col.key}
@@ -1466,21 +1726,19 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             {getSortedWorkerSummaries().map((summary, idx) => (
                               <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
                                 <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{summary.name}</td>
-                                <td className="px-4 py-3">{summary.jobsCount}</td>
-                                <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-extrabold">₹{summary.earnings.toFixed(2)}</td>
-                                <td className="px-4 py-3 text-rose-500 font-bold">₹{summary.commission.toFixed(2)}</td>
-                                <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{summary.fuelCost.toFixed(2)}</td>
+                                <td className="px-4 py-3">₹{summary.baseSalary.toLocaleString()}</td>
                                 <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{summary.netSalary.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-rose-500 font-bold">₹{summary.todayProfit.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{summary.monthlyProfit.toFixed(2)}</td>
                               </tr>
                             ))}
                             {/* Grand Total Row */}
                             <tr className="bg-slate-100 dark:bg-slate-900/60 font-black text-slate-800 dark:text-white uppercase tracking-wider text-[10px]">
                               <td className="px-4 py-3 font-extrabold text-xs">Grand Total</td>
-                              <td className="px-4 py-3">{grandCompletedJobs}</td>
-                              <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 text-xs">₹{grandWorkEarnings.toFixed(2)}</td>
-                              <td className="px-4 py-3 text-rose-500 text-xs">₹{grandCommission.toFixed(2)}</td>
-                              <td className="px-4 py-3 text-violet-600 dark:text-violet-400 text-xs">₹{grandFuelCost.toFixed(2)}</td>
-                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 text-xs">₹{grandNetSalary.toFixed(2)}</td>
+                              <td className="px-4 py-3">₹{grandBaseSalary.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 text-xs">₹{grandRemainingSalary.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-rose-500 text-xs">₹{grandTodayProfit.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-violet-600 dark:text-violet-400 text-xs">₹{grandMonthlyProfit.toFixed(2)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1546,6 +1804,176 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     </div>
                   </div>
                 )}
+
+                {/* 1.5. Specific Worker Base Salary Editor (if specific worker is selected) */}
+                {selectedWorker._id !== 'all' && activeWorker && (
+                  <div className="glass-card p-6 space-y-4">
+                    <div>
+                      <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center space-x-1.5">
+                        <span>💰</span>
+                        <span>Base Salary Settings</span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400">Manage the monthly base salary rate for {activeWorker.name}.</p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 bg-slate-55 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                      <div>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Worker Monthly Base Salary</span>
+                        {isEditingBaseSalary ? (
+                          <div className="flex items-center space-x-2 mt-1">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1.5 text-slate-400 text-xs">₹</span>
+                              <input
+                                type="number"
+                                value={newBaseSalaryValue}
+                                onChange={(e) => setNewBaseSalaryValue(e.target.value)}
+                                className="w-32 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded pl-5 pr-2 py-1 outline-none focus:border-secondary"
+                              />
+                            </div>
+                            <button
+                              onClick={() => handleSaveBaseSalary(activeWorker._id, activeWorker.monthlySalary || 0)}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase rounded cursor-pointer transition-all"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setIsEditingBaseSalary(false)}
+                              className="px-3 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-[10px] uppercase rounded cursor-pointer transition-all"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-base font-black text-slate-800 dark:text-white">₹{(activeWorker.monthlySalary || 0).toLocaleString()}</span>
+                            <button
+                              onClick={() => {
+                                setNewBaseSalaryValue(String(activeWorker.monthlySalary || 0));
+                                setIsEditingBaseSalary(true);
+                              }}
+                              className="p-1 text-slate-400 hover:text-secondary hover:scale-110 transition-all cursor-pointer"
+                              title="Edit Base Salary"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Salary Ledger (Running Balance History) Section */}
+                <div className="glass-card p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                      <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center space-x-1.5">
+                        <span>📜</span>
+                        <span>Salary Ledger (Running Balance History)</span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400">Date-wise running remaining salary deductions and history log.</p>
+                    </div>
+                    {/* Search Input for Ledger */}
+                    <div className="relative w-full sm:w-64">
+                      <input
+                        type="text"
+                        placeholder="Search date, worker, remarks..."
+                        value={searchLedger}
+                        onChange={(e) => {
+                          setSearchLedger(e.target.value);
+                          setLedgerPage(1);
+                        }}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2 pl-8 outline-none focus:border-secondary"
+                      />
+                      <span className="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-semibold text-slate-655 dark:text-slate-350 min-w-[900px]">
+                      <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400 font-black">
+                        <tr>
+                          <th className="px-4 py-3">Date</th>
+                          <th className="px-4 py-3">Worker</th>
+                          <th className="px-4 py-3">Base Salary</th>
+                          <th className="px-4 py-3">Today's Profit (Deduction)</th>
+                          <th className="px-4 py-3">Previous Remaining</th>
+                          <th className="px-4 py-3">Current Remaining</th>
+                          <th className="px-4 py-3">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {(() => {
+                          const ledgerData = getConsolidatedLedger();
+                          const filteredLedger = ledgerData.filter(entry => 
+                            entry.workerName.toLowerCase().includes(searchLedger.toLowerCase()) ||
+                            entry.date.includes(searchLedger) ||
+                            entry.remarks.toLowerCase().includes(searchLedger.toLowerCase())
+                          );
+                          const paginatedLedger = filteredLedger.slice((ledgerPage - 1) * 10, ledgerPage * 10);
+                          
+                          if (paginatedLedger.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-medium">
+                                  No ledger history found for this range.
+                                </td>
+                              </tr>
+                            );
+                          }
+                          
+                          return paginatedLedger.map((entry, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
+                              <td className="px-4 py-3 font-semibold whitespace-nowrap">{entry.date}</td>
+                              <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{entry.workerName}</td>
+                              <td className="px-4 py-3 font-bold">₹{entry.baseSalary.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-rose-500 font-bold">₹{entry.profit.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-slate-400">₹{entry.prevRemainingSalary.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{entry.currentRemainingSalary.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-slate-400 text-[10px] max-w-[200px] truncate" title={entry.remarks}>{entry.remarks}</td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination for Ledger */}
+                  {(() => {
+                    const ledgerData = getConsolidatedLedger();
+                    const filteredLedger = ledgerData.filter(entry => 
+                      entry.workerName.toLowerCase().includes(searchLedger.toLowerCase()) ||
+                      entry.date.includes(searchLedger) ||
+                      entry.remarks.toLowerCase().includes(searchLedger.toLowerCase())
+                    );
+                    const totalPages = Math.ceil(filteredLedger.length / 10);
+                    if (totalPages <= 1) return null;
+                    return (
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="text-[10px] text-slate-400">
+                          Showing {(ledgerPage - 1) * 10 + 1} to {Math.min(ledgerPage * 10, filteredLedger.length)} of {filteredLedger.length} rows
+                        </span>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            disabled={ledgerPage === 1}
+                            onClick={() => setLedgerPage(ledgerPage - 1)}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-50 text-[10px] font-extrabold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                          >
+                            ◀ Prev
+                          </button>
+                          <span className="px-3 text-xs font-black">{ledgerPage} / {totalPages}</span>
+                          <button
+                            disabled={ledgerPage === totalPages}
+                            onClick={() => setLedgerPage(ledgerPage + 1)}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 disabled:opacity-50 text-[10px] font-extrabold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                          >
+                            Next ▶
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {/* 2. Detailed Salary Records Section (shown in both specific worker & All Workers cases) */}
                 <div className="glass-card p-6 space-y-4">
