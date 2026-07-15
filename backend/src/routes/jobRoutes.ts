@@ -13,7 +13,8 @@ import {
   rejectJob,
   logNotificationDelivered,
   getCustomerDetailsByPhone,
-  getFormSuggestions
+  getFormSuggestions,
+  adminCompleteJob
 } from '../controllers/jobController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -37,6 +38,7 @@ router.put('/:id/fuel', authorizeRoles('worker', 'admin'), updateJobFuel);
 // Admin-only endpoints for CRUD
 router.post('/', authorizeRoles('admin'), createJob);
 router.put('/:id', authorizeRoles('admin'), updateJob);
+router.put('/:id/admin-complete', authorizeRoles('admin'), adminCompleteJob);
 router.delete('/:id', authorizeRoles('admin'), deleteJob);
 
 // Shared status edit (e.g. cancellation)

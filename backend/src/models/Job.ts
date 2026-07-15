@@ -59,6 +59,20 @@ export interface IJob extends Document {
   attachments?: string[];
   fromLocation?: string;
   toLocation?: string;
+
+  adminCompleted?: boolean;
+  adminCompletedBy?: mongoose.Types.ObjectId;
+  adminCompletedByName?: string;
+  adminCompletionReason?: string;
+  adminCompletionRemarks?: string;
+  adminCompletionIP?: string;
+  adminCompletionWorkerConfirmed?: boolean;
+  timeline?: Array<{
+    status: string;
+    timestamp: Date;
+    remarks?: string;
+    updatedBy?: string;
+  }>;
 }
 
 const JobSchema = new Schema<IJob>({
@@ -119,7 +133,21 @@ const JobSchema = new Schema<IJob>({
   createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   attachments: { type: [String], default: [] },
   fromLocation: { type: String, default: '' },
-  toLocation: { type: String, default: '' }
+  toLocation: { type: String, default: '' },
+
+  adminCompleted: { type: Boolean, default: false },
+  adminCompletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  adminCompletedByName: { type: String, default: '' },
+  adminCompletionReason: { type: String, default: '' },
+  adminCompletionRemarks: { type: String, default: '' },
+  adminCompletionIP: { type: String, default: '' },
+  adminCompletionWorkerConfirmed: { type: Boolean, default: false },
+  timeline: [{
+    status: { type: String },
+    timestamp: { type: Date, default: Date.now },
+    remarks: { type: String, default: '' },
+    updatedBy: { type: String, default: '' }
+  }]
 }, {
   timestamps: true
 });

@@ -301,7 +301,13 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       notes: notes || '',
       specialInstructions: specialInstructions || '',
       createdBy: req.user ? req.user.id : undefined,
-      attachments: uploadedAttachments
+      attachments: uploadedAttachments,
+      timeline: [{
+        status: 'pending',
+        timestamp: new Date(),
+        remarks: worker ? `Job created and assigned to ${worker.name}` : 'Job created (unassigned)',
+        updatedBy: req.user ? 'Admin' : 'System'
+      }]
     });
 
     await job.save();
@@ -402,6 +408,14 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     }
     job.startedAt = new Date();
 
+    if (!job.timeline) job.timeline = [];
+    job.timeline.push({
+      status: 'started',
+      timestamp: new Date(),
+      remarks: 'Job started by worker',
+      updatedBy: `Worker (${workerName})`
+    });
+
     await job.save();
 
     const startedTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -461,8 +475,18 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
+    const worker = await User.findById(req.user.id);
+    const workerName = worker ? worker.name : 'Worker';
+
     if (!job.workerId || job.workerId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
+    }
+
+    if (job.status === 'completed') {
+      if (job.adminCompleted) {
+        return res.status(400).json({ message: 'This job has already been completed by Admin.' });
+      }
+      return res.status(400).json({ message: 'This job has already been completed.' });
     }
 
     if (job.status !== 'started') {
@@ -518,6 +542,14 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     job.fuelAllowance = fuelAllowance;
     job.workerNotes = workerNotes || '';
 
+    if (!job.timeline) job.timeline = [];
+    job.timeline.push({
+      status: 'completed',
+      timestamp: new Date(),
+      remarks: 'Job completed by worker',
+      updatedBy: `Worker (${workerName || 'Worker'})`
+    });
+
     await job.save();
 
     // Create travel log for this completed cleanup job
@@ -552,10 +584,6 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     } catch (err) {
       console.error('Failed to auto-create travel log:', err);
     }
-
-    // Get worker details
-    const worker = await User.findById(req.user.id);
-    const workerName = worker ? worker.name : 'Worker';
 
     // WhatsApp notification to admin when job is completed
     const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER || '+919876543210';
@@ -627,6 +655,13 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
 
     job.status = 'cancelled';
     job.cancelReason = reason || 'No reason specified';
+    if (!job.timeline) job.timeline = [];
+    job.timeline.push({
+      status: 'cancelled',
+      timestamp: new Date(),
+      remarks: `Job cancelled. Reason: ${reason || 'No reason specified'}`,
+      updatedBy: req.user ? (req.user.role === 'admin' ? 'Admin' : 'Worker') : 'System'
+    });
     await job.save();
 
     logAudit(req, {
@@ -929,6 +964,13 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
     }
     job.status = 'accepted';
     job.acceptedAt = new Date();
+    if (!job.timeline) job.timeline = [];
+    job.timeline.push({
+      status: 'accepted',
+      timestamp: new Date(),
+      remarks: 'Job accepted by worker',
+      updatedBy: `Worker (${worker.name})`
+    });
     await job.save();
 
     // Notify admin
@@ -972,6 +1014,13 @@ export const rejectJob = async (req: AuthRequest, res: Response) => {
     }
     job.status = 'rejected';
     job.rejectedAt = new Date();
+    if (!job.timeline) job.timeline = [];
+    job.timeline.push({
+      status: 'rejected',
+      timestamp: new Date(),
+      remarks: 'Job rejected by worker',
+      updatedBy: `Worker (${worker.name})`
+    });
     await job.save();
 
     // Notify admin
@@ -1067,5 +1116,85 @@ export const getFormSuggestions = async (req: AuthRequest, res: Response) => {
     });
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+export const adminCompleteJob = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin and Super Admin can manually complete jobs.' });
+  }
+
+  const { id } = req.params;
+  const { reason, remarks, workerConfirmed } = req.body;
+
+  try {
+    const adminUser = await User.findById(req.user.id);
+    const adminName = adminUser ? adminUser.name : 'Admin';
+
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    if (job.status === 'completed') {
+      return res.status(400).json({ message: 'This job has already been completed.' });
+    }
+
+    // Set completion details
+    job.status = 'completed';
+    job.completedAt = new Date();
+    
+    // Set admin completion fields
+    job.adminCompleted = true;
+    job.adminCompletedBy = req.user.id as any;
+    job.adminCompletedByName = adminName;
+    job.adminCompletionReason = reason || 'Network Issue';
+    job.adminCompletionRemarks = remarks || '';
+    job.adminCompletionIP = req.ip || req.socket.remoteAddress || '';
+    job.adminCompletionWorkerConfirmed = !!workerConfirmed;
+
+    // Add to timeline
+    if (!job.timeline) job.timeline = [];
+    job.timeline.push({
+      status: 'completed',
+      timestamp: new Date(),
+      remarks: `Admin Completed: ${reason || 'Network Issue'}. ${remarks || ''}`,
+      updatedBy: `Admin (${adminName})`
+    });
+
+    await job.save();
+
+    // Log Audit Log
+    logAudit(req, {
+      action: 'completed_by_admin',
+      entityType: 'Job',
+      entityId: job._id.toString(),
+      summary: `Job "${job.title}" manually marked completed by Admin (${adminName}) due to: ${reason}`
+    });
+
+    // Notify via Socket
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit('adminNotification', {
+          type: 'JOB_COMPLETED',
+          message: `Job "${job.title}" completed by Admin.`,
+          jobId: job._id
+        });
+        if (job.workerId) {
+          io.to(job.workerId.toString()).emit('notification', {
+            type: 'JOB_COMPLETED_BY_ADMIN',
+            message: `Your assigned job "${job.title}" has been marked completed by Admin.`,
+            jobId: job._id
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to emit admin completion socket alerts:', err);
+    }
+
+    res.status(200).json({ message: 'Job completed successfully by Admin', job });
+  } catch (error: any) {
+    res.status(550).json({ message: 'Server error', error: error.message });
   }
 };

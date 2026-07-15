@@ -74,6 +74,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedJobPhotos, setSelectedJobPhotos] = useState<any>(null);
 
+  // Admin complete modal state
+  const [adminCompleteModalOpen, setAdminCompleteModalOpen] = useState(false);
+  const [adminCompleteJobData, setAdminCompleteJobData] = useState<any>(null);
+  const [adminCompleteReason, setAdminCompleteReason] = useState('Network Issue');
+  const [adminCompleteRemarks, setAdminCompleteRemarks] = useState('');
+  const [adminCompleteWorkerConfirmed, setAdminCompleteWorkerConfirmed] = useState(false);
+
   // Form inputs state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -645,6 +652,36 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       fetchJobsAndWorkers();
     } catch (err) {
       alert('Failed to update job status');
+    }
+  };
+
+  const handleOpenAdminCompleteModal = (job: any) => {
+    setAdminCompleteJobData(job);
+    setAdminCompleteReason('Network Issue');
+    setAdminCompleteRemarks('');
+    setAdminCompleteWorkerConfirmed(false);
+    setAdminCompleteModalOpen(true);
+  };
+
+  const handleAdminCompleteJob = async () => {
+    if (!adminCompleteWorkerConfirmed) {
+      alert('Please confirm that the worker verified the job completion.');
+      return;
+    }
+    try {
+      const res = await api.put(`/jobs/${adminCompleteJobData._id}/admin-complete`, {
+        reason: adminCompleteReason,
+        remarks: adminCompleteRemarks,
+        workerConfirmed: adminCompleteWorkerConfirmed
+      });
+      alert('Job successfully marked completed by Admin.');
+      setAdminCompleteModalOpen(false);
+      if (selectedJobForDrawer && selectedJobForDrawer._id === adminCompleteJobData._id) {
+        setSelectedJobForDrawer(res.data.job);
+      }
+      fetchJobsAndWorkers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to complete job by Admin');
     }
   };
 
@@ -1367,6 +1404,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <Sparkles className="h-4 w-4" />
                     <span>{selectedJobForDrawer.status === 'started' ? 'Complete Cleanup' : 'Worker Started'}</span>
                   </button>
+                  {selectedJobForDrawer.status !== 'completed' && (
+                    <button
+                      onClick={() => handleOpenAdminCompleteModal(selectedJobForDrawer)}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl shadow cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5 mt-2 transition-all"
+                    >
+                      <span>✅</span>
+                      <span>Mark as Completed (Admin)</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Assigned Worker Contact */}
@@ -1497,6 +1543,30 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       <Share2 className="h-4 w-4" />
                       <span>Share PDF</span>
                     </button>
+                  </div>
+                </div>
+
+                {/* Job Timeline History */}
+                <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Job Timeline</span>
+                  <div className="space-y-3 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-850 pl-4 mt-2">
+                    {selectedJobForDrawer.timeline && selectedJobForDrawer.timeline.length > 0 ? (
+                      selectedJobForDrawer.timeline.map((event: any, eIdx: number) => (
+                        <div key={eIdx} className="relative text-xs">
+                          <div className="absolute -left-[20px] top-1.5 h-2 w-2 rounded-full border border-white dark:border-slate-900 bg-indigo-650"></div>
+                          <div className="flex justify-between items-center font-bold">
+                            <span className="text-slate-800 dark:text-white capitalize">{event.status === 'pending' ? 'assigned' : event.status === 'started' ? 'in progress' : event.status}</span>
+                            <span className="text-[8.5px] text-slate-400 font-semibold">
+                              {new Date(event.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          {event.remarks && <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">{event.remarks}</p>}
+                          {event.updatedBy && <span className="text-[8.5px] text-indigo-500 font-bold block mt-0.5">{event.updatedBy}</span>}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-[10px] text-slate-400 italic">No timeline entries yet.</div>
+                    )}
                   </div>
                 </div>
 
@@ -2181,6 +2251,164 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   <div className="h-64 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 font-bold w-full bg-slate-50 dark:bg-slate-955/20">No After Photo Uploaded</div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Admin Complete Job Confirmation Popup Modal */}
+      {adminCompleteModalOpen && adminCompleteJobData && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col justify-between max-h-[95vh] overflow-y-auto">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h4 className="font-extrabold text-sm text-slate-800 dark:text-white uppercase tracking-wider flex items-center space-x-1.5">
+                  <span>✅</span>
+                  <span>Complete Job (Admin Override)</span>
+                </h4>
+                <p className="text-[10px] text-slate-400">Manually resolve and record cleanup job completion details.</p>
+              </div>
+              <button
+                onClick={() => setAdminCompleteModalOpen(false)}
+                className="text-slate-400 hover:text-slate-650 font-black cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="my-4 space-y-3.5 text-left text-xs font-bold text-slate-700 dark:text-slate-355">
+              {/* Job Details Card */}
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3.5 rounded-2xl">
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Job ID</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.visitId || adminCompleteJobData._id?.slice(-12).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Worker Name</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.workerId?.name || 'Unassigned'}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Customer Name</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.clientName}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Company</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.company}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Service Name</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.title}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Assigned Date</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.date}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Start Time</span>
+                  <span className="text-[10.5px] font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                    {adminCompleteJobData.startedAt
+                      ? new Date(adminCompleteJobData.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : adminCompleteJobData.timeSlot?.split(' - ')[0] || 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Current Status</span>
+                  <span className="text-[10.5px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase mt-0.5 block">
+                    {adminCompleteJobData.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Completion Metadata (Auto-Generated Details for User Preview) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Completion Date</span>
+                  <input
+                    type="text"
+                    disabled
+                    value={new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })}
+                    className="w-full text-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-extrabold text-slate-500 mt-1 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Completion Time</span>
+                  <input
+                    type="text"
+                    disabled
+                    value={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    className="w-full text-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-extrabold text-slate-500 mt-1 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Form Input fields */}
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Completion Reason</label>
+                  <select
+                    value={adminCompleteReason}
+                    onChange={(e) => setAdminCompleteReason(e.target.value)}
+                    className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
+                  >
+                    <option value="Network Issue">Network Issue</option>
+                    <option value="No Network">No Network</option>
+                    <option value="App Crash">App Crash</option>
+                    <option value="Battery Dead">Battery Dead</option>
+                    <option value="Phone Issue">Phone Issue</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider font-extrabold">Remarks / Notes</label>
+                  <textarea
+                    value={adminCompleteRemarks}
+                    onChange={(e) => setAdminCompleteRemarks(e.target.value)}
+                    placeholder="Enter additional remarks or reasons for completion..."
+                    className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 font-semibold mt-1 outline-none h-16 resize-none focus:border-secondary"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2 bg-slate-55 dark:bg-slate-955/30 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/50 mt-1 cursor-pointer select-none" onClick={() => setAdminCompleteWorkerConfirmed(!adminCompleteWorkerConfirmed)}>
+                  <input
+                    type="checkbox"
+                    checked={adminCompleteWorkerConfirmed}
+                    onChange={(e) => setAdminCompleteWorkerConfirmed(e.target.checked)}
+                    className="h-3.5 w-3.5 text-secondary border-slate-300 rounded focus:ring-secondary cursor-pointer"
+                  />
+                  <span className="text-[10px] text-slate-700 dark:text-slate-300 font-black">
+                    Worker confirmed the job was completed.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2.5 pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
+              <button
+                type="button"
+                onClick={() => setAdminCompleteModalOpen(false)}
+                className="px-4 py-2.5 border border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-300 font-extrabold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAdminCompleteJob}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-md transition-all"
+              >
+                Complete Job
+              </button>
             </div>
           </div>
         </div>

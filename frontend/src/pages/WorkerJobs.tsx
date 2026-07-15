@@ -563,7 +563,13 @@ const WorkerJobs: React.FC = () => {
             {/* Modal Body */}
             <form onSubmit={handleCompleteWorkSheetSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
               
-              <div className="rounded-2xl bg-slate-50 dark:bg-slate-950 p-4 border border-slate-150/40 dark:border-slate-850/40 space-y-2 text-left">
+              {selectedJob.adminCompleted && (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-extrabold rounded-2xl p-3.5 text-center text-[10px]">
+                  ⚠️ This job has already been completed by Admin.
+                </div>
+              )}
+              
+              <div className="rounded-2xl bg-slate-50 dark:bg-slate-955 p-4 border border-slate-150/40 dark:border-slate-850/40 space-y-2 text-left">
                 {selectedJob.price !== undefined && (
                   <div className="pb-1.5 mb-1.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Collect from Client:</span>
