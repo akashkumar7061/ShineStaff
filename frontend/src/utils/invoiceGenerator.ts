@@ -37,8 +37,8 @@ New Delhi – 110059, India`,
         "GST included in all prices."
       ],
       notes: "Thank you for choosing SofaShine.",
-      signature: window.location.origin + "/logos/sofashine_sig.png",
-      stamp: window.location.origin + "/logos/sofashine_stamp.jpg"
+      signature: "",
+      stamp: ""
     },
     CleanCruisers: {
       name: "CleanCruisers",
@@ -59,7 +59,7 @@ New Delhi – 110059, India`,
       ],
       notes: "Thank you for choosing CleanCruisers.",
       signature: window.location.origin + "/logos/cleancruisers_sig.png",
-      stamp: window.location.origin + "/logos/cleancruisers_stamp.jpg"
+      stamp: window.location.origin + "/logos/cleancruisers_stamp.png"
     }
   };
 
