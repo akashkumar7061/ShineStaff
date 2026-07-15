@@ -33,7 +33,6 @@ New Delhi – 110059, India`,
       accent: [124, 58, 237], // #7c3aed
       terms: [
         "Payment due on completion of service.",
-        "Re-cleaning offered within 48 hours if unsatisfied.",
         "Prices may vary based on actual condition of items.",
         "GST included in all prices."
       ],
@@ -55,7 +54,6 @@ New Delhi – 110059, India`,
       accent: [22, 163, 74], // #16a34a
       terms: [
         "Payment due on completion of service.",
-        "Re-clean offered within 24 hours if not satisfied.",
         "Prices may vary for luxury / vintage vehicles.",
         "GST included in all prices."
       ],
