@@ -1017,13 +1017,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const totalBookings = dayJobs.length;
   const confirmedBookings = dayJobs.filter((j) => ['completed', 'started', 'pending'].includes(j.status)).length;
 
-  // Gather unique time slots from current day's jobs or fall back to default schedule blocks
+  // Gather unique time slots from current day's jobs strictly (no hardcoded defaults)
   const timeSlots = Array.from(
-    new Set([
-      '08:00 AM - 02:00 PM',
-      '11:00 AM - 01:00 PM',
-      ...dayJobs.map((j) => j.timeSlot).filter(Boolean)
-    ])
+    new Set(dayJobs.map((j) => j.timeSlot).filter(Boolean))
   ).sort((a, b) => getJobStartTimeMinutes(a) - getJobStartTimeMinutes(b));
 
   // Helper to trigger Whatsapp link pre-filled
@@ -1160,7 +1156,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {timeSlots.map((slot) => (
+              {timeSlots.length > 0 ? (
+                timeSlots.map((slot) => (
                 <tr key={slot} className="hover:bg-slate-55/20 dark:hover:bg-slate-900/10">
                   
                   {/* Row Time Slot Cell */}
@@ -1303,7 +1300,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     )}
                   </td>
                 </tr>
-              ))}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={workers.length + 2} className="px-6 py-12 text-center text-slate-400 font-extrabold text-xs bg-slate-50/50 dark:bg-slate-900/10">
+                    No bookings scheduled for this date. Click "+ New Booking" to schedule.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
