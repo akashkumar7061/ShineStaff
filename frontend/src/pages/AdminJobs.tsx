@@ -1032,6 +1032,32 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     return `${convertDecimalToDMS(lat, true)} ${convertDecimalToDMS(lng, false)}`;
   };
 
+  const getGridMapLinkUrl = (j: any): string => {
+    if (j.location?.lat) {
+      return `https://www.google.com/maps/search/?api=1&query=${j.location.lat},${j.location.lng}`;
+    }
+    if (j.locationName && (j.locationName.startsWith('http://') || j.locationName.startsWith('https://'))) {
+      return j.locationName;
+    }
+    if (j.locationName) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.locationName)}`;
+    }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address || '')}`;
+  };
+
+  const getGridMapLinkLabel = (j: any): string => {
+    if (j.location?.lat) {
+      return getDMSString(j.location.lat, j.location.lng);
+    }
+    if (j.locationName) {
+      if (j.locationName.startsWith('http://') || j.locationName.startsWith('https://')) {
+        return 'GPS Link';
+      }
+      return j.locationName;
+    }
+    return 'View GPS / Map';
+  };
+
   // Grid calculation: filter jobs strictly matching the selected date and sort chronologically
   const dayJobs = jobs
     .filter((j) => j.date === selectedDate)
@@ -1241,20 +1267,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                   </div>
                                   <div className="mt-0.5 text-[9px] font-bold">
                                     <a
-                                      href={
-                                        j.location?.lat
-                                          ? `https://www.google.com/maps/search/?api=1&query=${j.location.lat},${j.location.lng}`
-                                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address || '')}`
-                                      }
+                                      href={getGridMapLinkUrl(j)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
                                       className="text-[#2563eb] hover:underline block truncate font-black tracking-tight"
-                                      title={j.location?.lat ? getDMSString(j.location.lat, j.location.lng) : 'Open in Google Maps'}
+                                      title={getGridMapLinkLabel(j)}
                                     >
-                                      🗺️ {j.location?.lat 
-                                        ? getDMSString(j.location.lat, j.location.lng) 
-                                        : 'View GPS / Map'}
+                                      🗺️ {getGridMapLinkLabel(j)}
                                     </a>
                                   </div>
                                 </div>
@@ -1331,20 +1351,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               </div>
                               <div className="mt-0.5 text-[9px] font-bold">
                                 <a
-                                  href={
-                                    j.location?.lat
-                                      ? `https://www.google.com/maps/search/?api=1&query=${j.location.lat},${j.location.lng}`
-                                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address || '')}`
-                                  }
+                                  href={getGridMapLinkUrl(j)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
                                   className="text-[#2563eb] hover:underline block truncate font-black tracking-tight"
-                                  title={j.location?.lat ? getDMSString(j.location.lat, j.location.lng) : 'Open in Google Maps'}
+                                  title={getGridMapLinkLabel(j)}
                                 >
-                                  🗺️ {j.location?.lat 
-                                    ? getDMSString(j.location.lat, j.location.lng) 
-                                    : 'View GPS / Map'}
+                                  🗺️ {getGridMapLinkLabel(j)}
                                 </a>
                               </div>
                             </div>
