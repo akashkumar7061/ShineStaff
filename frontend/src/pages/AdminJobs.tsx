@@ -651,8 +651,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const handleUpdateStatus = async (jobId: string, status: string) => {
     try {
       const res = await api.put(`/jobs/${jobId}`, { status });
-      // Update drawer visual status
-      if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
+      // Update drawer visual status or close it if cancelled
+      if (status === 'cancelled') {
+        setSelectedJobForDrawer(null);
+      } else if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
         setSelectedJobForDrawer(res.data);
       }
       fetchJobsAndWorkers();
