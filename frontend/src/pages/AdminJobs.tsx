@@ -1216,17 +1216,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                     </a>
                                     <span className="text-[#1e3a8a] dark:text-blue-200 font-extrabold">₹{j.price}</span>
                                   </div>
-                                  {j.workerId?.phone && (
-                                    <div className="pt-0.5">
-                                      <a
-                                        href={`tel:${j.workerId.phone}`}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="flex items-center space-x-0.5 text-[#2563eb] hover:underline text-[9.5px]"
-                                      >
-                                        <span>📞 Call</span>
-                                      </a>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             ))}
@@ -1382,22 +1371,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Location Address</span>
                     <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-250 mt-1 block leading-normal">{selectedJobForDrawer.address}</span>
                   </div>
-                  {selectedJobForDrawer.location && selectedJobForDrawer.location.lat && (
-                    <div>
-                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">GPS Coordinates</span>
-                      <span className="text-[10px] font-extrabold text-slate-800 dark:text-white mt-1 block">
-                        {selectedJobForDrawer.location.lat}, {selectedJobForDrawer.location.lng}
-                      </span>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${selectedJobForDrawer.location.lat},${selectedJobForDrawer.location.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#2563eb] hover:underline font-extrabold text-[10px] mt-1.5 inline-flex items-center space-x-1"
-                      >
-                        <span>📍 Open in Google Maps</span>
-                      </a>
-                    </div>
-                  )}
+                  <div>
+                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">GPS Coordinates</span>
+                    <span className="text-[10px] font-extrabold text-slate-800 dark:text-white mt-1 block">
+                      {selectedJobForDrawer.location?.lat 
+                        ? `${selectedJobForDrawer.location.lat}, ${selectedJobForDrawer.location.lng}` 
+                        : 'Auto-derived from Address'}
+                    </span>
+                    <a
+                      href={
+                        selectedJobForDrawer.location?.lat
+                          ? `https://www.google.com/maps/search/?api=1&query=${selectedJobForDrawer.location.lat},${selectedJobForDrawer.location.lng}`
+                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJobForDrawer.address || '')}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#2563eb] hover:underline font-extrabold text-[10px] mt-1.5 inline-flex items-center space-x-1"
+                    >
+                      <span>📍 Open in Google Maps</span>
+                    </a>
+                  </div>
                 </div>
 
 
