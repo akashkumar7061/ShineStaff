@@ -9,6 +9,7 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Building,
   User,
   Phone,
@@ -32,7 +33,7 @@ const AdminLogDailyJobs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'completed' | 'approvals' | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<'completed' | 'approvals' | 'all' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState(getFirstDayOfMonthString());
   const [endDate, setEndDate] = useState(getTodayString());
@@ -274,7 +275,8 @@ const AdminLogDailyJobs: React.FC = () => {
 
   // --- Filtering lists ---
   const completedJobs = jobs.filter(j => j.status === 'completed');
-  const approvalJobs = jobs.filter(j => j.status === 'pending' || j.status === 'cancelled' || j.status === 'rejected');
+  const cancelledJobs = jobs.filter(j => j.status === 'cancelled');
+  const approvalJobs = jobs.filter(j => j.status === 'pending' || j.status === 'rejected');
 
   const getFilteredList = () => {
     let activeList = [];
@@ -282,6 +284,8 @@ const AdminLogDailyJobs: React.FC = () => {
       activeList = jobs;
     } else if (activeTab === 'completed') {
       activeList = completedJobs;
+    } else if (activeTab === 'cancelled') {
+      activeList = cancelledJobs;
     } else {
       activeList = approvalJobs;
     }
@@ -519,6 +523,17 @@ const AdminLogDailyJobs: React.FC = () => {
                 >
                   <AlertCircle className="h-3.5 w-3.5" />
                   <span>Approvals Desk ({approvalJobs.length})</span>
+                </button>
+                <button
+                  onClick={() => { setActiveTab('cancelled'); setSearchQuery(''); }}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'cancelled'
+                      ? 'bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Cancelled Cleanups ({cancelledJobs.length})</span>
                 </button>
               </div>
 

@@ -1234,11 +1234,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                 key={j._id}
                                 onClick={() => setSelectedJobForDrawer(j)}
                                 className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
-                                  selectedJobForDrawer?._id === j._id
-                                    ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
-                                    : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700'
+                                  j.status === 'cancelled'
+                                    ? (selectedJobForDrawer?._id === j._id
+                                        ? 'bg-rose-100 border-rose-355 shadow-sm text-rose-800'
+                                        : 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 text-rose-700')
+                                    : (selectedJobForDrawer?._id === j._id
+                                        ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
+                                        : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700')
                                 }`}
                               >
+                                {j.status === 'cancelled' && (
+                                  <span className="inline-block bg-rose-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+                                    Cancelled
+                                  </span>
+                                )}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                                   className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
@@ -1319,11 +1328,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                             key={j._id}
                             onClick={() => setSelectedJobForDrawer(j)}
                             className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
-                              selectedJobForDrawer?._id === j._id
-                                ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
-                                : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700'
+                              j.status === 'cancelled'
+                                ? (selectedJobForDrawer?._id === j._id
+                                    ? 'bg-rose-100 border-rose-355 shadow-sm text-rose-800'
+                                    : 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 text-rose-700')
+                                : (selectedJobForDrawer?._id === j._id
+                                    ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
+                                    : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700')
                             }`}
                           >
+                            {j.status === 'cancelled' && (
+                              <span className="inline-block bg-rose-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+                                Cancelled
+                              </span>
+                            )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                               className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
