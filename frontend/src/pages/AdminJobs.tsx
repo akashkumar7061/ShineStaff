@@ -1010,6 +1010,28 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     return parseTimeToMinutes(parts[0]);
   };
 
+  const convertDecimalToDMS = (dec: number, isLat: boolean): string => {
+    const absolute = Math.abs(dec);
+    const degrees = Math.floor(absolute);
+    const minutesNotTruncated = (absolute - degrees) * 60;
+    const minutes = Math.floor(minutesNotTruncated);
+    const seconds = Math.round((minutesNotTruncated - minutes) * 60 * 10) / 10;
+    
+    let direction = '';
+    if (isLat) {
+      direction = dec >= 0 ? 'N' : 'S';
+    } else {
+      direction = dec >= 0 ? 'E' : 'W';
+    }
+    
+    return `${degrees}°${minutes}'${seconds.toFixed(1)}"${direction}`;
+  };
+
+  const getDMSString = (lat: number, lng: number): string => {
+    if (!lat || !lng) return '';
+    return `${convertDecimalToDMS(lat, true)} ${convertDecimalToDMS(lng, false)}`;
+  };
+
   // Grid calculation: filter jobs strictly matching the selected date and sort chronologically
   const dayJobs = jobs
     .filter((j) => j.date === selectedDate)
@@ -1217,7 +1239,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                     <span>📍</span>
                                     <span className="truncate">{j.address || 'No Address'}</span>
                                   </div>
-                                  <div className="mt-0.5 flex items-center justify-between text-[9px] font-bold text-slate-400">
+                                  <div className="mt-0.5 text-[9px] font-bold">
                                     <a
                                       href={
                                         j.location?.lat
@@ -1227,15 +1249,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
-                                      className="text-[#2563eb] hover:underline"
+                                      className="text-[#2563eb] hover:underline block truncate font-black tracking-tight"
+                                      title={j.location?.lat ? getDMSString(j.location.lat, j.location.lng) : 'Open in Google Maps'}
                                     >
-                                      🗺️ View GPS / Map
+                                      🗺️ {j.location?.lat 
+                                        ? getDMSString(j.location.lat, j.location.lng) 
+                                        : 'View GPS / Map'}
                                     </a>
-                                    {j.location?.lat && (
-                                      <span className="text-[8.5px] font-semibold text-slate-400">
-                                        {j.location.lat.toFixed(4)}, {j.location.lng.toFixed(4)}
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1309,7 +1329,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                 <span>📍</span>
                                 <span className="truncate">{j.address || 'No Address'}</span>
                               </div>
-                              <div className="mt-0.5 flex items-center justify-between text-[9px] font-bold text-slate-400">
+                              <div className="mt-0.5 text-[9px] font-bold">
                                 <a
                                   href={
                                     j.location?.lat
@@ -1319,15 +1339,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="text-[#2563eb] hover:underline"
+                                  className="text-[#2563eb] hover:underline block truncate font-black tracking-tight"
+                                  title={j.location?.lat ? getDMSString(j.location.lat, j.location.lng) : 'Open in Google Maps'}
                                 >
-                                  🗺️ View GPS / Map
+                                  🗺️ {j.location?.lat 
+                                    ? getDMSString(j.location.lat, j.location.lng) 
+                                    : 'View GPS / Map'}
                                 </a>
-                                {j.location?.lat && (
-                                  <span className="text-[8.5px] font-semibold text-slate-400">
-                                    {j.location.lat.toFixed(4)}, {j.location.lng.toFixed(4)}
-                                  </span>
-                                )}
                               </div>
                             </div>
                           </div>
