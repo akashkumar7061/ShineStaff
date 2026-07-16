@@ -1688,7 +1688,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             <span>💼</span>
                             <span>Worker Salary Summary</span>
                           </h3>
-                          <p className="text-[10px] text-slate-400">Worker-wise consolidated completed jobs, earnings, commissions, fuel, and net salaries.</p>
+                          <p className="text-[10px] text-slate-400">
+                            Worker-wise consolidated completed jobs, earnings, commissions, fuel, and net salaries.
+                            <span className="ml-1 text-secondary font-black bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded">
+                              📅 {startDate} to {endDate}
+                            </span>
+                          </p>
                         </div>
                         {/* Search Input for Summary */}
                         <div className="relative w-full sm:w-64">
@@ -1737,7 +1742,29 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {getSortedWorkerSummaries().map((summary, idx) => (
                               <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
-                                <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{summary.name}</td>
+                                <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">
+                                  <div className="flex items-center space-x-2">
+                                    <span>{summary.name}</span>
+                                    <button
+                                      onClick={async () => {
+                                        const newName = prompt(`Enter new Name for ${summary.name}:`, summary.name);
+                                        if (newName && newName.trim() !== '') {
+                                          try {
+                                            await api.put(`/workers/${summary._id}`, { name: newName.trim() });
+                                            alert('Worker name updated successfully!');
+                                            fetchData();
+                                          } catch (err) {
+                                            alert('Failed to update worker name.');
+                                          }
+                                        }
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-secondary hover:scale-110 transition-all cursor-pointer text-[10px]"
+                                      title="Edit Worker Name"
+                                    >
+                                      ✏️
+                                    </button>
+                                  </div>
+                                </td>
                                 <td className="px-4 py-3">
                                   <div className="flex items-center space-x-2">
                                     <span>₹{summary.baseSalary.toLocaleString()}</span>
