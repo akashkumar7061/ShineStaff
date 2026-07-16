@@ -675,6 +675,11 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     list.sort((a: any, b: any) => {
       let valA = a[sortFieldDetailed];
       let valB = b[sortFieldDetailed];
+      if (sortFieldDetailed === 'date') {
+        const timeA = valA ? new Date(valA).getTime() : 0;
+        const timeB = valB ? new Date(valB).getTime() : 0;
+        return sortAscDetailed ? (timeA - timeB) : (timeB - timeA);
+      }
       if (typeof valA === 'string') {
         return sortAscDetailed ? valA.localeCompare(valB) : valB.localeCompare(valA);
       }
