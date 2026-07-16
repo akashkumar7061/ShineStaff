@@ -365,6 +365,41 @@ const AdminBIDashboard: React.FC = () => {
     data: any[];
   } | null>(null);
 
+  const [editingItem, setEditingItem] = useState<{
+    type: 'job' | 'custom_expense' | 'salary_request' | 'travel_log' | 'customer';
+    id: string;
+    fields: any;
+  } | null>(null);
+
+  const handleEditItemSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    try {
+      if (editingItem.type === 'job') {
+        await api.put(`/jobs/${editingItem.id}`, editingItem.fields);
+      } else if (editingItem.type === 'custom_expense') {
+        await api.put(`/expenses/${editingItem.id}`, editingItem.fields);
+      } else if (editingItem.type === 'salary_request') {
+        await api.put(`/salary/payouts/${editingItem.id}`, editingItem.fields);
+      } else if (editingItem.type === 'travel_log') {
+        await api.put(`/travel/${editingItem.id}`, editingItem.fields);
+      } else if (editingItem.type === 'customer') {
+        await api.put(`/jobs/update-client-info`, {
+          originalPhone: editingItem.id,
+          clientName: editingItem.fields.clientName,
+          clientPhone: editingItem.fields.clientPhone,
+          address: editingItem.fields.address
+        });
+      }
+      alert('Record updated successfully!');
+      setEditingItem(null);
+      setDrillDown(null);
+      fetchBIData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update record');
+    }
+  };
+
   const openDrillDown = (type: 'sales' | 'revenue' | 'expenses' | 'profit' | 'gross' | 'outstanding' | 'received' | 'customers') => {
     if (!analytics) return;
     
@@ -383,21 +418,35 @@ const AdminBIDashboard: React.FC = () => {
       case 'expenses':
         title = 'Total Operating Expenses';
         const items: any[] = [];
-        expenses.forEach(e => items.push({ date: e.date, category: e.category.toUpperCase(), desc: e.description || 'Custom Expense', amount: e.amount }));
+        expenses.forEach(e => items.push({ 
+          id: e._id,
+          type: 'custom_expense',
+          date: e.date, 
+          category: e.category.toUpperCase(), 
+          desc: e.description || 'Custom Expense', 
+          amount: e.amount,
+          raw: e
+        }));
         (analytics.rawSalaryPayouts || []).forEach((sr: any) => {
           items.push({ 
+            id: sr._id,
+            type: 'salary_request',
             date: sr.processedAt ? new Date(sr.processedAt).toISOString().split('T')[0] : 'N/A', 
             category: 'SALARIES', 
             desc: `Salary Payout Request approved for ${sr.workerId?.name || 'Worker'} (${sr.month})`, 
-            amount: sr.amount 
+            amount: sr.amount,
+            raw: sr
           });
         });
         (analytics.rawTravelLogs || []).forEach((tl: any) => {
           items.push({ 
+            id: tl._id,
+            type: 'travel_log',
             date: tl.date, 
             category: 'FUEL ALLOWANCE', 
             desc: `Fuel Reimbursement for ${tl.workerId?.name || 'Worker'} (${tl.kms} Kms)`, 
-            amount: tl.allowance 
+            amount: tl.allowance,
+            raw: tl
           });
         });
         items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -1794,6 +1843,7 @@ const AdminBIDashboard: React.FC = () => {
                       <th className="px-4 py-3">Client Phone</th>
                       <th className="px-4 py-3">Client Location</th>
                       <th className="px-4 py-3 text-center">Total Bookings Count</th>
+                      <th className="px-4 py-3 text-center">Actions</th>
                     </tr>
                   ) : drillDown.type === 'expenses' || drillDown.type === 'profit' || drillDown.type === 'gross' ? (
                     <tr>
@@ -1801,6 +1851,7 @@ const AdminBIDashboard: React.FC = () => {
                       <th className="px-4 py-3">Category</th>
                       <th className="px-4 py-3">Description</th>
                       <th className="px-4 py-3 text-right">Amount</th>
+                      <th className="px-4 py-3 text-center">Actions</th>
                     </tr>
                   ) : (
                     <tr>
@@ -1810,6 +1861,7 @@ const AdminBIDashboard: React.FC = () => {
                       <th className="px-4 py-3">Assigned Worker</th>
                       <th className="px-4 py-3">Job Status</th>
                       <th className="px-4 py-3 text-right">Price</th>
+                      <th className="px-4 py-3 text-center">Actions</th>
                     </tr>
                   )}
                 </thead>
@@ -1822,6 +1874,23 @@ const AdminBIDashboard: React.FC = () => {
                           <td className="px-4 py-3 text-mono">{item.phone}</td>
                           <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-normal">{item.address || 'N/A'}</td>
                           <td className="px-4 py-3 text-center text-secondary font-black">{item.count} Bookings</td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => setEditingItem({
+                                type: 'customer',
+                                id: item.phone,
+                                fields: {
+                                  clientName: item.name,
+                                  clientPhone: item.phone,
+                                  address: item.address
+                                }
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-550 dark:text-indigo-305 text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                              title="Edit Client contact details across all bookings"
+                            >
+                              ✏️ Edit
+                            </button>
+                          </td>
                         </tr>
                       );
                     } else if (drillDown.type === 'expenses' || drillDown.type === 'profit' || drillDown.type === 'gross') {
@@ -1843,6 +1912,27 @@ const AdminBIDashboard: React.FC = () => {
                             isRev ? 'text-success' : 'text-danger'
                           }`}>
                             {isRev ? '+' : '-'}₹{(item.amount || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {item.type ? (
+                              <button
+                                onClick={() => setEditingItem({
+                                  type: item.type,
+                                  id: item.id,
+                                  fields: item.type === 'custom_expense'
+                                    ? { category: item.raw.category, description: item.raw.description, amount: item.raw.amount, date: item.raw.date }
+                                    : item.type === 'salary_request'
+                                    ? { amount: item.raw.amount, month: item.raw.month, paymentMode: item.raw.paymentMode || 'Online' }
+                                    : { kms: item.raw.kms, allowance: item.raw.allowance, date: item.raw.date }
+                                })}
+                                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-550 dark:text-indigo-305 text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                                title="Edit Expense item details"
+                              >
+                                ✏️ Edit
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-normal">System Metric</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1869,6 +1959,26 @@ const AdminBIDashboard: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-white">
                             ₹{(item.price || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => setEditingItem({
+                                type: 'job',
+                                id: item._id,
+                                fields: {
+                                  title: item.title,
+                                  clientName: item.clientName,
+                                  clientPhone: item.clientPhone,
+                                  price: item.price,
+                                  status: item.status,
+                                  date: item.date
+                                }
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-550 dark:text-indigo-305 text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                              title="Edit clean job details"
+                            >
+                              ✏️ Edit
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1899,6 +2009,340 @@ const AdminBIDashboard: React.FC = () => {
                 }
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {editingItem && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <div className="glass-card w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-205 dark:border-slate-800 shadow-2xl p-6 space-y-4 text-xs font-bold text-slate-700 dark:text-slate-200">
+            {/* Header */}
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h4 className="font-extrabold text-sm uppercase text-secondary">Edit BI Record</h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">Editing {editingItem.type.replace('_', ' ')} record</p>
+              </div>
+              <button
+                onClick={() => setEditingItem(null)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleEditItemSubmit} className="space-y-4">
+              {editingItem.type === 'job' && (
+                <>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Clean Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.fields.title || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, title: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-950/50 outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Client Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingItem.fields.clientName || ''}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, clientName: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-950/50 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Client Phone</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingItem.fields.clientPhone || ''}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, clientPhone: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Price (₹)</label>
+                      <input
+                        type="number"
+                        required
+                        value={editingItem.fields.price || 0}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, price: Number(e.target.value) }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Clean Date</label>
+                      <input
+                        type="date"
+                        required
+                        value={editingItem.fields.date || ''}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, date: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Job Status</label>
+                    <select
+                      value={editingItem.fields.status || 'pending'}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, status: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="started">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {editingItem.type === 'custom_expense' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Category</label>
+                      <select
+                        value={editingItem.fields.category || 'material'}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, category: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      >
+                        <option value="salaries">Salaries</option>
+                        <option value="fuel">Fuel & Travel</option>
+                        <option value="material">Materials</option>
+                        <option value="equipment">Equipment</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="office">Office/Admin</option>
+                        <option value="inventory">Inventory</option>
+                        <option value="miscellaneous">Miscellaneous</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Expense Date</label>
+                      <input
+                        type="date"
+                        required
+                        value={editingItem.fields.date || ''}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, date: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Amount (₹)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editingItem.fields.amount || 0}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, amount: Number(e.target.value) }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Description</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.fields.description || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, description: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {editingItem.type === 'salary_request' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Amount (₹)</label>
+                      <input
+                        type="number"
+                        required
+                        value={editingItem.fields.amount || 0}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, amount: Number(e.target.value) }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Billing Month</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="YYYY-MM"
+                        value={editingItem.fields.month || ''}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, month: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Mode</label>
+                    <select
+                      value={editingItem.fields.paymentMode || 'Online'}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, paymentMode: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    >
+                      <option value="Online">Online Transfer</option>
+                      <option value="Cash">Cash Payout</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {editingItem.type === 'travel_log' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Distance (KM)</label>
+                      <input
+                        type="number"
+                        required
+                        value={editingItem.fields.kms || 0}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, kms: Number(e.target.value) }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Allowance (₹)</label>
+                      <input
+                        type="number"
+                        required
+                        value={editingItem.fields.allowance || 0}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, allowance: Number(e.target.value) }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Log Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={editingItem.fields.date || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, date: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {editingItem.type === 'customer' && (
+                <>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Client Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.fields.clientName || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, clientName: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Client Phone</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.fields.clientPhone || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, clientPhone: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Client Address / Location</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.fields.address || ''}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        fields: { ...editingItem.fields, address: e.target.value }
+                      })}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Submit Buttons */}
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-secondary text-white font-extrabold uppercase tracking-wider hover:opacity-90 transition-opacity cursor-pointer text-center"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 dark:text-slate-300 font-extrabold uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

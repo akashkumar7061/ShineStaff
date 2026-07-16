@@ -14,7 +14,8 @@ import {
   logNotificationDelivered,
   getCustomerDetailsByPhone,
   getFormSuggestions,
-  adminCompleteJob
+  adminCompleteJob,
+  updateClientInfo
 } from '../controllers/jobController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -22,6 +23,7 @@ const router = Router();
 
 router.use(authenticateJWT);
 
+router.put('/update-client-info', authorizeRoles('admin'), updateClientInfo);
 router.get('/', getJobs);
 router.get('/customer/:phone', authorizeRoles('admin'), getCustomerDetailsByPhone);
 router.get('/suggestions/all', authorizeRoles('admin'), getFormSuggestions);
