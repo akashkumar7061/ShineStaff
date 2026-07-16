@@ -278,7 +278,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                     {/* Salary rates */}
                     <td className="px-6 py-4">
                       <div>
-                        <span className="block font-medium text-slate-700 dark:text-slate-300">Daily: ₹{worker.dailySalary}</span>
+                        <span className="block font-medium text-slate-700 dark:text-slate-300">Daily: ₹{worker.dailySalary || Math.round((worker.monthlySalary || 0) / 30)}</span>
                         <span className="block text-[10px] text-slate-400 mt-0.5">Monthly: ₹{worker.monthlySalary}</span>
                       </div>
                     </td>
@@ -751,7 +751,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="glass-card p-4">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Regular Daily Rate</span>
-                          <span className="block text-xl font-extrabold text-slate-850 dark:text-white mt-1">₹{selectedWorkerDetails.worker.dailySalary || 0}</span>
+                          <span className="block text-xl font-extrabold text-slate-850 dark:text-white mt-1">
+                            ₹{selectedWorkerDetails.worker.dailySalary || Math.round((selectedWorkerDetails.worker.monthlySalary || 0) / 30)}
+                          </span>
                         </div>
                         <div className="glass-card p-4">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Calculated Monthly Rate</span>
