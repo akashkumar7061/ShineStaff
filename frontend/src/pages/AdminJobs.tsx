@@ -249,7 +249,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setLoading(true);
     try {
       const [jobsRes, workersRes] = await Promise.all([
-        api.get(`/jobs?company=${companyFilter}`),
+        api.get(`/jobs?company=${companyFilter}&date=${selectedDate}`),
         api.get(`/workers?company=${companyFilter}`)
       ]);
       setJobs(jobsRes.data);
@@ -274,7 +274,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     };
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, [companyFilter]);
+  }, [companyFilter, selectedDate]);
 
   // Date Navigation Helpers
   const handlePrevDay = () => {

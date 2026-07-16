@@ -304,31 +304,29 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
   }
 
   try {
-    // 1. Fetch active workers
     const workerFilter: any = { role: 'worker', status: 'active' };
     if (company && company !== 'All') {
       workerFilter.company = { $in: [company, 'Both'] };
     }
-    const workers = await User.find(workerFilter).select('-password');
-
-    // 2. Fetch approved leaves for date
     const targetDate = new Date(date);
-    const leaves = await Leave.find({
-      status: 'approved',
-      startDate: { $lte: targetDate },
-      endDate: { $gte: targetDate }
-    });
+
+    // Parallelize all queries for extreme performance optimization (loads in milliseconds!)
+    const [workers, leaves, attendance, dayJobs] = await Promise.all([
+      User.find(workerFilter).select('-password'),
+      Leave.find({
+        status: 'approved',
+        startDate: { $lte: targetDate },
+        endDate: { $gte: targetDate }
+      }),
+      Attendance.find({ date }),
+      Job.find({
+        date,
+        status: { $ne: 'cancelled' }
+      })
+    ]);
+
     const leaveWorkerIds = new Set(leaves.map(l => l.workerId.toString()));
-
-    // 3. Fetch check-in attendance records for date
-    const attendance = await Attendance.find({ date });
     const checkedInWorkerIds = new Set(attendance.map(a => a.workerId.toString()));
-
-    // 4. Fetch all jobs for selected date (non-cancelled)
-    const dayJobs = await Job.find({
-      date,
-      status: { $ne: 'cancelled' }
-    });
 
     const isDateToday = date === new Date().toISOString().split('T')[0];
 
