@@ -788,7 +788,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
           {/* SECTION 2: 4 Executive Ratios Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             
-            <div className="glass-card p-5 border-l-4 border-l-indigo-600 shadow-sm">
+            <div 
+              onClick={() => openDrillDown('gross')}
+              className="glass-card p-5 border-l-4 border-l-indigo-600 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all"
+            >
               <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Gross Profit Margin</span>
               <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
                 {biAnalytics.financials.totalRevenue > 0 ? ((biAnalytics.financials.grossProfit / biAnalytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%
@@ -796,7 +799,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
               <p className="text-[9px] text-slate-400 mt-1 block">Benchmark: &gt;50% is healthy</p>
             </div>
 
-            <div className="glass-card p-5 border-l-4 border-l-violet-600 shadow-sm">
+            <div 
+              onClick={() => openDrillDown('profit')}
+              className="glass-card p-5 border-l-4 border-l-violet-600 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all"
+            >
               <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Net Profit Margin</span>
               <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
                 {biAnalytics.financials.totalRevenue > 0 ? ((biAnalytics.financials.netProfit / biAnalytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%
@@ -804,7 +810,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
               <p className="text-[9px] text-slate-400 mt-1 block">Benchmark: &gt;20% is excellent</p>
             </div>
 
-            <div className="glass-card p-5 border-l-4 border-l-rose-500 shadow-sm">
+            <div 
+              onClick={() => openDrillDown('expenses')}
+              className="glass-card p-5 border-l-4 border-l-rose-500 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all"
+            >
               <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Operating Expense Ratio (OER)</span>
               <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
                 {biAnalytics.financials.totalRevenue > 0 ? (((biAnalytics.expenseBreakdown.salaries + biAnalytics.expenseBreakdown.office + biAnalytics.expenseBreakdown.marketing + biAnalytics.expenseBreakdown.miscellaneous) / biAnalytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%
@@ -812,7 +821,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
               <p className="text-[9px] text-slate-400 mt-1 block">Opex efficiency ratio</p>
             </div>
 
-            <div className="glass-card p-5 border-l-4 border-l-amber-500 shadow-sm">
+            <div 
+              onClick={() => openDrillDown('customers')}
+              className="glass-card p-5 border-l-4 border-l-amber-500 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all"
+            >
               <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Customer Lifetime Value (LTV)</span>
               <h3 className="text-xl font-black text-slate-800 dark:text-white mt-1">
                 ₹{Math.round(biAnalytics.financials.averageOrderValue * (biAnalytics.financials.totalCustomers > 0 ? jobsList.length / biAnalytics.financials.totalCustomers : 1)).toLocaleString('en-IN')}
