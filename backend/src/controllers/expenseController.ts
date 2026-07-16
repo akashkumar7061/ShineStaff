@@ -73,3 +73,33 @@ export const deleteExpense = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const updateExpense = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { category, amount, date, description } = req.body;
+
+    const expense = await Expense.findById(id);
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    expense.category = category || expense.category;
+    expense.amount = amount !== undefined ? Number(amount) : expense.amount;
+    expense.date = date || expense.date;
+    expense.description = description !== undefined ? description : expense.description;
+
+    await expense.save();
+
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'Expense',
+      entityId: expense._id.toString(),
+      summary: `Updated expense: ₹${expense.amount} for ${expense.category} (${expense.description})`
+    });
+
+    res.status(200).json({ message: 'Expense updated successfully', expense });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

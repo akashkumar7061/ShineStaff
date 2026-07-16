@@ -39,7 +39,9 @@ import {
   Settings as SettingsIcon,
   History,
   Map,
-  Share2
+  Share2,
+  Pencil,
+  Check
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -144,6 +146,7 @@ const AdminBIDashboard: React.FC = () => {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(getTodayString());
   const [expenseDescription, setExpenseDescription] = useState('');
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
   const [travelWorker, setTravelWorker] = useState('');
   const [travelKms, setTravelKms] = useState('');
@@ -210,23 +213,50 @@ const AdminBIDashboard: React.FC = () => {
 
 
 
+  const handleStartEditExpense = (exp: any) => {
+    setEditingExpenseId(exp._id);
+    setExpenseCategory(exp.category);
+    setExpenseAmount(String(exp.amount));
+    setExpenseDate(exp.date);
+    setExpenseDescription(exp.description || '');
+  };
+
+  const handleCancelEditExpense = () => {
+    setEditingExpenseId(null);
+    setExpenseCategory('inventory');
+    setExpenseAmount('');
+    setExpenseDate(getTodayString());
+    setExpenseDescription('');
+  };
+
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!expenseAmount || isNaN(Number(expenseAmount)) || Number(expenseAmount) <= 0) return;
 
     try {
-      await api.post('/expenses', {
-        category: expenseCategory,
-        amount: Number(expenseAmount),
-        date: expenseDate,
-        description: expenseDescription
-      });
+      if (editingExpenseId) {
+        await api.put(`/expenses/${editingExpenseId}`, {
+          category: expenseCategory,
+          amount: Number(expenseAmount),
+          date: expenseDate,
+          description: expenseDescription
+        });
+        setEditingExpenseId(null);
+        alert('Expense updated successfully!');
+      } else {
+        await api.post('/expenses', {
+          category: expenseCategory,
+          amount: Number(expenseAmount),
+          date: expenseDate,
+          description: expenseDescription
+        });
+        alert('Expense logged successfully!');
+      }
       setExpenseAmount('');
       setExpenseDescription('');
-      alert('Expense logged successfully!');
       fetchBIData();
     } catch (err) {
-      console.error('Failed to log expense:', err);
+      console.error('Failed to log/update expense:', err);
     }
   };
 
@@ -1514,8 +1544,10 @@ const AdminBIDashboard: React.FC = () => {
               
               {/* Form card */}
               <div className="glass-card p-6 h-fit">
-                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Log Business Expense</h3>
-                <form onSubmit={handleAddExpense} className="space-y-4 text-xs font-bold text-slate-650 dark:text-slate-300">
+                <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">
+                  {editingExpenseId ? 'Edit Business Expense ✏️' : 'Log Business Expense'}
+                </h3>
+                <form onSubmit={handleAddExpense} className="space-y-4 text-xs font-bold text-slate-655 dark:text-slate-300">
                   <div>
                     <label className="block mb-1.5 uppercase tracking-wider text-[9px] text-slate-400">Expense Category:</label>
                     <select
@@ -1565,13 +1597,24 @@ const AdminBIDashboard: React.FC = () => {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full bg-secondary hover:bg-secondary-dark text-white font-extrabold p-3 rounded-xl transition-all mt-2 cursor-pointer flex items-center justify-center space-x-1.5 shadow-md"
-                  >
-                    <Plus className="h-4.5 w-4.5" />
-                    <span>Record Expense Log</span>
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      type="submit"
+                      className="w-full bg-secondary hover:bg-secondary-dark text-white font-extrabold p-3 rounded-xl transition-all mt-2 cursor-pointer flex items-center justify-center space-x-1.5 shadow-md"
+                    >
+                      {editingExpenseId ? <Check className="h-4.5 w-4.5" /> : <Plus className="h-4.5 w-4.5" />}
+                      <span>{editingExpenseId ? 'Update Expense Log' : 'Record Expense Log'}</span>
+                    </button>
+                    {editingExpenseId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditExpense}
+                        className="w-full bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-extrabold p-2.5 rounded-xl transition-all cursor-pointer text-center text-xs"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
 
@@ -1601,7 +1644,14 @@ const AdminBIDashboard: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 truncate max-w-[180px]">{exp.description || '-'}</td>
                             <td className="px-4 py-3 text-right font-black text-rose-500">₹{exp.amount.toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-3 text-center">
+                            <td className="px-4 py-3 text-center flex justify-center items-center space-x-1">
+                              <button
+                                onClick={() => handleStartEditExpense(exp)}
+                                className="text-secondary hover:text-indigo-650 p-1.5 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-950/20 cursor-pointer"
+                                title="Edit expense"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
                               <button
                                 onClick={() => handleDeleteExpense(exp._id)}
                                 className="text-danger hover:text-red-655 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-955/20 cursor-pointer"
