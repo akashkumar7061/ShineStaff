@@ -998,7 +998,6 @@ const AdminBIDashboard: React.FC = () => {
           {activeTab === 'operations-desk' && (
             <div className="space-y-6">
               
-              {/* Header Info */}
               <div className="bg-gradient-to-r from-violet-500/10 to-indigo-500/10 p-5 rounded-3xl border border-violet-200/30 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 flex items-center space-x-1.5">
@@ -1009,80 +1008,7 @@ const AdminBIDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sub-Section 1: Daily Quick Logging Forms Grid */}
-              <div className="max-w-xl text-xs font-bold text-slate-655 dark:text-slate-350">
-                
-                {/* Form B: Expense & Inventory Logger */}
-                <div className="glass-card p-6 border-t-4 border-t-rose-500">
-                  <h4 className="text-xs font-black uppercase text-rose-655 tracking-wider mb-4 flex items-center space-x-1">
-                    <Archive className="h-4.5 w-4.5" />
-                    <span>Log Daily Expenditures & Inventory</span>
-                  </h4>
-                  <form onSubmit={handleAddExpense} className="space-y-4">
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Expenditure Category:</label>
-                      <select
-                        value={expenseCategory}
-                        onChange={(e) => setExpenseCategory(e.target.value as any)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-805 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-rose-500"
-                      >
-                        <option value="inventory">Inventory & Cleaning Supplies 📦</option>
-                        <option value="material">Cleaning Materials / Liquids</option>
-                        <option value="fuel">Fuel commuting allowances</option>
-                        <option value="equipment">Cleaners Machinery & Equipment</option>
-                        <option value="marketing">Marketing & Google Ads</option>
-                        <option value="office">Office rent & Utilities</option>
-                        <option value="miscellaneous">Miscellaneous expense</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Expense Cost (INR):</label>
-                      <input
-                        type="number"
-                        required
-                        placeholder="e.g. 1500"
-                        value={expenseAmount}
-                        onChange={(e) => setExpenseAmount(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-rose-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Expense Date:</label>
-                      <input
-                        type="date"
-                        required
-                        value={expenseDate}
-                        onChange={(e) => setExpenseDate(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-rose-500 dark:color-scheme-dark"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1 text-[9px] uppercase tracking-wider text-slate-455">Description Details:</label>
-                      <textarea
-                        required
-                        placeholder="e.g. Purchased 10 Microfiber cloths & Floor scrubbers"
-                        value={expenseDescription}
-                        onChange={(e) => setExpenseDescription(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 h-20 outline-none focus:border-rose-500 resize-none"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-rose-500 hover:bg-rose-600 text-white font-extrabold p-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center space-x-1.5"
-                    >
-                      <Plus className="h-4.5 w-4.5" />
-                      <span>Log Cost Log</span>
-                    </button>
-                  </form>
-                </div>
-              </div>
-
-              {/* Sub-Section 2: Approvals Action Center Lists */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 
                 {/* 1. Pending Salary Advance/Payout requests */}
                 <div className="glass-card p-6 overflow-hidden">
