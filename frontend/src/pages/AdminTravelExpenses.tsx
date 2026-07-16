@@ -1628,44 +1628,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             {activeSection === 'dashboard' && (
               <div className="space-y-6">
                 
-                {/* Visual Analytics graphs */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
-                  <div className="glass-card p-5 space-y-4">
-                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Earnings Trend (₹)</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={getChartData()}>
-                          <defs>
-                            <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" className="dark:hidden" />
-                          <XAxis dataKey="name" stroke="#94A3B8" fontSize={9} fontWeight="bold" />
-                          <YAxis stroke="#94A3B8" fontSize={9} fontWeight="bold" />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="Earnings" stroke="#10b981" fillOpacity={1} fill="url(#colorEarnings)" strokeWidth={2} isAnimationActive={false} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="glass-card p-5 space-y-4">
-                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Travel & Distance Trend (KM)</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={getChartData()}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                          <XAxis dataKey="name" stroke="#94A3B8" fontSize={9} fontWeight="bold" />
-                          <YAxis stroke="#94A3B8" fontSize={9} fontWeight="bold" />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="Distance" name="Distance (KM)" fill="#8b5cf6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                      {/* 1. If All Workers is selected: show Worker Salary Summary & Analytics */}
+                {/* 1. If All Workers is selected: show Worker Salary Summary & Analytics */}
                 {selectedWorker._id === 'all' && (
                   <div className="space-y-6">
                     {/* Worker Salary Summary Table Card */}
@@ -1751,7 +1714,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         <span>📊</span>
                         <span>Salary Analytics</span>
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+                      <div className="grid grid-cols-1 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
                         <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100/50 dark:border-emerald-955/30 flex flex-col justify-between space-y-2">
                           <span className="text-[9px] uppercase tracking-wider text-slate-400">Highest Paid Worker</span>
                           <p className="text-lg font-black text-slate-855 dark:text-white">
@@ -1781,7 +1744,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
+                      <div className="grid grid-cols-1 gap-6 text-xs font-bold text-slate-655 dark:text-slate-350">
                         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col space-y-1">
                           <span className="text-[9px] uppercase tracking-wider text-slate-400">Avg Earnings Per Job</span>
                           <p className="text-base font-extrabold text-slate-800 dark:text-white">
@@ -2156,8 +2119,6 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       </div>
                     );
                   })()}
-                </div>
-                  </div>
                 </div>
 
               </div>
