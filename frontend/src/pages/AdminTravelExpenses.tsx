@@ -31,6 +31,8 @@ import {
   Zap,
   Activity,
   ClipboardList,
+  CheckCircle2,
+  CreditCard,
   X
 } from 'lucide-react';
 import {
@@ -1804,7 +1806,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             <nav className="flex space-x-3.5 pb-2" aria-label="Tabs">
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
-                { id: 'bi-hub', label: 'BI Performance Hub', icon: Sparkles },
+                { id: 'bi-operations', label: 'Operations & Target Planning', icon: CheckCircle2 },
+                { id: 'bi-workers', label: 'Worker Performance & Attendance', icon: Award },
+                { id: 'bi-goals', label: 'Projections & AI recommendations', icon: Zap },
+                { id: 'bi-expenses', label: 'Manage Expenditures', icon: Plus },
+                { id: 'bi-payments', label: 'Invoice & Payments status', icon: CreditCard },
+                { id: 'bi-settings', label: 'Company Settings', icon: SettingsIcon },
                 { id: 'daily-travel', label: 'Daily Travel Report', icon: MapPin },
                 { id: 'work-earnings', label: 'Work-wise Earnings', icon: DollarSign },
                 { id: 'travel-expenses', label: 'Travel Expenses', icon: Compass },
@@ -3449,10 +3456,40 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
               </div>
             )}
 
-            {/* TAB CONTENT: 9. BI Performance Hub */}
-            {activeSection === 'bi-hub' && (
-              <div className="w-full">
-                <AdminBIDashboard />
+            {/* TAB CONTENT: 9. BI Performance Hub - Flattened */}
+            {activeSection === 'bi-operations' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="operations" hideNavigation={true} />
+              </div>
+            )}
+
+            {activeSection === 'bi-workers' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="workers" hideNavigation={true} />
+              </div>
+            )}
+
+            {activeSection === 'bi-goals' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="goals" hideNavigation={true} />
+              </div>
+            )}
+
+            {activeSection === 'bi-expenses' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="expenses" hideNavigation={true} />
+              </div>
+            )}
+
+            {activeSection === 'bi-payments' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="payment-tracker" hideNavigation={true} />
+              </div>
+            )}
+
+            {activeSection === 'bi-settings' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="settings" hideNavigation={true} />
               </div>
             )}
 

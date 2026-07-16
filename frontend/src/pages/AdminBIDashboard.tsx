@@ -109,7 +109,12 @@ const getPresetDates = (preset: string) => {
   return { startDate: formatDate(start), endDate: formatDate(end) };
 };
 
-const AdminBIDashboard: React.FC = () => {
+interface AdminBIDashboardProps {
+  forceTab?: 'operations-desk' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'settings';
+  hideNavigation?: boolean;
+}
+
+const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavigation = false }) => {
   const [preset, setPreset] = useState('this-month');
   const [startDate, setStartDate] = useState(() => getPresetDates('this-month').startDate);
   const [endDate, setEndDate] = useState(getTodayString());
@@ -199,6 +204,12 @@ const AdminBIDashboard: React.FC = () => {
     fetchBIData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (forceTab) {
+      setActiveTab(forceTab);
+    }
+  }, [forceTab]);
 
   const handlePresetChange = (selectedPreset: string) => {
     setPreset(selectedPreset);
@@ -811,35 +822,37 @@ const AdminBIDashboard: React.FC = () => {
         <div className="space-y-6">
 
           {/* 3. Segment Tabbed Views */}
-          <div className="border-b border-slate-200 dark:border-slate-800 print:hidden">
-            <nav className="flex space-x-4 overflow-x-auto pb-1" aria-label="Tabs">
-              {[
-                { id: 'operations-desk', label: 'Daily Operations Desk ✍️', icon: ClipboardList },
-                { id: 'operations', label: 'Operations & Target Planning', icon: CheckCircle2 },
-                { id: 'workers', label: 'Worker Performance & Attendance', icon: Award },
-                { id: 'goals', label: 'Projections & AI recommendations', icon: Zap },
-                { id: 'expenses', label: 'Manage Expenditures', icon: Plus },
-                { id: 'payment-tracker', label: 'Invoice & Payments status', icon: CreditCard },
-                { id: 'settings', label: 'Company Settings', icon: SettingsIcon }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-1.5 border-b-2 py-2 px-3 text-xs font-bold transition-all uppercase tracking-wider whitespace-nowrap cursor-pointer ${
-                      activeTab === tab.id
-                        ? 'border-secondary text-secondary'
-                        : 'border-transparent text-slate-400 hover:border-slate-300 hover:text-slate-600'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+          {!hideNavigation && (
+            <div className="border-b border-slate-200 dark:border-slate-800 print:hidden">
+              <nav className="flex space-x-4 overflow-x-auto pb-1" aria-label="Tabs">
+                {[
+                  { id: 'operations-desk', label: 'Daily Operations Desk ✍️', icon: ClipboardList },
+                  { id: 'operations', label: 'Operations & Target Planning', icon: CheckCircle2 },
+                  { id: 'workers', label: 'Worker Performance & Attendance', icon: Award },
+                  { id: 'goals', label: 'Projections & AI recommendations', icon: Zap },
+                  { id: 'expenses', label: 'Manage Expenditures', icon: Plus },
+                  { id: 'payment-tracker', label: 'Invoice & Payments status', icon: CreditCard },
+                  { id: 'settings', label: 'Company Settings', icon: SettingsIcon }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center space-x-1.5 border-b-2 py-2 px-3 text-xs font-bold transition-all uppercase tracking-wider whitespace-nowrap cursor-pointer ${
+                        activeTab === tab.id
+                          ? 'border-secondary text-secondary'
+                          : 'border-transparent text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
 
           {/* 4. Tab Contents */}
 
