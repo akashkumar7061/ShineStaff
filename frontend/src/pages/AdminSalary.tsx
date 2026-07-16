@@ -185,7 +185,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Payroll & Salary Board</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Review auto-calculated salaries, record cash/online payouts or advances, and generate payslips</p>
+          <p className="text-xs text-slate-400 mt-0.5">Review auto-calculated salaries, record cash/online payouts or commissions, and generate payslips</p>
         </div>
 
         {/* Month selector */}
@@ -378,7 +378,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                   required
                   value={payoutReason}
                   onChange={(e) => setPayoutReason(e.target.value)}
-                  placeholder="Reason for payment/advance"
+                  placeholder="Reason for payment/commission"
                   className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
                 />
               </div>
@@ -419,7 +419,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
             {/* List body */}
             <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
               {paymentHistory.length === 0 ? (
-                <p className="text-center text-xs text-slate-400 py-6">No approved advances or payout records logged for this worker.</p>
+                <p className="text-center text-xs text-slate-400 py-6">No approved commissions or payout records logged for this worker.</p>
               ) : (
                 paymentHistory.map((pay: any) => (
                   <div key={pay._id} className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
@@ -428,7 +428,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                         <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
                           pay.type === 'advance' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
                         }`}>
-                          {pay.type.replace('_', ' ')}
+                          {pay.type === 'advance' ? 'Commission' : pay.type.replace('_', ' ')}
                         </span>
                         <span className="text-[10px] text-slate-450 font-semibold">{pay.paymentMode || 'Online'}</span>
                         <span className="text-[10px] text-slate-400">({pay.month})</span>
@@ -521,7 +521,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                   >
                     <option value="regular_payout">Regular Salary Payout</option>
                     <option value="regular_salary">Regular Salary Request</option>
-                    <option value="advance">Salary Advance</option>
+                    <option value="advance">Commission</option>
                   </select>
                 </div>
 
