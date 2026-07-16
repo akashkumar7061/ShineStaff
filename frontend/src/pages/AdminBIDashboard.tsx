@@ -1540,7 +1540,7 @@ const AdminBIDashboard: React.FC = () => {
 
           {/* Tab 4.7: Manage Expenditures */}
           {activeTab === 'expenses' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
               
               {/* Form card */}
               <div className="glass-card p-6 h-fit">
@@ -1619,7 +1619,7 @@ const AdminBIDashboard: React.FC = () => {
               </div>
 
               {/* Expenses list logs */}
-              <div className="glass-card p-6 lg:col-span-2 overflow-hidden flex flex-col justify-between">
+              <div className="glass-card p-6 overflow-hidden">
                 <div>
                   <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest mb-4">Recorded Custom Expenditures</h3>
                   <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
