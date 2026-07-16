@@ -436,13 +436,21 @@ const AdminBIDashboard: React.FC = () => {
         break;
       case 'customers':
         title = 'Client Booking Activity (Repeat & Unique)';
-        const map: { [phone: string]: { name: string; phone: string; count: number } } = {};
+        const map: { [phone: string]: { name: string; phone: string; count: number; address?: string } } = {};
         jobs.forEach(j => {
           if (j.clientPhone) {
             if (!map[j.clientPhone]) {
-              map[j.clientPhone] = { name: j.clientName, phone: j.clientPhone, count: 0 };
+              map[j.clientPhone] = { 
+                name: j.clientName, 
+                phone: j.clientPhone, 
+                count: 0, 
+                address: j.address || j.locationName || 'N/A' 
+              };
             }
             map[j.clientPhone].count++;
+            if ((!map[j.clientPhone].address || map[j.clientPhone].address === 'N/A') && (j.address || j.locationName)) {
+              map[j.clientPhone].address = j.address || j.locationName;
+            }
           }
         });
         data = Object.values(map).sort((a, b) => b.count - a.count);
@@ -1784,6 +1792,7 @@ const AdminBIDashboard: React.FC = () => {
                     <tr>
                       <th className="px-4 py-3">Client Name</th>
                       <th className="px-4 py-3">Client Phone</th>
+                      <th className="px-4 py-3">Client Location</th>
                       <th className="px-4 py-3 text-center">Total Bookings Count</th>
                     </tr>
                   ) : drillDown.type === 'expenses' || drillDown.type === 'profit' || drillDown.type === 'gross' ? (
@@ -1811,6 +1820,7 @@ const AdminBIDashboard: React.FC = () => {
                         <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                           <td className="px-4 py-3 text-slate-855 dark:text-slate-100 font-extrabold">{item.name}</td>
                           <td className="px-4 py-3 text-mono">{item.phone}</td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-normal">{item.address || 'N/A'}</td>
                           <td className="px-4 py-3 text-center text-secondary font-black">{item.count} Bookings</td>
                         </tr>
                       );
