@@ -268,6 +268,71 @@ const RecentlyCompletedJobBanner: React.FC<{ job: any; onClick: () => void }> = 
   );
 };
 
+const PendingJobBanner: React.FC<{ job: any; onClick: () => void }> = ({ job, onClick }) => {
+  return (
+    <div 
+      onClick={onClick}
+      className="rounded-2xl border border-blue-500/30 bg-white dark:bg-slate-900/60 p-5 space-y-4 shadow-md relative overflow-hidden text-slate-800 dark:text-white text-xs cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg hover:border-blue-500/50"
+    >
+      <div className="absolute top-0 right-0 h-24 w-24 bg-blue-500/5 rounded-full blur-2xl" />
+      
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start space-x-2.5 min-w-0">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-500 text-white shadow-sm text-sm shrink-0">
+            🔵
+          </div>
+          <div className="text-left min-w-0">
+            <span className="text-[8px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest block">
+              ⚡ PENDING ASSIGNED
+            </span>
+            <span className="font-extrabold text-slate-855 dark:text-white block text-sm break-words">
+              {job.title} ({job.company})
+            </span>
+          </div>
+        </div>
+        <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-xl px-2.5 py-1 font-black text-[9px] uppercase tracking-wider shrink-0">
+          Assigned
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-left text-[11px] text-slate-655 dark:text-slate-350">
+        <div className="flex items-center space-x-2.5 text-left min-w-0">
+          <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-855 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-white uppercase overflow-hidden shadow-inner shrink-0 text-[10px]">
+            {job.workerId?.avatar ? (
+              <img src={job.workerId.avatar} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <span>{job.workerId?.name?.slice(0, 2) || 'WK'}</span>
+            )}
+          </div>
+          <div className="min-w-0 text-left">
+            <span className="block text-[8px] text-slate-405 uppercase tracking-widest">Worker</span>
+            <span className="font-bold text-slate-855 dark:text-slate-150 block break-words">
+              {job.workerId?.name || 'Unassigned'}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Client Customer</span>
+          <span className="font-bold text-slate-855 dark:text-slate-150 block break-words">
+            👤 {job.clientName || 'N/A'}
+          </span>
+        </div>
+      </div>
+
+      <div className="text-[11px] text-slate-655 dark:text-slate-350 text-left">
+        <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-black">Service Address</span>
+        <span className="font-bold text-slate-800 dark:text-slate-200 block break-words leading-normal">📍 {job.address || 'N/A'}</span>
+      </div>
+
+      <div className="flex items-center justify-between text-[9px] bg-slate-50/50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 mt-1">
+        <span className="text-slate-455">Scheduled Slot: <strong className="text-slate-750 dark:text-slate-205">{job.timeSlot || 'N/A'}</strong></span>
+        <span className="text-slate-400">Awaiting acceptance...</span>
+      </div>
+    </div>
+  );
+};
+
 const JobDetailModal: React.FC<{ job: any; onClose: () => void }> = ({ job, onClose }) => {
   const [seconds, setSeconds] = useState(0);
 
@@ -530,10 +595,10 @@ const AdminOperationsHUD: React.FC<AdminOperationsHUDProps> = ({ companyFilter }
 
   const activeJobs = jobs.filter((j: any) => j.status === 'started' && (!filterDate || j.date === filterDate));
   const acceptedJobs = jobs.filter((j: any) => j.status === 'accepted' && (!filterDate || j.date === filterDate));
+  const pendingJobs = jobs.filter((j: any) => j.status === 'pending' && (!filterDate || j.date === filterDate));
   const completedJobs = jobs
     .filter((j: any) => j.status === 'completed' && j.completedAt && (!filterDate || j.date === filterDate))
-    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
-    .slice(0, 4);
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
 
   return (
     <div className="space-y-6 text-left max-w-full">
@@ -570,13 +635,29 @@ const AdminOperationsHUD: React.FC<AdminOperationsHUDProps> = ({ companyFilter }
         </div>
       </div>
 
+      {/* Operations Quick Stats Board */}
+      <div className="grid grid-cols-3 gap-4 pb-4 border-b border-slate-150 dark:border-slate-800/80">
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-205 dark:border-emerald-900 flex flex-col justify-between">
+          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Completed Cleans</span>
+          <span className="text-2xl font-black text-emerald-700 dark:text-emerald-305 mt-1">{completedJobs.length}</span>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-2xl border border-blue-205 dark:border-blue-900 flex flex-col justify-between">
+          <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">Pending Cleans</span>
+          <span className="text-2xl font-black text-blue-700 dark:text-blue-305 mt-1">{pendingJobs.length}</span>
+        </div>
+        <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-205 dark:border-amber-900 flex flex-col justify-between">
+          <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">In Progress</span>
+          <span className="text-2xl font-black text-amber-700 dark:text-amber-305 mt-1">{activeJobs.length}</span>
+        </div>
+      </div>
+
       {loading && jobs.length === 0 ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
             <div key={n} className="animate-shimmer h-28 w-full rounded-2xl" />
           ))}
         </div>
-      ) : activeJobs.length === 0 && acceptedJobs.length === 0 && completedJobs.length === 0 ? (
+      ) : activeJobs.length === 0 && acceptedJobs.length === 0 && completedJobs.length === 0 && pendingJobs.length === 0 ? (
         <div className="glass-card p-12 text-center flex flex-col items-center justify-center space-y-3 rounded-3xl border border-slate-200 dark:border-slate-800">
           <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
             <Sparkles className="h-6 w-6" />
@@ -616,11 +697,25 @@ const AdminOperationsHUD: React.FC<AdminOperationsHUDProps> = ({ companyFilter }
             </div>
           )}
 
-          {/* 3. Recently Completed Cleans */}
+          {/* 3. Pending / Assigned Cleans */}
+          {pendingJobs.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-slate-150 dark:border-slate-800/80">
+              <span className="block text-xs font-black text-blue-500 uppercase tracking-widest">
+                🔵 Pending / Assigned Cleans ({pendingJobs.length})
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {pendingJobs.map((j) => (
+                  <PendingJobBanner key={j._id} job={j} onClick={() => setSelectedJob(j)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4. Completed Cleans */}
           {completedJobs.length > 0 && (
             <div className="space-y-3 pt-4 border-t border-slate-150 dark:border-slate-800/80">
               <span className="block text-xs font-black text-slate-505 uppercase tracking-widest">
-                ✅ Recently Completed Cleans (Last 4)
+                ✅ Completed Cleans ({completedJobs.length})
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {completedJobs.map((j) => (
