@@ -106,6 +106,15 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [ledgerPage, setLedgerPage] = useState(1);
   const [isEditingBaseSalary, setIsEditingBaseSalary] = useState(false);
   const [newBaseSalaryValue, setNewBaseSalaryValue] = useState('');
+  const [editingLedgerItem, setEditingLedgerItem] = useState<{
+    job: any;
+    commissionAmount: string;
+    remarks: string;
+    price: string;
+    fuelKmsTravelled: string;
+    paymentStatus: string;
+    date: string;
+  } | null>(null);
 
   // Manual Commute Logging states
   const [logWorker, setLogWorker] = useState<string>('');
@@ -762,6 +771,40 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     }
   };
 
+  const handleSaveLedgerItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLedgerItem) return;
+    try {
+      // 1. Update the Job pricing, fuel KMs, status, and date
+      await api.put(`/jobs/${editingLedgerItem.job._id}`, {
+        price: Number(editingLedgerItem.price) || 0,
+        fuelKmsTravelled: Number(editingLedgerItem.fuelKmsTravelled) || 0,
+        paymentStatus: editingLedgerItem.paymentStatus,
+        date: editingLedgerItem.date
+      });
+
+      // 2. Upsert the Commission and remarks
+      const payload = {
+        workerId: editingLedgerItem.job.workerId?._id || editingLedgerItem.job.workerId,
+        commissions: [
+          {
+            jobId: editingLedgerItem.job._id,
+            commissionAmount: Number(editingLedgerItem.commissionAmount) || 0,
+            remarks: editingLedgerItem.remarks
+          }
+        ]
+      };
+      await api.post('/commissions/bulk-upsert', payload);
+
+      alert('Ledger record updated successfully!');
+      setEditingLedgerItem(null);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update ledger record.');
+    }
+  };
+
   const handleDeleteCommission = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this commission record?')) return;
     try {
@@ -799,7 +842,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         netSalary: netSalaryVal,
         date: j.date || '',
         paymentStatus: j.paymentStatus || 'pending',
-        remarks: commRemarks || ''
+        remarks: commRemarks || '',
+        rawJob: j
       };
     });
   };
@@ -1689,7 +1733,29 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             {getSortedWorkerSummaries().map((summary, idx) => (
                               <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
                                 <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{summary.name}</td>
-                                <td className="px-4 py-3">₹{summary.baseSalary.toLocaleString()}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center space-x-2">
+                                    <span>₹{summary.baseSalary.toLocaleString()}</span>
+                                    <button
+                                      onClick={async () => {
+                                        const newSal = prompt(`Enter new Monthly Base Salary for ${summary.name}:`, String(summary.baseSalary));
+                                        if (newSal !== null && !isNaN(Number(newSal))) {
+                                          try {
+                                            await api.put(`/workers/${summary._id}`, { monthlySalary: Number(newSal) });
+                                            alert('Base salary updated successfully!');
+                                            fetchData();
+                                          } catch (err) {
+                                            alert('Failed to update base salary.');
+                                          }
+                                        }
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-secondary hover:scale-110 transition-all cursor-pointer text-xs"
+                                      title="Edit Base Salary"
+                                    >
+                                      ✏️
+                                    </button>
+                                  </div>
+                                </td>
                                 <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{summary.netSalary.toFixed(2)}</td>
                                 <td className="px-4 py-3 text-rose-500 font-bold">₹{summary.todayProfit.toFixed(2)}</td>
                                 <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{summary.monthlyProfit.toFixed(2)}</td>
@@ -2020,7 +2086,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             { key: 'grandPayout', label: 'Profit' },
                             { key: 'netSalary', label: 'Net Salary' },
                             { key: 'paymentStatus', label: 'Payment Status' },
-                            { key: 'remarks', label: 'Remarks' }
+                            { key: 'remarks', label: 'Remarks' },
+                            { key: 'actions', label: 'Actions' }
                           ].map(col => (
                             <th
                               key={col.key}
@@ -2082,6 +2149,22 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                 </span>
                               </td>
                               <td className="px-4 py-3 max-w-[120px] truncate text-slate-400 text-[10px] font-medium" title={item.remarks}>{item.remarks || '-'}</td>
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={() => setEditingLedgerItem({
+                                    job: item.rawJob,
+                                    commissionAmount: String(item.commission),
+                                    remarks: item.remarks,
+                                    price: String(item.workAmount),
+                                    fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
+                                    paymentStatus: item.paymentStatus,
+                                    date: item.date
+                                  })}
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-550 dark:text-indigo-305 text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                                >
+                                  ✏️ Edit
+                                </button>
+                              </td>
                             </tr>
                           ));
                         })()}
@@ -3238,6 +3321,97 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Ledger Record Modal */}
+      {editingLedgerItem && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm text-xs font-bold text-slate-700 dark:text-slate-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 w-full max-w-md">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h4 className="font-extrabold text-sm uppercase text-secondary">Edit Ledger Record</h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">Editing job and commission details</p>
+              </div>
+              <button onClick={() => setEditingLedgerItem(null)} className="text-slate-400 hover:text-slate-655 text-sm font-black cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveLedgerItem} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Work Amount / Price (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingLedgerItem.price}
+                    onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, price: e.target.value })}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-950/50 outline-none text-slate-700 dark:text-white font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Commission (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingLedgerItem.commissionAmount}
+                    onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, commissionAmount: e.target.value })}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Fuel KMs Travelled</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingLedgerItem.fuelKmsTravelled}
+                    onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, fuelKmsTravelled: e.target.value })}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Job Timing Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingLedgerItem.date}
+                    onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, date: e.target.value })}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Status</label>
+                <select
+                  value={editingLedgerItem.paymentStatus}
+                  onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, paymentStatus: e.target.value })}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-600 dark:text-slate-300 font-bold"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="received">Received</option>
+                  <option value="outstanding">Outstanding</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase text-slate-400 mb-1">Remarks</label>
+                <input
+                  type="text"
+                  placeholder="Remarks/Notes..."
+                  value={editingLedgerItem.remarks}
+                  onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, remarks: e.target.value })}
+                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-2 text-center font-extrabold uppercase tracking-wider">
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white cursor-pointer hover:opacity-90">Save Changes</button>
+                <button type="button" onClick={() => setEditingLedgerItem(null)} className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 text-slate-400 cursor-pointer">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
