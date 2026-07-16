@@ -221,12 +221,12 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                   <th className="px-6 py-4 text-center">Duty Days (P / L)</th>
                   <th className="px-6 py-4">Monthly Salary</th>
                   <th className="px-6 py-4">Fuel Commute</th>
-                  <th className="px-6 py-4">Advance Paid</th>
-                  <th className="px-6 py-4">Net Remaining</th>
+                  <th className="px-6 py-4">Commission</th>
+                  <th className="px-6 py-4">Total Payment</th>
                   <th className="px-6 py-4 text-center">Payroll Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-855">
                 {payrollList.map((entry) => (
                   <tr key={entry.worker.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors">
                      <td className="px-6 py-5 whitespace-nowrap">
@@ -250,11 +250,17 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
 
                     <td className="px-6 py-5 text-danger font-semibold whitespace-nowrap">₹{entry.earnings.advanceDeducted}</td>
 
-                    <td className="px-6 py-5 font-extrabold text-secondary text-sm whitespace-nowrap">₹{entry.earnings.remainingSalary}</td>
+                    <td className="px-6 py-5 font-extrabold text-secondary text-sm whitespace-nowrap">
+                      ₹{entry.earnings.baseWage + entry.earnings.fuelAllowance + entry.earnings.advanceDeducted}
+                    </td>
 
                     <td className="px-6 py-5 text-center flex items-center justify-center space-x-2.5 whitespace-nowrap">
                       <button
-                        onClick={() => handleOpenPayoutModal(entry.worker.id, entry.worker.name, entry.earnings.remainingSalary)}
+                        onClick={() => handleOpenPayoutModal(
+                          entry.worker.id, 
+                          entry.worker.name, 
+                          entry.earnings.baseWage + entry.earnings.fuelAllowance + entry.earnings.advanceDeducted
+                        )}
                         className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3.5 py-1.5 uppercase transition-colors"
                       >
                         Pay / Record
@@ -311,7 +317,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                   <span className="font-bold text-slate-700 dark:text-slate-205">{selectedMonth}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-450">Calculated Net Remaining:</span>
+                  <span className="text-slate-455">Calculated Total Due Payout:</span>
                   <span className="font-bold text-secondary text-sm">₹{payoutAmount}</span>
                 </div>
               </div>
@@ -322,10 +328,10 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                   <select
                     value={payoutType}
                     onChange={(e) => setPayoutType(e.target.value as any)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary"
                   >
                     <option value="regular_payout">Regular Payout</option>
-                    <option value="advance">Advance Payment</option>
+                    <option value="advance">Commission</option>
                   </select>
                 </div>
                 <div>
