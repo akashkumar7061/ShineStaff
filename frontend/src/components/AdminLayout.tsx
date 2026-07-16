@@ -55,7 +55,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: 'Worker Travel & Expenses', path: '/admin/travel-expenses', icon: Compass, color: 'text-orange-600' },
     { name: 'Export Reports', path: '/admin/reports', icon: FileSpreadsheet, color: 'text-cyan-500' },
     { name: 'Log Daily Clean Job', path: '/admin/log-daily-jobs', icon: ClipboardList, color: 'text-sky-500' },
-    { name: 'Business Intelligence (BI)', path: '/admin/bi-dashboard', icon: Sparkles, color: 'text-indigo-500' },
     { name: 'Audit Log', path: '/admin/audit-log', icon: History, color: 'text-fuchsia-500' },
     { name: 'Company Settings', path: '/admin/settings', icon: SettingsIcon, color: 'text-slate-500' }
   ];

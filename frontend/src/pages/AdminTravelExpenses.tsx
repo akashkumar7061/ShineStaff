@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import api from '../utils/api';
+import AdminBIDashboard from './AdminBIDashboard';
 import {
+  Sparkles,
   Compass,
   Search,
   Calendar,
@@ -1802,6 +1804,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             <nav className="flex space-x-3.5 pb-2" aria-label="Tabs">
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+                { id: 'bi-hub', label: 'BI Performance Hub', icon: Sparkles },
                 { id: 'daily-travel', label: 'Daily Travel Report', icon: MapPin },
                 { id: 'work-earnings', label: 'Work-wise Earnings', icon: DollarSign },
                 { id: 'travel-expenses', label: 'Travel Expenses', icon: Compass },
@@ -3443,6 +3446,13 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                     </button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 9. BI Performance Hub */}
+            {activeSection === 'bi-hub' && (
+              <div className="w-full">
+                <AdminBIDashboard />
               </div>
             )}
 
