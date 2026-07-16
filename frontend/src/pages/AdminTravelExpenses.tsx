@@ -2129,7 +2129,21 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                           }
                           return paginatedList.map((item, idx) => (
                             <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-955/20 transition-colors">
-                              <td className="px-4 py-3 font-semibold whitespace-nowrap">{item.date}</td>
+                              <td className="px-4 py-3 font-semibold whitespace-nowrap cursor-pointer hover:text-secondary group"
+                                  onClick={() => setEditingLedgerItem({
+                                    job: item.rawJob,
+                                    commissionAmount: String(item.commission),
+                                    remarks: item.remarks,
+                                    price: String(item.workAmount),
+                                    fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
+                                    paymentStatus: item.paymentStatus,
+                                    date: item.date
+                                  })}>
+                                <div className="flex items-center space-x-1">
+                                  <span>{item.date}</span>
+                                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-[10px]">✏️</span>
+                                </div>
+                              </td>
                               <td className="px-4 py-3 font-extrabold text-slate-800 dark:text-white">{item.workerName}</td>
                               <td className="px-4 py-3 font-bold text-[10px] uppercase text-slate-400">#{String(item.jobId).substring(0, 8)}</td>
                               <td className="px-4 py-3 whitespace-nowrap">
@@ -2139,21 +2153,76 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">{item.customer}</td>
                               <td className="px-4 py-3 whitespace-nowrap">{item.service}</td>
-                              <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-extrabold">₹{item.workAmount.toFixed(2)}</td>
-                              <td className="px-4 py-3 text-rose-500 font-bold">₹{item.commission.toFixed(2)}</td>
-                              <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">₹{item.fuelCost.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-extrabold cursor-pointer hover:opacity-80 group"
+                                  onClick={() => setEditingLedgerItem({
+                                    job: item.rawJob,
+                                    commissionAmount: String(item.commission),
+                                    remarks: item.remarks,
+                                    price: String(item.workAmount),
+                                    fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
+                                    paymentStatus: item.paymentStatus,
+                                    date: item.date
+                                  })}>
+                                <div className="flex items-center space-x-1">
+                                  <span>₹{item.workAmount.toFixed(2)}</span>
+                                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-[10px]">✏️</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-rose-500 font-bold cursor-pointer hover:opacity-80 group"
+                                  onClick={() => setEditingLedgerItem({
+                                    job: item.rawJob,
+                                    commissionAmount: String(item.commission),
+                                    remarks: item.remarks,
+                                    price: String(item.workAmount),
+                                    fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
+                                    paymentStatus: item.paymentStatus,
+                                    date: item.date
+                                  })}>
+                                <div className="flex items-center space-x-1">
+                                  <span>₹{item.commission.toFixed(2)}</span>
+                                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-[10px]">✏️</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-violet-600 dark:text-violet-400 font-semibold">{item.fuelCost.toFixed(2)}</td>
                               <td className="px-4 py-3 text-indigo-500 font-semibold">₹{item.grandPayout.toFixed(2)}</td>
                               <td className="px-4 py-3 text-indigo-600 dark:text-indigo-400 font-black text-sm">₹{item.netSalary.toFixed(2)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                                  item.paymentStatus === 'paid'
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600'
-                                    : 'bg-amber-50 dark:bg-amber-955/15 text-amber-600'
-                                }`}>
-                                  {item.paymentStatus}
-                                </span>
+                              <td className="px-4 py-3 whitespace-nowrap cursor-pointer group"
+                                  onClick={() => setEditingLedgerItem({
+                                    job: item.rawJob,
+                                    commissionAmount: String(item.commission),
+                                    remarks: item.remarks,
+                                    price: String(item.workAmount),
+                                    fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
+                                    paymentStatus: item.paymentStatus,
+                                    date: item.date
+                                  })}>
+                                <div className="flex items-center space-x-1">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                    item.paymentStatus === 'paid'
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600'
+                                      : 'bg-amber-50 dark:bg-amber-955/15 text-amber-600'
+                                  }`}>
+                                    {item.paymentStatus}
+                                  </span>
+                                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-[10px]">✏️</span>
+                                </div>
                               </td>
-                              <td className="px-4 py-3 max-w-[120px] truncate text-slate-400 text-[10px] font-medium" title={item.remarks}>{item.remarks || '-'}</td>
+                              <td className="px-4 py-3 max-w-[120px] truncate text-slate-400 text-[10px] font-medium cursor-pointer hover:text-slate-600 dark:hover:text-slate-200 group"
+                                  onClick={() => setEditingLedgerItem({
+                                    job: item.rawJob,
+                                    commissionAmount: String(item.commission),
+                                    remarks: item.remarks,
+                                    price: String(item.workAmount),
+                                    fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
+                                    paymentStatus: item.paymentStatus,
+                                    date: item.date
+                                  })}
+                                  title={item.remarks}>
+                                <div className="flex items-center space-x-1 truncate">
+                                  <span className="truncate">{item.remarks || '-'}</span>
+                                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-[10px]">✏️</span>
+                                </div>
+                              </td>
                               <td className="px-4 py-3 text-center">
                                 <button
                                   onClick={() => setEditingLedgerItem({
