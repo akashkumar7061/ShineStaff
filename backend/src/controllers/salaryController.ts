@@ -515,7 +515,8 @@ export const getBulkSalaryDashboard = async (req: AuthRequest, res: Response) =>
         worker: {
           id: worker._id,
           name: worker.name,
-          dailySalary: worker.dailySalary,
+          dailySalary: worker.dailySalary || Math.round((worker.monthlySalary || 0) / 30),
+          monthlySalary: worker.monthlySalary || ((worker.dailySalary || 0) * 30),
           company: worker.company
         },
         month: targetMonth,
