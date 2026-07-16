@@ -1806,6 +1806,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             <nav className="flex space-x-3.5 pb-2" aria-label="Tabs">
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+                { id: 'bi-operations-desk', label: 'Daily Operations Desk ✍️', icon: ClipboardList },
                 { id: 'bi-operations', label: 'Operations & Target Planning', icon: CheckCircle2 },
                 { id: 'bi-workers', label: 'Worker Performance & Attendance', icon: Award },
                 { id: 'bi-goals', label: 'Projections & AI recommendations', icon: Zap },
@@ -3469,6 +3470,12 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             )}
 
             {/* TAB CONTENT: 9. BI Performance Hub - Flattened */}
+            {activeSection === 'bi-operations-desk' && (
+              <div className="w-full animate-fade-in">
+                <AdminBIDashboard forceTab="operations-desk" hideNavigation={true} />
+              </div>
+            )}
+
             {activeSection === 'bi-operations' && (
               <div className="w-full animate-fade-in">
                 <AdminBIDashboard forceTab="operations" hideNavigation={true} />

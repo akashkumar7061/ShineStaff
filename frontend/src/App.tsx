@@ -612,11 +612,7 @@ const App: React.FC = () => {
               <Route
                 path="/admin/bi-dashboard"
                 element={
-                  <ProtectedRoute allowedRole="admin">
-                    <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
-                      <AdminBIDashboard />
-                    </AdminLayout>
-                  </ProtectedRoute>
+                  <Navigate to="/admin/travel-expenses" replace />
                 }
               />
               <Route
