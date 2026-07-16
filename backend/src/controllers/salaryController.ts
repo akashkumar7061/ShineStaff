@@ -45,7 +45,7 @@ export const getSalaryDashboard = async (req: AuthRequest, res: Response) => {
     const absentDays = attendance.filter(a => a.status === 'absent').length;
 
     // Daily wage rules
-    const rate = worker.dailySalary || 0;
+    const rate = worker.dailySalary || Math.round((worker.monthlySalary || 0) / 30);
     const presentEarnings = (presentDays + lateDays) * rate; // Late is paid daily rate but flagged
     const halfDayEarnings = halfDays * (rate / 2);
     const totalWageEarnings = presentEarnings + halfDayEarnings;
@@ -320,7 +320,7 @@ export const downloadPayslip = async (req: AuthRequest, res: Response) => {
     const halfDays = attendance.filter(a => a.status === 'half-day').length;
     const absentDays = attendance.filter(a => a.status === 'absent').length;
 
-    const rate = worker.dailySalary || 0;
+    const rate = worker.dailySalary || Math.round((worker.monthlySalary || 0) / 30);
     const totalWageEarnings = (presentDays + lateDays) * rate + halfDays * (rate / 2);
 
     const start = new Date(`${month}-01T00:00:00.000Z`);
@@ -483,7 +483,7 @@ export const getBulkSalaryDashboard = async (req: AuthRequest, res: Response) =>
       const halfDays = workerAttendance.filter(a => a.status === 'half-day').length;
       const absentDays = workerAttendance.filter(a => a.status === 'absent').length;
 
-      const rate = worker.dailySalary || 0;
+      const rate = worker.dailySalary || Math.round((worker.monthlySalary || 0) / 30);
       const presentEarnings = (presentDays + lateDays) * rate;
       const halfDayEarnings = halfDays * (rate / 2);
       const totalWageEarnings = presentEarnings + halfDayEarnings;

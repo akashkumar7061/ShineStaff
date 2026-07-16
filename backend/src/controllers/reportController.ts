@@ -74,7 +74,7 @@ export const exportSalaryCSV = async (req: Request, res: Response) => {
       const halfDays = attendance.filter((a) => a.status === 'half-day').length;
       const absents = attendance.filter((a) => a.status === 'absent').length;
 
-      const rate = w.dailySalary || 0;
+      const rate = w.dailySalary || Math.round((w.monthlySalary || 0) / 30);
       const wageEarnings = (presents + lates) * rate + halfDays * (rate / 2);
 
       const start = new Date(`${month}-01T00:00:00.000Z`);
