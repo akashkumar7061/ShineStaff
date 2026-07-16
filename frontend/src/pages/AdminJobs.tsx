@@ -55,6 +55,78 @@ interface AdminJobsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
 }
 
+const getJobCardStyles = (status: string, isSelected: boolean): string => {
+  switch (status) {
+    case 'cancelled':
+      return isSelected
+        ? 'bg-rose-100 border-rose-300 shadow-sm text-rose-800'
+        : 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 text-rose-700';
+    case 'completed':
+      return isSelected
+        ? 'bg-emerald-100 border-emerald-300 shadow-sm text-emerald-850'
+        : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 text-emerald-750';
+    case 'started':
+      return isSelected
+        ? 'bg-amber-100 border-amber-300 shadow-sm text-amber-850'
+        : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 text-amber-750';
+    case 'accepted':
+      return isSelected
+        ? 'bg-indigo-100 border-indigo-300 shadow-sm text-indigo-850'
+        : 'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900 text-indigo-755';
+    case 'rejected':
+      return isSelected
+        ? 'bg-slate-200 border-slate-350 shadow-sm text-slate-800'
+        : 'bg-slate-100 border-slate-250 dark:bg-slate-900 dark:border-slate-800 text-slate-600';
+    case 'pending':
+    default:
+      return isSelected
+        ? 'bg-blue-100 border-blue-300 shadow-sm text-blue-800'
+        : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900 text-blue-700';
+  }
+};
+
+const getJobBadge = (status: string) => {
+  switch (status) {
+    case 'cancelled':
+      return (
+        <span className="inline-block bg-rose-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Cancelled
+        </span>
+      );
+    case 'completed':
+      return (
+        <span className="inline-block bg-emerald-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Completed
+        </span>
+      );
+    case 'started':
+      return (
+        <span className="inline-block bg-amber-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          In Progress
+        </span>
+      );
+    case 'accepted':
+      return (
+        <span className="inline-block bg-indigo-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Accepted
+        </span>
+      );
+    case 'rejected':
+      return (
+        <span className="inline-block bg-slate-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Rejected
+        </span>
+      );
+    case 'pending':
+    default:
+      return (
+        <span className="inline-block bg-blue-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Assigned
+        </span>
+      );
+  }
+};
+
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
@@ -1235,21 +1307,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               <div
                                 key={j._id}
                                 onClick={() => setSelectedJobForDrawer(j)}
-                                className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
-                                  j.status === 'cancelled'
-                                    ? (selectedJobForDrawer?._id === j._id
-                                        ? 'bg-rose-100 border-rose-355 shadow-sm text-rose-800'
-                                        : 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 text-rose-700')
-                                    : (selectedJobForDrawer?._id === j._id
-                                        ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
-                                        : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700')
-                                }`}
+                                className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
                               >
-                                {j.status === 'cancelled' && (
-                                  <span className="inline-block bg-rose-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
-                                    Cancelled
-                                  </span>
-                                )}
+                                {getJobBadge(j.status)}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                                   className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
@@ -1329,21 +1389,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           <div
                             key={j._id}
                             onClick={() => setSelectedJobForDrawer(j)}
-                            className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${
-                              j.status === 'cancelled'
-                                ? (selectedJobForDrawer?._id === j._id
-                                    ? 'bg-rose-100 border-rose-355 shadow-sm text-rose-800'
-                                    : 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 text-rose-700')
-                                : (selectedJobForDrawer?._id === j._id
-                                    ? 'bg-[#dbeafe] border-[#bfdbfe] shadow-sm'
-                                    : 'bg-[#eff6ff] hover:bg-[#dbeafe] border-[#bfdbfe] dark:bg-slate-800/20 dark:border-slate-700')
-                            }`}
+                            className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
                           >
-                            {j.status === 'cancelled' && (
-                              <span className="inline-block bg-rose-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
-                                Cancelled
-                              </span>
-                            )}
+                            {getJobBadge(j.status)}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                               className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
