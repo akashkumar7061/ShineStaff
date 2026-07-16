@@ -1691,7 +1691,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   };
 
   return (
-    <div className="space-y-6 select-none pb-12 print:p-0">
+    <div className="space-y-6 pb-12 print:p-0">
       
       {/* Search Header Container */}
       <div className="glass-card p-6 flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center print:hidden">
