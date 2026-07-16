@@ -251,7 +251,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                     <td className="px-6 py-5 text-danger font-semibold whitespace-nowrap">₹{entry.earnings.advanceDeducted}</td>
 
                     <td className="px-6 py-5 font-extrabold text-secondary text-sm whitespace-nowrap">
-                      ₹{entry.earnings.baseWage + entry.earnings.fuelAllowance + entry.earnings.advanceDeducted}
+                      ₹{(entry.worker.monthlySalary || 0) + entry.earnings.fuelAllowance + entry.earnings.advanceDeducted}
                     </td>
 
                     <td className="px-6 py-5 text-center flex items-center justify-center space-x-2.5 whitespace-nowrap">
@@ -259,7 +259,7 @@ const AdminSalary: React.FC<AdminSalaryProps> = ({ companyFilter }) => {
                         onClick={() => handleOpenPayoutModal(
                           entry.worker.id, 
                           entry.worker.name, 
-                          entry.earnings.baseWage + entry.earnings.fuelAllowance + entry.earnings.advanceDeducted
+                          (entry.worker.monthlySalary || 0) + entry.earnings.fuelAllowance + entry.earnings.advanceDeducted
                         )}
                         className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] px-3.5 py-1.5 uppercase transition-colors"
                       >
