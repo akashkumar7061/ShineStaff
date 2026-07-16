@@ -31,6 +31,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWorkerDetails, setSelectedWorkerDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   
   // Modals visibility
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -139,13 +140,18 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
   };
 
   const handleOpenDetails = async (id: string) => {
+    const basicWorker = workers.find(w => w._id === id);
+    setSelectedWorkerDetails(basicWorker ? { worker: basicWorker } : null);
+    setDetailsModalOpen(true);
+    setLoadingDetails(true);
+    setDetailTab('overview');
     try {
       const res = await api.get(`/workers/${id}`);
       setSelectedWorkerDetails(res.data);
-      setDetailTab('overview');
-      setDetailsModalOpen(true);
     } catch (err) {
       alert('Failed to fetch worker details');
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -564,7 +570,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                   
                   <div className="flex items-center space-x-1.5 text-xs text-amber-500 mt-3 font-semibold">
                     <Star className="h-4 w-4 fill-current" />
-                    <span>Score: {selectedWorkerDetails.stats.performanceScore} / 100</span>
+                    <span>Score: {selectedWorkerDetails.stats ? `${selectedWorkerDetails.stats.performanceScore} / 100` : '...'}</span>
                   </div>
                 </div>
 
@@ -616,7 +622,14 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
 
                 {/* Tab content conditional rendering */}
                 <div className="flex-1 overflow-y-auto pt-2 space-y-4">
-                  {detailTab === 'overview' && (
+                  {loadingDetails ? (
+                    <div className="flex flex-col items-center justify-center py-20 space-y-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-secondary" />
+                      <span className="text-slate-400 font-medium">Fetching history dossier...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {detailTab === 'overview' && (
                     <div className="space-y-6">
                       {/* Statistics counts grid */}
                       <div className="grid grid-cols-3 gap-4">
@@ -786,6 +799,8 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                         </div>
                       </div>
                     </div>
+                  )}
+                    </>
                   )}
                 </div>
 

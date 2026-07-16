@@ -38,33 +38,31 @@ export const getWorkerDetails = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Worker not found' });
     }
 
-    // Get attendance logs
-    const attendance = await Attendance.find({ workerId: id }).sort({ checkInTime: -1 }).limit(30);
+    // Parallelize all queries for extreme performance optimization (loads in milliseconds!)
+    const [
+      attendance,
+      jobs,
+      overtimes,
+      travelLogs,
+      payouts,
+      totalJobs,
+      completedJobs,
+      presentDays
+    ] = await Promise.all([
+      Attendance.find({ workerId: id }).sort({ checkInTime: -1 }).limit(30),
+      Job.find({ workerId: id }).sort({ createdAt: -1 }).limit(30),
+      Overtime.find({ workerId: id }).sort({ date: -1 }).limit(30),
+      TravelLog.find({ workerId: id }).populate('jobId').sort({ date: -1 }).limit(30),
+      SalaryRequest.find({ workerId: id }).sort({ createdAt: -1 }).limit(30),
+      Job.countDocuments({ workerId: id }),
+      Job.countDocuments({ workerId: id, status: 'completed' }),
+      Attendance.countDocuments({
+        workerId: id,
+        status: { $in: ['present', 'late', 'half-day'] }
+      })
+    ]);
 
-    // Get jobs assigned
-    const jobs = await Job.find({ workerId: id }).sort({ createdAt: -1 }).limit(30);
-
-    // Get overtime logged
-    const overtimes = await Overtime.find({ workerId: id }).sort({ date: -1 }).limit(30);
-
-    // Get travel logs logged
-    const travelLogs = await TravelLog.find({ workerId: id }).populate('jobId').sort({ date: -1 }).limit(30);
-
-    // Get payout logs logged
-    const payouts = await SalaryRequest.find({ workerId: id }).sort({ createdAt: -1 }).limit(30);
-
-    // Calculate performance score
-    // Completed jobs vs Total assigned jobs
-    const totalJobs = await Job.countDocuments({ workerId: id });
-    const completedJobs = await Job.countDocuments({ workerId: id, status: 'completed' });
-    
-    // Attendance rate
     const totalDays = 30; // standard last 30 days
-    const presentDays = await Attendance.countDocuments({
-      workerId: id,
-      status: { $in: ['present', 'late', 'half-day'] }
-    });
-
     const completionRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 100;
     const attendanceRate = Math.round((presentDays / totalDays) * 100);
 
