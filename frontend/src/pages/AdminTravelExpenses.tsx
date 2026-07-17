@@ -417,14 +417,14 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
   const getConsolidatedLedger = () => {
     if (selectedWorker && selectedWorker._id !== 'all') {
-      return getSalaryLedger(selectedWorker._id, startDate, endDate);
+      return [...getSalaryLedger(selectedWorker._id, startDate, endDate)].reverse();
     } else {
       let combined: any[] = [];
       workers.forEach(w => {
         combined = [...combined, ...getSalaryLedger(w._id, startDate, endDate)];
       });
       combined.sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date);
+        const dateCompare = b.date.localeCompare(a.date); // Sort by date descending (latest first)
         if (dateCompare !== 0) return dateCompare;
         return a.workerName.localeCompare(b.workerName);
       });
