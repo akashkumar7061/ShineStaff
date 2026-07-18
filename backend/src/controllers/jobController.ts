@@ -4,6 +4,7 @@ import Job from '../models/Job';
 import User from '../models/User';
 import Settings from '../models/Settings';
 import TravelLog from '../models/TravelLog';
+import Commission from '../models/Commission';
 import { uploadToCloudinary } from '../config/cloudinary';
 import { sendWhatsAppAlert } from '../utils/whatsapp';
 import { sendMail } from '../config/mailer';
@@ -668,6 +669,10 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
     });
     await job.save();
 
+    // Delete any associated TravelLog or Commission records since the job is now cancelled
+    await TravelLog.deleteMany({ jobId: job._id });
+    await Commission.deleteMany({ jobId: job._id });
+
     logAudit(req, {
       action: 'updated',
       entityType: 'Job',
@@ -711,6 +716,10 @@ export const deleteJob = async (req: AuthRequest, res: Response) => {
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
     }
+
+    // Delete any associated TravelLog or Commission records since the job is now deleted
+    await TravelLog.deleteMany({ jobId: id });
+    await Commission.deleteMany({ jobId: id });
 
     logAudit(req, {
       action: 'deleted',
@@ -883,6 +892,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
 
     if (status !== undefined) {
       if (job.status !== status) {
+        const previousStatus = job.status;
         job.status = status as any;
         if (status === 'cancelled') {
           job.cancelReason = cancelReason || 'No reason specified';
@@ -905,6 +915,11 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
             : `Status updated by Admin to ${status}`,
           updatedBy: 'Admin'
         });
+
+        if (previousStatus === 'completed' && status !== 'completed') {
+          await TravelLog.deleteMany({ jobId: job._id });
+          await Commission.deleteMany({ jobId: job._id });
+        }
       }
     }
 

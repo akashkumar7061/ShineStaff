@@ -367,7 +367,13 @@ const AdminLogDailyJobs: React.FC = () => {
   };
 
   // --- Filtering lists ---
-  const dateFilteredJobs = jobs.filter(j => j.date && j.date >= startDate && j.date <= endDate);
+  const dateFilteredJobs = jobs.filter(j => {
+    if (j.date) {
+      const dStr = j.date.split('T')[0];
+      return dStr >= startDate && dStr <= endDate;
+    }
+    return false;
+  });
   const completedJobs = dateFilteredJobs.filter(j => j.status === 'completed');
   const cancelledJobs = dateFilteredJobs.filter(j => j.status === 'cancelled');
   const approvalJobs = dateFilteredJobs.filter(j => j.status === 'pending' || j.status === 'rejected');
@@ -610,7 +616,7 @@ const AdminLogDailyJobs: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-2.5 px-3">
-                          <div className="flex flex-wrap gap-1.5 justify-center items-center">
+                          <div className="grid grid-cols-2 gap-1.5 w-full min-w-[170px] max-w-[200px] mx-auto">
                              {job.status !== 'completed' && (
                                <button
                                  type="button"
@@ -618,9 +624,9 @@ const AdminLogDailyJobs: React.FC = () => {
                                    e.stopPropagation();
                                    handleApproveJob(job._id);
                                  }}
-                                 className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-emerald-200/50 dark:border-emerald-900/30"
+                                 className="w-full flex items-center justify-center space-x-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all text-[9px] uppercase font-black shadow-sm border border-emerald-200/50 dark:border-emerald-900/30"
                                >
-                                 <Check className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                                 <Check className="h-3 w-3 pointer-events-none" />
                                  <span className="pointer-events-none">Approve</span>
                                </button>
                              )}
@@ -631,9 +637,9 @@ const AdminLogDailyJobs: React.FC = () => {
                                    e.stopPropagation();
                                    handleCancelJob(job._id);
                                  }}
-                                 className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-amber-50 hover:bg-amber-100 active:scale-95 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-amber-200/50 dark:border-amber-900/30"
+                                 className="w-full flex items-center justify-center space-x-1 px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 active:scale-95 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer transition-all text-[9px] uppercase font-black shadow-sm border border-amber-200/50 dark:border-amber-900/30"
                                >
-                                 <X className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                                 <X className="h-3 w-3 pointer-events-none" />
                                  <span className="pointer-events-none">Cancel</span>
                                </button>
                              )}
@@ -652,9 +658,11 @@ const AdminLogDailyJobs: React.FC = () => {
                                  setEditStatus(job.status || 'completed');
                                  setEditTimeSlot(job.timeSlot || '09:00 AM - 12:00 PM');
                                }}
-                               className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-blue-50 hover:bg-blue-100 active:scale-95 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-blue-200/50 dark:border-blue-900/30"
+                               className={`w-full flex items-center justify-center space-x-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 active:scale-95 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 cursor-pointer transition-all text-[9px] uppercase font-black shadow-sm border border-blue-200/50 dark:border-blue-900/30 ${
+                                 job.status === 'completed' ? '' : ''
+                               }`}
                              >
-                               <Pencil className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                               <Pencil className="h-3 w-3 pointer-events-none" />
                                <span className="pointer-events-none">Edit</span>
                              </button>
                              <button
@@ -663,9 +671,11 @@ const AdminLogDailyJobs: React.FC = () => {
                                  e.stopPropagation();
                                  handleDeleteJob(job._id);
                                }}
-                               className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-95 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-rose-200/50 dark:border-rose-900/30"
+                               className={`w-full flex items-center justify-center space-x-1 px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-95 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer transition-all text-[9px] uppercase font-black shadow-sm border border-rose-200/50 dark:border-rose-900/30 ${
+                                 job.status === 'cancelled' ? 'col-span-2' : ''
+                               }`}
                              >
-                               <Trash2 className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                               <Trash2 className="h-3 w-3 pointer-events-none" />
                                <span className="pointer-events-none">Delete</span>
                              </button>
                            </div>
