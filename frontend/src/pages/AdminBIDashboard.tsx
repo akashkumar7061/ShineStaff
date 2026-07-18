@@ -112,12 +112,22 @@ const getPresetDates = (preset: string) => {
 interface AdminBIDashboardProps {
   forceTab?: 'operations-desk' | 'operations' | 'workers' | 'goals' | 'expenses' | 'payment-tracker' | 'settings';
   hideNavigation?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
-const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavigation = false }) => {
+const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ 
+  forceTab, 
+  hideNavigation = false,
+  startDate: propStartDate,
+  endDate: propEndDate
+}) => {
   const [preset, setPreset] = useState('this-month');
-  const [startDate, setStartDate] = useState(() => getPresetDates('this-month').startDate);
-  const [endDate, setEndDate] = useState(getTodayString());
+  const [localStartDate, setLocalStartDate] = useState(() => getPresetDates('this-month').startDate);
+  const [localEndDate, setLocalEndDate] = useState(getTodayString());
+
+  const startDate = propStartDate || localStartDate;
+  const endDate = propEndDate || localEndDate;
 
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -215,8 +225,8 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavig
     setPreset(selectedPreset);
     if (selectedPreset !== 'custom') {
       const dates = getPresetDates(selectedPreset);
-      setStartDate(dates.startDate);
-      setEndDate(dates.endDate);
+      setLocalStartDate(dates.startDate);
+      setLocalEndDate(dates.endDate);
     }
   };
 
@@ -662,45 +672,49 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavig
 
         {/* Date Filters Control Bar */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-            <select
-              value={preset}
-              onChange={(e) => handlePresetChange(e.target.value)}
-              className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-transparent outline-none cursor-pointer border-none"
-            >
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="last-7">Last 7 Days</option>
-              <option value="last-30">Last 30 Days</option>
-              <option value="this-month">This Month</option>
-              <option value="last-month">Last Month</option>
-              <option value="this-quarter">This Quarter</option>
-              <option value="this-year">This Year</option>
-              <option value="custom">Custom Date Range</option>
-            </select>
-          </div>
+          {!propStartDate && !propEndDate && (
+            <>
+              <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
+                <select
+                  value={preset}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                  className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-transparent outline-none cursor-pointer border-none"
+                >
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="last-7">Last 7 Days</option>
+                  <option value="last-30">Last 30 Days</option>
+                  <option value="this-month">This Month</option>
+                  <option value="last-month">Last Month</option>
+                  <option value="this-quarter">This Quarter</option>
+                  <option value="this-year">This Year</option>
+                  <option value="custom">Custom Date Range</option>
+                </select>
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPreset('custom');
-              }}
-              className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
-            />
-            <span className="text-slate-400 text-xs font-bold">➔</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPreset('custom');
-              }}
-              className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
-            />
-          </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setLocalStartDate(e.target.value);
+                    setPreset('custom');
+                  }}
+                  className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                />
+                <span className="text-slate-400 text-xs font-bold">➔</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setLocalEndDate(e.target.value);
+                    setPreset('custom');
+                  }}
+                  className="text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-850 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark"
+                />
+              </div>
+            </>
+          )}
 
           <button
             onClick={exportToExcel}

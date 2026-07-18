@@ -296,7 +296,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
       // Date Range filter
       if (j.date) {
-        return j.date >= startDate && j.date <= endDate;
+        const dStr = j.date.split('T')[0];
+        return dStr >= startDate && dStr <= endDate;
       }
       return false;
     });
@@ -311,7 +312,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       }
 
       if (log.date) {
-        return log.date >= startDate && log.date <= endDate;
+        const dStr = log.date.split('T')[0];
+        return dStr >= startDate && dStr <= endDate;
       }
       return false;
     });
@@ -328,7 +330,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         if (c.company !== companyFilter) return false;
       }
       if (c.jobDate) {
-        return c.jobDate >= startDate && c.jobDate <= endDate;
+        const dStr = c.jobDate.split('T')[0];
+        return dStr >= startDate && dStr <= endDate;
       }
       return false;
     });
@@ -449,7 +452,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     const jobsInPeriod = jobs.filter(j => 
       (j.workerId?._id === w._id || j.workerId === w._id) &&
       j.status === 'completed' &&
-      j.date && j.date >= startDate && j.date <= endDate
+      j.date && j.date.split('T')[0] >= startDate && j.date.split('T')[0] <= endDate
     );
 
     const earnings = jobsInPeriod.reduce((sum, j) => sum + (j.price || 0), 0);
@@ -461,7 +464,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     
     const travelInPeriod = travelLogs.filter(log =>
       (log.workerId?._id === w._id || log.workerId === w._id) &&
-      log.date && log.date >= startDate && log.date <= endDate
+      log.date && log.date.split('T')[0] >= startDate && log.date.split('T')[0] <= endDate
     );
     const extraFuelCost = travelInPeriod.reduce((sum, log) => sum + ((log.kms || 0) * globalFuelRate), 0);
     const totalFuelInPeriod = fuelCost + extraFuelCost;
@@ -557,17 +560,17 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       const jobsForWorker = jobs.filter(j => 
         (j.workerId?._id === w._id || j.workerId === w._id) &&
         j.status === 'completed' &&
-        j.date && j.date >= startDate && j.date <= endDate
+        j.date && j.date.split('T')[0] >= startDate && j.date.split('T')[0] <= endDate
       );
       
       const travelForWorker = travelLogs.filter(log => 
         (log.workerId?._id === w._id || log.workerId === w._id) &&
-        log.date && log.date >= startDate && log.date <= endDate
+        log.date && log.date.split('T')[0] >= startDate && log.date.split('T')[0] <= endDate
       );
 
       const commForWorker = commissions.filter(c => 
         (c.workerId?._id === w._id || c.workerId === w._id) &&
-        c.jobDate && c.jobDate >= startDate && c.jobDate <= endDate
+        c.jobDate && c.jobDate.split('T')[0] >= startDate && c.jobDate.split('T')[0] <= endDate
       );
 
       const jobsCount = jobsForWorker.length;
@@ -3186,43 +3189,43 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             {/* TAB CONTENT: 9. BI Performance Hub - Flattened */}
             {activeSection === 'bi-operations-desk' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="operations-desk" hideNavigation={true} />
+                <AdminBIDashboard forceTab="operations-desk" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
             {activeSection === 'bi-operations' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="operations" hideNavigation={true} />
+                <AdminBIDashboard forceTab="operations" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
             {activeSection === 'bi-workers' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="workers" hideNavigation={true} />
+                <AdminBIDashboard forceTab="workers" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
             {activeSection === 'bi-goals' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="goals" hideNavigation={true} />
+                <AdminBIDashboard forceTab="goals" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
             {activeSection === 'bi-expenses' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="expenses" hideNavigation={true} />
+                <AdminBIDashboard forceTab="expenses" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
             {activeSection === 'bi-payments' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="payment-tracker" hideNavigation={true} />
+                <AdminBIDashboard forceTab="payment-tracker" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
             {activeSection === 'bi-settings' && (
               <div className="w-full animate-fade-in">
-                <AdminBIDashboard forceTab="settings" hideNavigation={true} />
+                <AdminBIDashboard forceTab="settings" hideNavigation={true} startDate={startDate} endDate={endDate} />
               </div>
             )}
 
