@@ -523,51 +523,51 @@ const AdminLogDailyJobs: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-2.5 px-3">
-                          <div className="flex justify-center items-center space-x-2">
+                          <div className="flex flex-wrap gap-1.5 justify-center items-center">
                              {job.status !== 'completed' && (
-                              <button
-                                onClick={() => handleApproveJob(job._id)}
-                                title="Approve Clean Job"
-                                className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-955/40 dark:hover:bg-emerald-955/60 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all"
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            {job.status !== 'cancelled' && job.status !== 'completed' && (
-                              <button
-                                onClick={() => handleCancelJob(job._id)}
-                                title="Cancel Clean Job"
-                                className="p-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/40 dark:hover:bg-rose-955/60 text-rose-600 dark:text-rose-400 cursor-pointer transition-all"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setEditingJob(job);
-                                setEditTitle(job.title || '');
-                                setEditPrice(String(job.price || ''));
-                                setEditWorker(job.workerId?._id || 'unassigned');
-                                setEditClientName(job.clientName || '');
-                                setEditClientPhone(job.clientPhone || '');
-                                setEditCompany(job.company || 'SofaShine');
-                                setEditDate(job.date || getTodayString());
-                                setEditStatus(job.status || 'completed');
-                                setEditTimeSlot(job.timeSlot || '09:00 AM - 12:00 PM');
-                              }}
-                              title="Edit Clean Job"
-                              className="p-1 rounded bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60 text-blue-600 dark:text-blue-400 cursor-pointer transition-all"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteJob(job._id)}
-                              title="Delete Clean Job"
-                              className="p-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 cursor-pointer transition-all"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
+                               <button
+                                 onClick={() => handleApproveJob(job._id)}
+                                 className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                               >
+                                 <Check className="h-3 w-3" />
+                                 <span>Approve</span>
+                               </button>
+                             )}
+                             {job.status !== 'cancelled' && job.status !== 'completed' && (
+                               <button
+                                 onClick={() => handleCancelJob(job._id)}
+                                 className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                               >
+                                 <X className="h-3 w-3" />
+                                 <span>Cancel</span>
+                               </button>
+                             )}
+                             <button
+                               onClick={() => {
+                                 setEditingJob(job);
+                                 setEditTitle(job.title || '');
+                                 setEditPrice(String(job.price || ''));
+                                 setEditWorker(job.workerId?._id || 'unassigned');
+                                 setEditClientName(job.clientName || '');
+                                 setEditClientPhone(job.clientPhone || '');
+                                 setEditCompany(job.company || 'SofaShine');
+                                 setEditDate(job.date || getTodayString());
+                                 setEditStatus(job.status || 'completed');
+                                 setEditTimeSlot(job.timeSlot || '09:00 AM - 12:00 PM');
+                               }}
+                               className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                             >
+                               <Pencil className="h-3 w-3" />
+                               <span>Edit</span>
+                             </button>
+                             <button
+                               onClick={() => handleDeleteJob(job._id)}
+                               className="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                             >
+                               <Trash2 className="h-3 w-3" />
+                               <span>Delete</span>
+                             </button>
+                           </div>
                         </td>
                       </tr>
                     ))}
