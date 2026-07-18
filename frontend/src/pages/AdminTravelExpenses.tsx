@@ -1156,9 +1156,9 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
     const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Profit", "Net Salary", "Payment Status", "Remarks"];
     const rows = data.map(item => [
-      item.date,
+      `'${item.date}`,
       item.workerName,
-      item.jobId,
+      `'${item.jobId}`,
       item.company,
       item.customer,
       item.service,
@@ -1441,8 +1441,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
     const headers = ["Date", "Job ID", "Service Title", "Customer", "Price", "Distance", "Fuel Cost", "From", "To"];
     const rows = workerJobs.map(j => [
-      j.date || '',
-      j.visitId || j._id,
+      `'${j.date || ''}`,
+      `'${j.visitId || j._id}`,
       j.title || '',
       j.clientName || '',
       Number(j.price || 0).toFixed(2),

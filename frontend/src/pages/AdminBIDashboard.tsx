@@ -563,16 +563,16 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavig
     csvContent += 'Date,Category,Description,Amount (INR)\r\n';
     
     expenses.forEach(e => {
-      csvContent += `${escapeCSV(e.date)},${escapeCSV(e.category.toUpperCase())},${escapeCSV(e.description || 'Custom Expense')},${e.amount}\r\n`;
+      csvContent += `${escapeCSV(`'${e.date}`)},${escapeCSV(e.category.toUpperCase())},${escapeCSV(e.description || 'Custom Expense')},${e.amount}\r\n`;
     });
     
     (analytics.rawSalaryPayouts || []).forEach((sr: any) => {
       const dateStr = sr.processedAt ? new Date(sr.processedAt).toISOString().split('T')[0] : 'N/A';
-      csvContent += `${dateStr},SALARY PAYOUT,${escapeCSV(`Approved salary payout for ${sr.workerId?.name || 'Worker'} (${sr.month})`)},${sr.amount}\r\n`;
+      csvContent += `${escapeCSV(`'${dateStr}`)},SALARY PAYOUT,${escapeCSV(`Approved salary payout for ${sr.workerId?.name || 'Worker'} (${sr.month})`)},${sr.amount}\r\n`;
     });
 
     (analytics.rawTravelLogs || []).forEach((tl: any) => {
-      csvContent += `${escapeCSV(tl.date)},FUEL ALLOWANCE,${escapeCSV(`Commute allowance for ${tl.workerId?.name || 'Worker'} (${tl.kms} kms)`)},${tl.allowance}\r\n`;
+      csvContent += `${escapeCSV(`'${tl.date}`)},FUEL ALLOWANCE,${escapeCSV(`Commute allowance for ${tl.workerId?.name || 'Worker'} (${tl.kms} kms)`)},${tl.allowance}\r\n`;
     });
     
     csvContent += '\r\n';
@@ -582,7 +582,7 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavig
     csvContent += 'Date,Client,Clean Title,Worker Assigned,Status,Payment Status,Price (INR)\r\n';
     
     jobs.forEach(j => {
-      csvContent += `${escapeCSV(j.date)},${escapeCSV(j.clientName || 'N/A')},${escapeCSV(j.title)},${escapeCSV((j.workerId as any)?.name || 'Unassigned')},${escapeCSV(j.status)},${escapeCSV(j.paymentStatus || 'received')},${j.price}\r\n`;
+      csvContent += `${escapeCSV(`'${j.date}`)},${escapeCSV(j.clientName || 'N/A')},${escapeCSV(j.title)},${escapeCSV((j.workerId as any)?.name || 'Unassigned')},${escapeCSV(j.status)},${escapeCSV(j.paymentStatus || 'received')},${j.price}\r\n`;
     });
 
     const BOM = '\uFEFF';

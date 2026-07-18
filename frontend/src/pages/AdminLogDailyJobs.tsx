@@ -226,13 +226,13 @@ const AdminLogDailyJobs: React.FC = () => {
 
     filtered.forEach(j => {
       const row = [
-        j._id || '',
+        `'${j._id || ''}`,
         j.title || '',
         j.company || '',
         j.clientName || '',
-        j.clientPhone || '',
+        `'${j.clientPhone || ''}`,
         j.price || 0,
-        j.date || '',
+        `'${j.date || ''}`,
         j.timeSlot || '',
         j.status || '',
         j.paymentStatus || '',
