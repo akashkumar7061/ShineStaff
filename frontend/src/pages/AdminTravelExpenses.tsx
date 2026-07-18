@@ -468,29 +468,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
     const profitInPeriod = earnings - commAmt - totalFuelInPeriod;
 
-    let remainingSalary = baseSal - profitInPeriod;
-
-    if (datePreset === 'today' || datePreset === 'yesterday') {
-      const firstDay = getFirstDayOfMonth(endDate);
-      const jobsInMonth = jobs.filter(j => 
-        (j.workerId?._id === w._id || j.workerId === w._id) &&
-        j.status === 'completed' &&
-        j.date && j.date >= firstDay && j.date <= endDate
-      );
-      const earningsM = jobsInMonth.reduce((sum, j) => sum + (j.price || 0), 0);
-      const commM = jobsInMonth.reduce((sum, j) => {
-        const comm = commissions.find(c => c.jobId?._id === j._id || c.jobId === j._id);
-        return sum + (comm ? (comm.commissionAmount || 0) : 0);
-      }, 0);
-      const fuelM = jobsInMonth.reduce((sum, j) => sum + ((j.fuelKmsTravelled || 0) * globalFuelRate), 0);
-      const travelM = travelLogs.filter(log =>
-        (log.workerId?._id === w._id || log.workerId === w._id) &&
-        log.date && log.date >= firstDay && log.date <= endDate
-      );
-      const extraFuelM = travelM.reduce((sum, log) => sum + ((log.kms || 0) * globalFuelRate), 0);
-      const profitM = earningsM - commM - (fuelM + extraFuelM);
-      remainingSalary = baseSal - profitM;
-    }
+    const remainingSalary = baseSal - profitInPeriod;
 
     return {
       baseSalary: baseSal,
@@ -1777,7 +1755,19 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { label: 'Work Earnings', val: `₹${totalWorkEarnings.toFixed(2)}`, desc: 'clean revenues', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20', section: 'work-earnings' },
                 { label: 'Travel Distance', val: `${totalDistance.toFixed(2)} KM`, desc: 'total commutes', color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/20', section: 'travel-expenses' },
                 { label: 'Fuel Costs', val: `₹${totalFuelCost.toFixed(2)}`, desc: `at ₹${globalFuelRate}/KM`, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/20', section: 'settings' },
-                { label: 'Remaining Net Salary', val: `₹${totalRemainingSalary.toFixed(2)}`, desc: datePreset === 'today' ? `Today's Deduction: ₹${totalProfit.toFixed(2)}` : datePreset === 'this-month' ? `This Month Deduction: ₹${totalProfit.toFixed(2)}` : `Period Deduction: ₹${totalProfit.toFixed(2)}`, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', section: 'work-earnings' },
+                { 
+                  label: 'Remaining Net Salary', 
+                  val: `₹${totalRemainingSalary.toFixed(2)}`, 
+                  desc: datePreset === 'today' ? `Today's Deduction: ₹${totalProfit.toFixed(2)}` : 
+                        datePreset === 'yesterday' ? `Yesterday's Deduction: ₹${totalProfit.toFixed(2)}` : 
+                        datePreset === 'this-month' ? `This Month Deduction: ₹${totalProfit.toFixed(2)}` : 
+                        datePreset === 'last-month' ? `Last Month Deduction: ₹${totalProfit.toFixed(2)}` : 
+                        datePreset === 'this-year' ? `This Year Deduction: ₹${totalProfit.toFixed(2)}` : 
+                        datePreset === 'last-7' ? `7 Days Deduction: ₹${totalProfit.toFixed(2)}` : 
+                        `Period Deduction: ₹${totalProfit.toFixed(2)}`, 
+                  color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', 
+                  section: 'work-earnings' 
+                },
                 { label: 'Commission', val: `₹${totalCommission.toFixed(2)}`, desc: 'commission paid', color: 'text-amber-500 bg-amber-50/50 dark:bg-amber-950/10', section: 'commissions' },
                 { label: 'Profit', val: `₹${totalProfit.toFixed(2)}`, desc: 'work - comm - fuel', color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20', section: 'work-earnings' }
               ].map((kpi, idx) => (

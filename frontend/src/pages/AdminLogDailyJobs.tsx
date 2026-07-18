@@ -62,6 +62,24 @@ const AdminLogDailyJobs: React.FC = () => {
   const [editStatus, setEditStatus] = useState<'pending' | 'completed' | 'cancelled' | 'rejected' | 'accepted' | 'started'>('completed');
   const [editTimeSlot, setEditTimeSlot] = useState('');
 
+  // --- Custom Confirm/Prompt/Alert Dialog ---
+  const [customDialog, setCustomDialog] = useState<{
+    visible: boolean;
+    type: 'confirm' | 'prompt' | 'success' | 'error';
+    title: string;
+    message: string;
+    placeholder?: string;
+    inputValue?: string;
+    onConfirm?: (value?: string) => void;
+  }>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    placeholder: '',
+    inputValue: ''
+  });
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -124,11 +142,21 @@ const AdminLogDailyJobs: React.FC = () => {
       setJobWorker('');
       setJobClientName('');
       setJobClientPhone('');
-      alert('Clean Job logged successfully!');
+      setCustomDialog({
+        visible: true,
+        type: 'success',
+        title: 'Job Logged',
+        message: 'The clean job was logged successfully!'
+      });
       fetchData();
     } catch (err) {
       console.error('Failed to quick-add job:', err);
-      alert('Failed to log clean job. Please try again.');
+      setCustomDialog({
+        visible: true,
+        type: 'error',
+        title: 'Error Logging Job',
+        message: 'Failed to log clean job. Please check details and try again.'
+      });
     }
   };
 
@@ -138,39 +166,84 @@ const AdminLogDailyJobs: React.FC = () => {
         status: 'completed',
         paymentStatus: 'received'
       });
-      alert('Clean job approved & marked as completed!');
+      setCustomDialog({
+        visible: true,
+        type: 'success',
+        title: 'Job Approved',
+        message: 'The clean job has been successfully approved and marked as completed.'
+      });
       fetchData();
     } catch (err) {
       console.error('Failed to approve job:', err);
-      alert('Failed to approve job.');
+      setCustomDialog({
+        visible: true,
+        type: 'error',
+        title: 'Approval Failed',
+        message: 'Failed to approve the clean job. Please try again.'
+      });
     }
   };
 
   const handleCancelJob = async (jobId: string) => {
-    const reason = window.prompt('Please enter the reason for cancellation (optional):', 'Cancelled by Admin');
-    if (reason === null) return; // User clicked cancel
-    try {
-      await api.put(`/jobs/${jobId}/cancel`, {
-        reason: reason || 'Cancelled by Admin'
-      });
-      alert('Clean job marked as cancelled!');
-      fetchData();
-    } catch (err) {
-      console.error('Failed to cancel job:', err);
-      alert('Failed to cancel job.');
-    }
+    setCustomDialog({
+      visible: true,
+      type: 'prompt',
+      title: 'Cancel Clean Job',
+      message: 'Please enter the reason for cancellation (optional):',
+      placeholder: 'Reason for cancellation',
+      inputValue: 'Cancelled by Admin',
+      onConfirm: async (reason) => {
+        try {
+          await api.put(`/jobs/${jobId}/cancel`, {
+            reason: reason || 'Cancelled by Admin'
+          });
+          setCustomDialog({
+            visible: true,
+            type: 'success',
+            title: 'Job Cancelled',
+            message: 'The clean job has been successfully marked as cancelled.'
+          });
+          fetchData();
+        } catch (err) {
+          console.error('Failed to cancel job:', err);
+          setCustomDialog({
+            visible: true,
+            type: 'error',
+            title: 'Cancellation Failed',
+            message: 'Failed to cancel the clean job. Please try again.'
+          });
+        }
+      }
+    });
   };
 
   const handleDeleteJob = async (jobId: string) => {
-    if (!window.confirm('Are you sure you want to delete this clean job?')) return;
-    try {
-      await api.delete(`/jobs/${jobId}`);
-      alert('Clean job deleted successfully.');
-      fetchData();
-    } catch (err) {
-      console.error('Failed to delete job:', err);
-      alert('Failed to delete job.');
-    }
+    setCustomDialog({
+      visible: true,
+      type: 'confirm',
+      title: 'Delete Clean Job',
+      message: 'Are you sure you want to permanently delete this clean job? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/jobs/${jobId}`);
+          setCustomDialog({
+            visible: true,
+            type: 'success',
+            title: 'Job Deleted',
+            message: 'The clean job has been successfully deleted.'
+          });
+          fetchData();
+        } catch (err) {
+          console.error('Failed to delete job:', err);
+          setCustomDialog({
+            visible: true,
+            type: 'error',
+            title: 'Deletion Failed',
+            message: 'Failed to delete the clean job. Please try again.'
+          });
+        }
+      }
+    });
   };
 
   const handleUpdateJobSubmit = async (e: React.FormEvent) => {
@@ -178,7 +251,12 @@ const AdminLogDailyJobs: React.FC = () => {
     if (!editingJob) return;
 
     if (Number(editPrice) < 0) {
-      alert('Price cannot be negative.');
+      setCustomDialog({
+        visible: true,
+        type: 'error',
+        title: 'Invalid Price',
+        message: 'Job price cannot be negative.'
+      });
       return;
     }
 
@@ -196,12 +274,22 @@ const AdminLogDailyJobs: React.FC = () => {
         paymentStatus: editStatus === 'completed' ? 'received' : 'pending'
       });
 
-      alert('Clean Job updated successfully!');
       setEditingJob(null);
+      setCustomDialog({
+        visible: true,
+        type: 'success',
+        title: 'Job Updated',
+        message: 'The clean job details have been updated successfully.'
+      });
       fetchData();
     } catch (err) {
       console.error('Failed to update job:', err);
-      alert('Failed to update job.');
+      setCustomDialog({
+        visible: true,
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update the clean job. Please try again.'
+      });
     }
   };
 
@@ -525,24 +613,34 @@ const AdminLogDailyJobs: React.FC = () => {
                           <div className="flex flex-wrap gap-1.5 justify-center items-center">
                              {job.status !== 'completed' && (
                                <button
-                                 onClick={() => handleApproveJob(job._id)}
-                                 className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                                 type="button"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleApproveJob(job._id);
+                                 }}
+                                 className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-emerald-200/50 dark:border-emerald-900/30"
                                >
-                                 <Check className="h-3 w-3" />
-                                 <span>Approve</span>
+                                 <Check className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                                 <span className="pointer-events-none">Approve</span>
                                </button>
                              )}
                              {job.status !== 'cancelled' && job.status !== 'completed' && (
                                <button
-                                 onClick={() => handleCancelJob(job._id)}
-                                 className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                                 type="button"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleCancelJob(job._id);
+                                 }}
+                                 className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-amber-50 hover:bg-amber-100 active:scale-95 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-amber-200/50 dark:border-amber-900/30"
                                >
-                                 <X className="h-3 w-3" />
-                                 <span>Cancel</span>
+                                 <X className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                                 <span className="pointer-events-none">Cancel</span>
                                </button>
                              )}
                              <button
-                               onClick={() => {
+                               type="button"
+                               onClick={(e) => {
+                                 e.stopPropagation();
                                  setEditingJob(job);
                                  setEditTitle(job.title || '');
                                  setEditPrice(String(job.price || ''));
@@ -554,17 +652,21 @@ const AdminLogDailyJobs: React.FC = () => {
                                  setEditStatus(job.status || 'completed');
                                  setEditTimeSlot(job.timeSlot || '09:00 AM - 12:00 PM');
                                }}
-                               className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                               className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-blue-50 hover:bg-blue-100 active:scale-95 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-blue-200/50 dark:border-blue-900/30"
                              >
-                               <Pencil className="h-3 w-3" />
-                               <span>Edit</span>
+                               <Pencil className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                               <span className="pointer-events-none">Edit</span>
                              </button>
                              <button
-                               onClick={() => handleDeleteJob(job._id)}
-                               className="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-[9px] uppercase font-black"
+                               type="button"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleDeleteJob(job._id);
+                               }}
+                               className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-95 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer transition-all inline-flex items-center space-x-1 text-xs sm:text-[9px] uppercase font-black shadow-sm border border-rose-200/50 dark:border-rose-900/30"
                              >
-                               <Trash2 className="h-3 w-3" />
-                               <span>Delete</span>
+                               <Trash2 className="h-3.5 w-3.5 sm:h-3 sm:w-3 pointer-events-none" />
+                               <span className="pointer-events-none">Delete</span>
                              </button>
                            </div>
                         </td>
@@ -728,6 +830,84 @@ const AdminLogDailyJobs: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Custom Confirmation / Alert / Prompt Modal */}
+      {customDialog.visible && (
+        <div 
+          onClick={() => {
+            if (customDialog.type === 'success' || customDialog.type === 'error') {
+              setCustomDialog(prev => ({ ...prev, visible: false }));
+            }
+          }}
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 flex flex-col justify-between text-xs animate-fade-in text-slate-800 dark:text-slate-200"
+          >
+            <div className="text-center space-y-2">
+              <h3 className={`text-sm font-black uppercase tracking-wider ${
+                customDialog.type === 'error' ? 'text-rose-600' :
+                customDialog.type === 'success' ? 'text-emerald-600' : 'text-sky-600'
+              }`}>
+                {customDialog.title}
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 font-semibold">
+                {customDialog.message}
+              </p>
+            </div>
+
+            {customDialog.type === 'prompt' && (
+              <div>
+                <input
+                  type="text"
+                  placeholder={customDialog.placeholder}
+                  value={customDialog.inputValue || ''}
+                  onChange={(e) => setCustomDialog(prev => ({ ...prev, inputValue: e.target.value }))}
+                  className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-sky-500 dark:text-white"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-center space-x-2.5 pt-2">
+              {(customDialog.type === 'confirm' || customDialog.type === 'prompt') ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCustomDialog(prev => ({ ...prev, visible: false }))}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomDialog(prev => ({ ...prev, visible: false }));
+                      if (customDialog.onConfirm) {
+                        customDialog.onConfirm(customDialog.inputValue);
+                      }
+                    }}
+                    className={`px-5 py-2 text-white font-bold rounded-xl transition-all cursor-pointer shadow-md ${
+                      customDialog.type === 'confirm' && customDialog.title.toLowerCase().includes('delete')
+                        ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-200 dark:shadow-none'
+                        : 'bg-sky-600 hover:bg-sky-700 shadow-sky-200 dark:shadow-none'
+                    }`}
+                  >
+                    Confirm
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCustomDialog(prev => ({ ...prev, visible: false }))}
+                  className="px-6 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  OK
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
