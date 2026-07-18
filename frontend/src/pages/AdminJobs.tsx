@@ -179,6 +179,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [adminCompleteReason, setAdminCompleteReason] = useState('Network Issue');
   const [adminCompleteRemarks, setAdminCompleteRemarks] = useState('');
   const [adminCompleteWorkerConfirmed, setAdminCompleteWorkerConfirmed] = useState(false);
+  const [adminCompletePaymentStatus, setAdminCompletePaymentStatus] = useState<'pending' | 'received' | 'outstanding'>('received');
+  const [adminCompletePaymentMode, setAdminCompletePaymentMode] = useState<string>('not_selected');
 
   // Form inputs state
   const [title, setTitle] = useState('');
@@ -773,6 +775,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setAdminCompleteReason('Network Issue');
     setAdminCompleteRemarks('');
     setAdminCompleteWorkerConfirmed(false);
+    setAdminCompletePaymentStatus(job.paymentStatus || 'received');
+    setAdminCompletePaymentMode(job.paymentMode || 'not_selected');
     setAdminCompleteModalOpen(true);
   };
 
@@ -785,7 +789,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       const res = await api.put(`/jobs/${adminCompleteJobData._id}/admin-complete`, {
         reason: adminCompleteReason,
         remarks: adminCompleteRemarks,
-        workerConfirmed: adminCompleteWorkerConfirmed
+        workerConfirmed: adminCompleteWorkerConfirmed,
+        paymentStatus: adminCompletePaymentStatus,
+        paymentMode: adminCompletePaymentMode
       });
       alert('Job successfully marked completed by Admin.');
       setAdminCompleteModalOpen(false);
@@ -2629,6 +2635,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <option value="Phone Issue">Phone Issue</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Status</label>
+                    <select
+                      value={adminCompletePaymentStatus}
+                      onChange={(e) => setAdminCompletePaymentStatus(e.target.value as any)}
+                      className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="received">Received / Paid</option>
+                      <option value="outstanding">Outstanding</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Method</label>
+                    <select
+                      value={adminCompletePaymentMode}
+                      onChange={(e) => setAdminCompletePaymentMode(e.target.value)}
+                      className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
+                    >
+                      <option value="not_selected">Select Payment Method...</option>
+                      <option value="cash">💵 Cash Payment</option>
+                      <option value="upi_online">📱 UPI / Online Payment</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>

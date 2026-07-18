@@ -1166,7 +1166,7 @@ export const adminCompleteJob = async (req: AuthRequest, res: Response) => {
   }
 
   const { id } = req.params;
-  const { reason, remarks, workerConfirmed } = req.body;
+  const { reason, remarks, workerConfirmed, paymentStatus, paymentMode } = req.body;
 
   try {
     const adminUser = await User.findById(req.user.id);
@@ -1193,6 +1193,13 @@ export const adminCompleteJob = async (req: AuthRequest, res: Response) => {
     job.adminCompletionRemarks = remarks || '';
     job.adminCompletionIP = req.ip || req.socket.remoteAddress || '';
     job.adminCompletionWorkerConfirmed = !!workerConfirmed;
+
+    if (paymentStatus) {
+      job.paymentStatus = paymentStatus;
+    }
+    if (paymentMode) {
+      job.paymentMode = paymentMode;
+    }
 
     // Add to timeline
     if (!job.timeline) job.timeline = [];
