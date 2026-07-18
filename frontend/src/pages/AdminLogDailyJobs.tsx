@@ -18,7 +18,8 @@ import {
   Clock,
   Sparkles,
   Archive,
-  Pencil
+  Pencil,
+  X
 } from 'lucide-react';
 
 const getTodayString = () => new Date().toISOString().split('T')[0];
@@ -81,6 +82,16 @@ const AdminLogDailyJobs: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const handleSocketUpdate = () => {
+      fetchData();
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => {
+      window.removeEventListener('socket-update', handleSocketUpdate);
+    };
+  }, []);
+
   const handleAddJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle || !jobPrice || !jobClientName || !jobClientPhone) {
@@ -132,6 +143,22 @@ const AdminLogDailyJobs: React.FC = () => {
     } catch (err) {
       console.error('Failed to approve job:', err);
       alert('Failed to approve job.');
+    }
+  };
+
+  const handleCancelJob = async (jobId: string) => {
+    const reason = window.prompt('Please enter the reason for cancellation (optional):', 'Cancelled by Admin');
+    if (reason === null) return; // User clicked cancel
+    try {
+      await api.put(`/jobs/${jobId}`, {
+        status: 'cancelled',
+        cancelReason: reason || 'Cancelled by Admin'
+      });
+      alert('Clean job marked as cancelled!');
+      fetchData();
+    } catch (err) {
+      console.error('Failed to cancel job:', err);
+      alert('Failed to cancel job.');
     }
   };
 
@@ -497,13 +524,22 @@ const AdminLogDailyJobs: React.FC = () => {
                         </td>
                         <td className="py-2.5 px-3">
                           <div className="flex justify-center items-center space-x-2">
-                            {job.status !== 'completed' && (
+                             {job.status !== 'completed' && (
                               <button
                                 onClick={() => handleApproveJob(job._id)}
                                 title="Approve Clean Job"
-                                className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all"
+                                className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-955/40 dark:hover:bg-emerald-955/60 text-emerald-600 dark:text-emerald-400 cursor-pointer transition-all"
                               >
                                 <Check className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            {job.status !== 'cancelled' && job.status !== 'completed' && (
+                              <button
+                                onClick={() => handleCancelJob(job._id)}
+                                title="Cancel Clean Job"
+                                className="p-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-955/40 dark:hover:bg-rose-955/60 text-rose-600 dark:text-rose-400 cursor-pointer transition-all"
+                              >
+                                <X className="h-3.5 w-3.5" />
                               </button>
                             )}
                             <button

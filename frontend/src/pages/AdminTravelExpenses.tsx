@@ -236,6 +236,16 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     fetchData();
   }, [startDate, endDate]);
 
+  useEffect(() => {
+    const handleSocketUpdate = () => {
+      fetchData();
+    };
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => {
+      window.removeEventListener('socket-update', handleSocketUpdate);
+    };
+  }, []);
+
   // Handle Preset Date Filter
   const handlePresetChange = (preset: string) => {
     setDatePreset(preset);
@@ -2422,6 +2432,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="date"
                                   value={editingJob.date || ''}
                                   onChange={(e) => setEditingJob({ ...editingJob, date: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                   className="w-28 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
@@ -2430,6 +2441,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="text"
                                   value={editingJob.clientName || ''}
                                   onChange={(e) => setEditingJob({ ...editingJob, clientName: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                   className="w-32 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                   placeholder="Customer"
                                 />
@@ -2437,6 +2449,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="text"
                                   value={editingJob.address || ''}
                                   onChange={(e) => setEditingJob({ ...editingJob, address: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                   className="w-32 block text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                   placeholder="Address"
                                 />
@@ -2446,6 +2459,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="text"
                                   value={editingJob.timeSlot || ''}
                                   onChange={(e) => setEditingJob({ ...editingJob, timeSlot: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                   className="w-24 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
@@ -2453,6 +2467,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                 <select
                                   value={editingJob.status || ''}
                                   onChange={(e) => setEditingJob({ ...editingJob, status: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                   className="w-28 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 >
                                   <option value="pending">Pending</option>
@@ -2469,6 +2484,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   min="0"
                                   value={editingJob.fuelKmsTravelled || ''}
                                   onChange={(e) => setEditingJob({ ...editingJob, fuelKmsTravelled: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                   className="w-20 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
@@ -2578,6 +2594,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                 value={editingJob.price || ''}
                                 min="0"
                                 onChange={(e) => setEditingJob({ ...editingJob, price: e.target.value })}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJob(); }}
                                 className="w-24 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-855 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                               />
                             ) : (
@@ -2660,6 +2677,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="date"
                                   value={editingLog.date || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, date: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTravelLog(); }}
                                   className="w-28 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
@@ -2673,6 +2691,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                 <select
                                   value={editingLog.type || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, type: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTravelLog(); }}
                                   className="w-24 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 >
                                   <option value="job">Commute to Job</option>
@@ -2684,6 +2703,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="text"
                                   value={editingLog.fromLocation || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, fromLocation: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTravelLog(); }}
                                   className="w-28 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
@@ -2692,6 +2712,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   type="text"
                                   value={editingLog.toLocation || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, toLocation: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTravelLog(); }}
                                   className="w-28 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-905 p-1.5 outline-none focus:border-secondary"
                                 />
                               </td>
@@ -2701,6 +2722,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   min="0"
                                   value={editingLog.kms || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, kms: e.target.value, allowance: (Number(e.target.value) * globalFuelRate).toFixed(2) })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTravelLog(); }}
                                   className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-905 p-1.5 outline-none focus:border-secondary"
                                   placeholder="KM"
                                 />
@@ -2709,6 +2731,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                   min="0"
                                   value={editingLog.allowance || ''}
                                   onChange={(e) => setEditingLog({ ...editingLog, allowance: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTravelLog(); }}
                                   className="w-20 block text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-905 p-1.5 outline-none focus:border-secondary"
                                   placeholder="Allowance"
                                 />
