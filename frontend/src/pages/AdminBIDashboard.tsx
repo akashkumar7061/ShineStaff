@@ -526,150 +526,71 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({ forceTab, hideNavig
   const exportToExcel = () => {
     if (!analytics) return;
 
-    const xmlHeader = `<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:html="http://www.w3.org/TR/REC-html40">
- <Styles>
-  <Style ss:ID="Default" ss:Name="Normal">
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#333333"/>
-  </Style>
-  <Style ss:ID="Title">
-   <Font ss:FontName="Segoe UI" ss:Size="14" ss:Bold="1" ss:Color="#1e1b4b"/>
-  </Style>
-  <Style ss:ID="SubTitle">
-   <Font ss:FontName="Segoe UI" ss:Size="9" ss:Italic="1" ss:Color="#666666"/>
-  </Style>
-  <Style ss:ID="TableHeader">
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#4f46e5" ss:Pattern="Solid"/>
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-  </Style>
-  <Style ss:ID="KPIKey">
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1"/>
-   <Interior ss:Color="#f3f4f6" ss:Pattern="Solid"/>
-  </Style>
-  <Style ss:ID="KPIVal">
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#111827"/>
-  </Style>
- </Styles>`;
+    // Force CSV format to ensure 100% compatibility and avoid corruption warnings on mobile/desktop
+    const filename = `ShineStaff_Corporate_Performance_Report_${startDate}_to_${endDate}.csv`;
 
-    // Sheet 1: Executive Summary & Corporate Ratios
-    let execSheet = `<Worksheet ss:Name="Executive Summary">
-  <Table>
-   <Row><Cell ss:StyleID="Title"><Data ss:Type="String">ShineStaff Company Performance Ratios</Data></Cell></Row>
-   <Row><Cell ss:StyleID="SubTitle"><Data ss:Type="String">Period: ${startDate} to ${endDate}</Data></Cell></Row>
-   <Row></Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Total Sales (Scheduled)</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.totalSales}</Data></Cell>
-   </Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Total Revenue (Completed)</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.totalRevenue}</Data></Cell>
-   </Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Total Operating Expenses</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.totalExpenses}</Data></Cell>
-   </Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Net Profit</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="Number">${analytics.financials.netProfit}</Data></Cell>
-   </Row>
-   <Row></Row>
-   <Row><Cell ss:StyleID="KPIKey"><Data ss:Type="String">CORPORATE EFFICIENCY RATIOS</Data></Cell></Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Gross Profit Margin %</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? ((analytics.financials.grossProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
-   </Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Net Profit Margin %</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? ((analytics.financials.netProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
-   </Row>
-   <Row>
-     <Cell ss:StyleID="KPIKey"><Data ss:Type="String">Operating Expense Ratio (OER)</Data></Cell>
-     <Cell ss:StyleID="KPIVal"><Data ss:Type="String">${analytics.financials.totalRevenue > 0 ? (((analytics.expenseBreakdown.salaries + analytics.expenseBreakdown.office + analytics.expenseBreakdown.marketing + analytics.expenseBreakdown.miscellaneous) / analytics.financials.totalRevenue) * 100).toFixed(1) : '0'}%</Data></Cell>
-   </Row>
-  </Table>
- </Worksheet>`;
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str}"`;
+      }
+      return str;
+    };
 
-    // Sheet 2: Expenditures Log
-    let expSheet = `<Worksheet ss:Name="Operating Expenditures">
-  <Table>
-   <Row>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Date</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Category</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Description</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Amount (INR)</Data></Cell>
-   </Row>`;
+    let csvContent = '';
+
+    // --- Section 1: Executive Summary ---
+    csvContent += '--- EXECUTIVE SUMMARY & CORPORATE RATIOS ---\r\n';
+    csvContent += `Period,${startDate} to ${endDate}\r\n\r\n`;
+    
+    csvContent += `Total Sales (Scheduled),${analytics.financials.totalSales}\r\n`;
+    csvContent += `Total Revenue (Completed),${analytics.financials.totalRevenue}\r\n`;
+    csvContent += `Total Operating Expenses,${analytics.financials.totalExpenses}\r\n`;
+    csvContent += `Net Profit,${analytics.financials.netProfit}\r\n`;
+    
+    const grossProfitMargin = analytics.financials.totalRevenue > 0 ? ((analytics.financials.grossProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0';
+    const netProfitMargin = analytics.financials.totalRevenue > 0 ? ((analytics.financials.netProfit / analytics.financials.totalRevenue) * 100).toFixed(1) : '0';
+    const oer = analytics.financials.totalRevenue > 0 ? (((analytics.expenseBreakdown.salaries + analytics.expenseBreakdown.office + analytics.expenseBreakdown.marketing + analytics.expenseBreakdown.miscellaneous) / analytics.financials.totalRevenue) * 100).toFixed(1) : '0';
+    
+    csvContent += `Gross Profit Margin %,${grossProfitMargin}%\r\n`;
+    csvContent += `Net Profit Margin %,${netProfitMargin}%\r\n`;
+    csvContent += `Operating Expense Ratio (OER),${oer}%\r\n\r\n`;
+
+    // --- Section 2: Operating Expenditures ---
+    csvContent += '--- OPERATING EXPENDITURES ---\r\n';
+    csvContent += 'Date,Category,Description,Amount (INR)\r\n';
     
     expenses.forEach(e => {
-      expSheet += `<Row>
-        <Cell><Data ss:Type="String">${e.date}</Data></Cell>
-        <Cell><Data ss:Type="String">${e.category.toUpperCase()}</Data></Cell>
-        <Cell><Data ss:Type="String">${e.description || 'Custom Expense'}</Data></Cell>
-        <Cell><Data ss:Type="Number">${e.amount}</Data></Cell>
-      </Row>`;
+      csvContent += `${escapeCSV(e.date)},${escapeCSV(e.category.toUpperCase())},${escapeCSV(e.description || 'Custom Expense')},${e.amount}\r\n`;
     });
     
     (analytics.rawSalaryPayouts || []).forEach((sr: any) => {
-      expSheet += `<Row>
-        <Cell><Data ss:Type="String">${sr.processedAt ? new Date(sr.processedAt).toISOString().split('T')[0] : 'N/A'}</Data></Cell>
-        <Cell><Data ss:Type="String">SALARY PAYOUT</Data></Cell>
-        <Cell><Data ss:Type="String">Approved salary payout for ${sr.workerId?.name || 'Worker'} (${sr.month})</Data></Cell>
-        <Cell><Data ss:Type="Number">${sr.amount}</Data></Cell>
-      </Row>`;
+      const dateStr = sr.processedAt ? new Date(sr.processedAt).toISOString().split('T')[0] : 'N/A';
+      csvContent += `${dateStr},SALARY PAYOUT,${escapeCSV(`Approved salary payout for ${sr.workerId?.name || 'Worker'} (${sr.month})`)},${sr.amount}\r\n`;
     });
 
     (analytics.rawTravelLogs || []).forEach((tl: any) => {
-      expSheet += `<Row>
-        <Cell><Data ss:Type="String">${tl.date}</Data></Cell>
-        <Cell><Data ss:Type="String">FUEL ALLOWANCE</Data></Cell>
-        <Cell><Data ss:Type="String">Commute allowance for ${tl.workerId?.name || 'Worker'} (${tl.kms} kms)</Data></Cell>
-        <Cell><Data ss:Type="Number">${tl.allowance}</Data></Cell>
-      </Row>`;
+      csvContent += `${escapeCSV(tl.date)},FUEL ALLOWANCE,${escapeCSV(`Commute allowance for ${tl.workerId?.name || 'Worker'} (${tl.kms} kms)`)},${tl.allowance}\r\n`;
     });
-
-    expSheet += `</Table></Worksheet>`;
-
-    // Sheet 3: Scheduled Cleans
-    let jobsSheet = `<Worksheet ss:Name="Clean Bookings">
-  <Table>
-   <Row>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Date</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Client</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Clean Title</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Worker Assigned</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Status</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Payment Status</Data></Cell>
-     <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Price (INR)</Data></Cell>
-   </Row>`;
-
-    jobs.forEach(j => {
-      jobsSheet += `<Row>
-        <Cell><Data ss:Type="String">${j.date}</Data></Cell>
-        <Cell><Data ss:Type="String">${j.clientName || 'N/A'}</Data></Cell>
-        <Cell><Data ss:Type="String">${j.title}</Data></Cell>
-        <Cell><Data ss:Type="String">${(j.workerId as any)?.name || 'Unassigned'}</Data></Cell>
-        <Cell><Data ss:Type="String">${j.status}</Data></Cell>
-        <Cell><Data ss:Type="String">${j.paymentStatus || 'received'}</Data></Cell>
-        <Cell><Data ss:Type="Number">${j.price}</Data></Cell>
-      </Row>`;
-    });
-
-    jobsSheet += `</Table></Worksheet>`;
-
-    const xmlFooter = `</Workbook>`;
-    const finalXml = xmlHeader + execSheet + expSheet + jobsSheet + xmlFooter;
     
-    const blob = new Blob([finalXml], { type: 'application/vnd.ms-excel' });
+    csvContent += '\r\n';
+
+    // --- Section 3: Clean Bookings ---
+    csvContent += '--- CLEAN BOOKINGS ---\r\n';
+    csvContent += 'Date,Client,Clean Title,Worker Assigned,Status,Payment Status,Price (INR)\r\n';
+    
+    jobs.forEach(j => {
+      csvContent += `${escapeCSV(j.date)},${escapeCSV(j.clientName || 'N/A')},${escapeCSV(j.title)},${escapeCSV((j.workerId as any)?.name || 'Unassigned')},${escapeCSV(j.status)},${escapeCSV(j.paymentStatus || 'received')},${j.price}\r\n`;
+    });
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ShineStaff_Corporate_Performance_Report_${startDate}_to_${endDate}.xls`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

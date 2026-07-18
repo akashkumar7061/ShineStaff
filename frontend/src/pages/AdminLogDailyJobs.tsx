@@ -253,14 +253,15 @@ const AdminLogDailyJobs: React.FC = () => {
   };
 
   // --- Filtering lists ---
-  const completedJobs = jobs.filter(j => j.status === 'completed');
-  const cancelledJobs = jobs.filter(j => j.status === 'cancelled');
-  const approvalJobs = jobs.filter(j => j.status === 'pending' || j.status === 'rejected');
+  const dateFilteredJobs = jobs.filter(j => j.date && j.date >= startDate && j.date <= endDate);
+  const completedJobs = dateFilteredJobs.filter(j => j.status === 'completed');
+  const cancelledJobs = dateFilteredJobs.filter(j => j.status === 'cancelled');
+  const approvalJobs = dateFilteredJobs.filter(j => j.status === 'pending' || j.status === 'rejected');
 
   const getFilteredList = () => {
     let activeList = [];
     if (activeTab === 'all') {
-      activeList = jobs;
+      activeList = dateFilteredJobs;
     } else if (activeTab === 'completed') {
       activeList = completedJobs;
     } else if (activeTab === 'cancelled') {
@@ -268,15 +269,9 @@ const AdminLogDailyJobs: React.FC = () => {
     } else {
       activeList = approvalJobs;
     }
-    
-    // Filter by date range first
-    let filtered = activeList.filter(j => {
-      if (!j.date) return false;
-      return j.date >= startDate && j.date <= endDate;
-    });
 
-    if (!searchQuery) return filtered;
-    return filtered.filter(
+    if (!searchQuery) return activeList;
+    return activeList.filter(
       j =>
         (j.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (j.clientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -345,7 +340,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   }`}
                 >
                   <ClipboardList className="h-3.5 w-3.5" />
-                  <span>All Clean Logs ({jobs.length})</span>
+                  <span>All Clean Logs ({dateFilteredJobs.length})</span>
                 </button>
                 <button
                   onClick={() => { setActiveTab('completed'); setSearchQuery(''); }}
