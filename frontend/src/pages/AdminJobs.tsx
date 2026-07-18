@@ -770,6 +770,18 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     }
   };
 
+  const handleUpdateDrawerPayment = async (jobId: string, paymentStatus: string, paymentMode: string) => {
+    try {
+      const res = await api.put(`/jobs/${jobId}`, { paymentStatus, paymentMode });
+      if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
+        setSelectedJobForDrawer(res.data);
+      }
+      fetchJobsAndWorkers();
+    } catch (err) {
+      alert('Failed to update payment details');
+    }
+  };
+
   const handleOpenAdminCompleteModal = (job: any) => {
     setAdminCompleteJobData(job);
     setAdminCompleteReason('Network Issue');
@@ -1803,6 +1815,37 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     ) : (
                       <div className="text-[10px] text-slate-400 italic">No timeline entries yet.</div>
                     )}
+                  </div>
+                </div>
+
+                {/* Payment Details Section (Inline Edit) */}
+                <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Details</span>
+                  <div className="grid grid-cols-2 gap-3 bg-slate-55 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2xl">
+                    <div>
+                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Status</label>
+                      <select
+                        value={selectedJobForDrawer.paymentStatus || 'pending'}
+                        onChange={(e) => handleUpdateDrawerPayment(selectedJobForDrawer._id, e.target.value, selectedJobForDrawer.paymentMode || 'not_selected')}
+                        className="w-full text-[10.5px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none focus:border-secondary text-slate-800 dark:text-white"
+                      >
+                        <option value="pending">⏳ Pending</option>
+                        <option value="received">✅ Received / Paid</option>
+                        <option value="outstanding">⚠️ Outstanding</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Method</label>
+                      <select
+                        value={selectedJobForDrawer.paymentMode || 'not_selected'}
+                        onChange={(e) => handleUpdateDrawerPayment(selectedJobForDrawer._id, selectedJobForDrawer.paymentStatus || 'pending', e.target.value)}
+                        className="w-full text-[10.5px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none focus:border-secondary text-slate-800 dark:text-white"
+                      >
+                        <option value="not_selected">Select Method...</option>
+                        <option value="cash">💵 Cash Payment</option>
+                        <option value="upi_online">📱 UPI / Online</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
