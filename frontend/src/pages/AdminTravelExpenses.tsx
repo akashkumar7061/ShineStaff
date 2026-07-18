@@ -1140,103 +1140,57 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       return;
     }
 
-    const filename = `${selectedWorker.name}_salary_report.${format}`;
-    let content = '';
+    // Force CSV extension for compatibility with all spreadsheet viewers
+    const filename = `${selectedWorker.name}_salary_report.csv`;
     const data = getCommissionReportData();
 
-    if (format === 'xls') {
-      content = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-          <!--[if gte mso 9]>
-          <xml>
-            <x:ExcelWorkbook>
-              <x:ExcelWorksheets>
-                <x:ExcelWorksheet>
-                  <x:Name>Salary Report</x:Name>
-                  <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-                </x:ExcelWorksheet>
-              </x:ExcelWorksheets>
-            </x:ExcelWorkbook>
-          </xml>
-          <![endif]-->
-          <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
-        </head>
-        <body>
-          <h2>Worker Salary & Profit Statement - ${selectedWorker.name}</h2>
-          <p>Period: ${startDate} to ${endDate}</p>
-          <table border="1">
-            <thead>
-              <tr style="background-color: #f1f5f9; font-weight: bold;">
-                <th>Date</th>
-                <th>Worker Name</th>
-                <th>Job ID</th>
-                <th>Company</th>
-                <th>Customer</th>
-                <th>Service</th>
-                <th>Work Amount (INR)</th>
-                <th>Commission (INR)</th>
-                <th>Fuel Cost (INR)</th>
-                <th>Profit (INR)</th>
-                <th>Net Salary (INR)</th>
-                <th>Payment Status</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.map(item => `
-                <tr>
-                  <td>${item.date}</td>
-                  <td>${item.workerName}</td>
-                  <td>${item.jobId}</td>
-                  <td>${item.company}</td>
-                  <td>${item.customer}</td>
-                  <td>${item.service}</td>
-                  <td>${item.workAmount.toFixed(2)}</td>
-                  <td>${item.commission.toFixed(2)}</td>
-                  <td>${item.fuelCost.toFixed(2)}</td>
-                  <td>${item.grandPayout.toFixed(2)}</td>
-                  <td>${item.netSalary.toFixed(2)}</td>
-                  <td>${item.paymentStatus}</td>
-                  <td>${item.remarks}</td>
-                </tr>
-              `).join('')}
-              <tr style="font-weight: bold; background-color: #e2e8f0;">
-                <td colspan="6">Totals</td>
-                <td>₹${totalWorkEarnings.toFixed(2)}</td>
-                <td>₹${totalCommission.toFixed(2)}</td>
-                <td>₹${totalFuelCost.toFixed(2)}</td>
-                <td>₹${totalProfit.toFixed(2)}</td>
-                <td>₹${totalNetSalary.toFixed(2)}</td>
-                <td colspan="2"></td>
-              </tr>
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
-    } else {
-      // CSV Export
-      const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Profit", "Net Salary", "Payment Status", "Remarks"];
-      const rows = data.map(item => [
-        item.date,
-        item.workerName,
-        item.jobId,
-        item.company,
-        item.customer,
-        item.service,
-        item.workAmount.toFixed(2),
-        item.commission.toFixed(2),
-        item.fuelCost.toFixed(2),
-        item.grandPayout.toFixed(2),
-        item.netSalary.toFixed(2),
-        item.paymentStatus,
-        item.remarks
-      ]);
-      content = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
-    }
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str}"`;
+      }
+      return str;
+    };
 
-    const blob = new Blob([content], { type: format === 'xls' ? 'application/vnd.ms-excel;charset=utf-8;' : 'text/csv;charset=utf-8;' });
+    const headers = ["Date", "Worker Name", "Job ID", "Company", "Customer", "Service", "Work Amount", "Commission", "Fuel Cost", "Profit", "Net Salary", "Payment Status", "Remarks"];
+    const rows = data.map(item => [
+      item.date,
+      item.workerName,
+      item.jobId,
+      item.company,
+      item.customer,
+      item.service,
+      item.workAmount.toFixed(2),
+      item.commission.toFixed(2),
+      item.fuelCost.toFixed(2),
+      item.grandPayout.toFixed(2),
+      item.netSalary.toFixed(2),
+      item.paymentStatus,
+      item.remarks
+    ]);
+
+    // Add totals row
+    rows.push([
+      "Totals",
+      "",
+      "",
+      "",
+      "",
+      "",
+      totalWorkEarnings.toFixed(2),
+      totalCommission.toFixed(2),
+      totalFuelCost.toFixed(2),
+      totalProfit.toFixed(2),
+      totalNetSalary.toFixed(2),
+      "",
+      ""
+    ]);
+
+    const csvContent = [headers.map(escapeCSV).join(','), ...rows.map(r => r.map(escapeCSV).join(','))].join('\r\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -1472,88 +1426,48 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
       return;
     }
 
-    const filename = `${selectedWorker.name}_travel_expense_report.${format}`;
-    let content = '';
+    // Force CSV extension for compatibility with all spreadsheet viewers
+    const filename = `${selectedWorker.name}_travel_expense_report.csv`;
 
-    if (format === 'xls') {
-      content = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-          <!--[if gte mso 9]>
-          <xml>
-            <x:ExcelWorkbook>
-              <x:ExcelWorksheets>
-                <x:ExcelWorksheet>
-                  <x:Name>Travel Report</x:Name>
-                  <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-                </x:ExcelWorksheet>
-              </x:ExcelWorksheets>
-            </x:ExcelWorkbook>
-          </xml>
-          <![endif]-->
-          <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
-        </head>
-        <body>
-          <h2>Worker Travel & Expense Statement - ${selectedWorker.name}</h2>
-          <p>Period: ${startDate} to ${endDate}</p>
-          <table border="1">
-            <thead>
-              <tr style="background-color: #f1f5f9; font-weight: bold;">
-                <th>Date</th>
-                <th>Job ID</th>
-                <th>Service Title</th>
-                <th>Customer</th>
-                <th>Price (INR)</th>
-                <th>Distance (KM)</th>
-                <th>Fuel Cost (₹${globalFuelRate}/KM)</th>
-                <th>From Location</th>
-                <th>To Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${workerJobs.map(j => `
-                <tr>
-                  <td>${j.date || ''}</td>
-                  <td>${j.visitId || j._id}</td>
-                  <td>${j.title || ''}</td>
-                  <td>${j.clientName || ''}</td>
-                  <td>${Number(j.price || 0).toFixed(2)}</td>
-                  <td>${Number(j.fuelKmsTravelled || 0).toFixed(2)}</td>
-                  <td>${Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2)}</td>
-                  <td>${j.fromLocation || ''}</td>
-                  <td>${j.toLocation || ''}</td>
-                </tr>
-              `).join('')}
-              <tr>
-                <td colspan="4"><b>Totals</b></td>
-                <td><b>₹${totalWorkEarnings.toFixed(2)}</b></td>
-                <td><b>${totalDistance.toFixed(2)} KM</b></td>
-                <td><b>₹${totalFuelCost.toFixed(2)}</b></td>
-                <td colspan="2"></td>
-              </tr>
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
-    } else {
-      // CSV Export
-      const headers = ["Date", "Job ID", "Service Title", "Customer", "Price", "Distance", "Fuel Cost", "From", "To"];
-      const rows = workerJobs.map(j => [
-        j.date || '',
-        j.visitId || j._id,
-        j.title || '',
-        j.clientName || '',
-        Number(j.price || 0).toFixed(2),
-        Number(j.fuelKmsTravelled || 0).toFixed(2),
-        Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2),
-        j.fromLocation || '',
-        j.toLocation || ''
-      ]);
-      content = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
-    }
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str}"`;
+      }
+      return str;
+    };
 
-    const blob = new Blob([content], { type: format === 'xls' ? 'application/vnd.ms-excel;charset=utf-8;' : 'text/csv;charset=utf-8;' });
+    const headers = ["Date", "Job ID", "Service Title", "Customer", "Price", "Distance", "Fuel Cost", "From", "To"];
+    const rows = workerJobs.map(j => [
+      j.date || '',
+      j.visitId || j._id,
+      j.title || '',
+      j.clientName || '',
+      Number(j.price || 0).toFixed(2),
+      Number(j.fuelKmsTravelled || 0).toFixed(2),
+      Number((j.fuelKmsTravelled || 0) * globalFuelRate).toFixed(2),
+      j.fromLocation || '',
+      j.toLocation || ''
+    ]);
+
+    // Add totals row
+    rows.push([
+      "Totals",
+      "",
+      "",
+      "",
+      totalWorkEarnings.toFixed(2),
+      totalDistance.toFixed(2),
+      totalFuelCost.toFixed(2),
+      "",
+      ""
+    ]);
+
+    const csvContent = [headers.map(escapeCSV).join(','), ...rows.map(r => r.map(escapeCSV).join(','))].join('\r\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);

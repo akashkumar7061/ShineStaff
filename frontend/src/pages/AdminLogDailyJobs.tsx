@@ -183,14 +183,14 @@ const AdminLogDailyJobs: React.FC = () => {
   const handleDownloadSpreadsheet = (filterType: 'all' | 'completed' | 'cancelled') => {
     let rangeJobs = jobs.filter(j => j.date && j.date >= startDate && j.date <= endDate);
     let filtered = [...rangeJobs];
-    let filename = 'all_work_logs.xls';
+    let filename = 'all_work_logs.csv';
 
     if (filterType === 'completed') {
       filtered = rangeJobs.filter(j => j.status === 'completed');
-      filename = 'completed_work_logs.xls';
+      filename = 'completed_work_logs.csv';
     } else if (filterType === 'cancelled') {
       filtered = rangeJobs.filter(j => j.status === 'cancelled');
-      filename = 'cancelled_work_logs.xls';
+      filename = 'cancelled_work_logs.csv';
     }
 
     if (filtered.length === 0) {
@@ -198,72 +198,51 @@ const AdminLogDailyJobs: React.FC = () => {
       return;
     }
 
-    // Build Microsoft Excel XML/HTML spreadsheet format
-    let excelTemplate = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <!--[if gte mso 9]>
-        <xml>
-          <x:ExcelWorkbook>
-            <x:ExcelWorksheets>
-              <x:ExcelWorksheet>
-                <x:Name>Clean Work Logs</x:Name>
-                <x:WorksheetOptions>
-                  <x:DisplayGridlines/>
-                </x:WorksheetOptions>
-              </x:ExcelWorksheet>
-            </x:ExcelWorksheets>
-          </x:ExcelWorkbook>
-        </xml>
-        <![endif]-->
-        <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
-      </head>
-      <body>
-        <table border="1">
-          <thead>
-            <tr style="background-color: #f1f5f9; font-weight: bold;">
-              <th>Job ID</th>
-              <th>Clean Job Title</th>
-              <th>Company Division</th>
-              <th>Client Name</th>
-              <th>Client Phone</th>
-              <th>Price (INR)</th>
-              <th>Date</th>
-              <th>Time Slot</th>
-              <th>Status</th>
-              <th>Payment Status</th>
-              <th>Assigned Crew Worker</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str}"`;
+      }
+      return str;
+    };
+
+    const headers = [
+      'Job ID',
+      'Clean Job Title',
+      'Company Division',
+      'Client Name',
+      'Client Phone',
+      'Price (INR)',
+      'Date',
+      'Time Slot',
+      'Status',
+      'Payment Status',
+      'Assigned Crew Worker'
+    ];
+
+    let csvContent = headers.map(escapeCSV).join(',') + '\r\n';
 
     filtered.forEach(j => {
-      excelTemplate += `
-        <tr>
-          <td>${j._id || ''}</td>
-          <td>${j.title || ''}</td>
-          <td>${j.company || ''}</td>
-          <td>${j.clientName || ''}</td>
-          <td>${j.clientPhone || ''}</td>
-          <td>${j.price || 0}</td>
-          <td>${j.date || ''}</td>
-          <td>${j.timeSlot || ''}</td>
-          <td>${j.status || ''}</td>
-          <td>${j.paymentStatus || ''}</td>
-          <td>${j.workerId?.name || 'Unassigned'}</td>
-        </tr>
-      `;
+      const row = [
+        j._id || '',
+        j.title || '',
+        j.company || '',
+        j.clientName || '',
+        j.clientPhone || '',
+        j.price || 0,
+        j.date || '',
+        j.timeSlot || '',
+        j.status || '',
+        j.paymentStatus || '',
+        j.workerId?.name || 'Unassigned'
+      ];
+      csvContent += row.map(escapeCSV).join(',') + '\r\n';
     });
 
-    excelTemplate += `
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
