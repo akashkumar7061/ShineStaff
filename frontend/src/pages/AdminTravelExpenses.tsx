@@ -140,6 +140,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     price: string;
     fuelKmsTravelled: string;
     paymentStatus: string;
+    paymentMode: string;
     date: string;
   } | null>(null);
 
@@ -986,6 +987,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         price: Number(editingLedgerItem.price) || 0,
         fuelKmsTravelled: Number(editingLedgerItem.fuelKmsTravelled) || 0,
         paymentStatus: editingLedgerItem.paymentStatus,
+        paymentMode: editingLedgerItem.paymentMode,
         date: editingLedgerItem.date
       });
 
@@ -2314,6 +2316,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                     price: String(item.workAmount),
                                     fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
                                     paymentStatus: item.paymentStatus,
+                                    paymentMode: item.rawJob.paymentMode || 'not_selected',
                                     date: item.date
                                   })}>
                                 <div className="flex items-center space-x-1">
@@ -2338,6 +2341,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                     price: String(item.workAmount),
                                     fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
                                     paymentStatus: item.paymentStatus,
+                                    paymentMode: item.rawJob.paymentMode || 'not_selected',
                                     date: item.date
                                   })}>
                                 <div className="flex items-center space-x-1">
@@ -2353,6 +2357,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                     price: String(item.workAmount),
                                     fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
                                     paymentStatus: item.paymentStatus,
+                                    paymentMode: item.rawJob.paymentMode || 'not_selected',
                                     date: item.date
                                   })}>
                                 <div className="flex items-center space-x-1">
@@ -2371,6 +2376,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                     price: String(item.workAmount),
                                     fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
                                     paymentStatus: item.paymentStatus,
+                                    paymentMode: item.rawJob.paymentMode || 'not_selected',
                                     date: item.date
                                   })}>
                                 <div className="flex items-center space-x-1">
@@ -2392,6 +2398,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                     price: String(item.workAmount),
                                     fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
                                     paymentStatus: item.paymentStatus,
+                                    paymentMode: item.rawJob.paymentMode || 'not_selected',
                                     date: item.date
                                   })}
                                   title={item.remarks}>
@@ -2409,6 +2416,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                     price: String(item.workAmount),
                                     fuelKmsTravelled: String(item.rawJob.fuelKmsTravelled || 0),
                                     paymentStatus: item.paymentStatus,
+                                    paymentMode: item.rawJob.paymentMode || 'not_selected',
                                     date: item.date
                                   })}
                                   className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-550 dark:text-indigo-305 text-[10px] font-bold uppercase transition-colors cursor-pointer"
@@ -3677,17 +3685,31 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Status</label>
-                <select
-                  value={editingLedgerItem.paymentStatus}
-                  onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, paymentStatus: e.target.value })}
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-600 dark:text-slate-300 font-bold"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="received">Received</option>
-                  <option value="outstanding">Outstanding</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Status</label>
+                  <select
+                    value={editingLedgerItem.paymentStatus}
+                    onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, paymentStatus: e.target.value })}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-600 dark:text-slate-300 font-bold"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="received">Received</option>
+                    <option value="outstanding">Outstanding</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Method</label>
+                  <select
+                    value={editingLedgerItem.paymentMode || 'not_selected'}
+                    onChange={(e) => setEditingLedgerItem({ ...editingLedgerItem, paymentMode: e.target.value })}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/55 dark:bg-slate-955/50 outline-none text-slate-600 dark:text-slate-300 font-bold"
+                  >
+                    <option value="not_selected">Not Selected</option>
+                    <option value="cash">💵 Cash</option>
+                    <option value="upi_online">📱 UPI / Online</option>
+                  </select>
+                </div>
               </div>
 
               <div>

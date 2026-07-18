@@ -957,6 +957,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
                       <th className="px-4 py-3">Clean Title</th>
                       <th className="px-4 py-3">Assigned Worker</th>
                       <th className="px-4 py-3">Job Status</th>
+                      <th className="px-4 py-3">Payment</th>
                       <th className="px-4 py-3 text-right">Price</th>
                       <th className="px-4 py-3 text-center">Actions</th>
                     </tr>
@@ -1054,6 +1055,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
                               {item.status}
                             </span>
                           </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full w-max ${
+                                item.paymentStatus === 'received' 
+                                  ? 'bg-success/15 text-success' 
+                                  : item.paymentStatus === 'outstanding' 
+                                  ? 'bg-danger/15 text-danger' 
+                                  : 'bg-amber-500/15 text-amber-500'
+                              }`}>
+                                {item.paymentStatus || 'pending'}
+                              </span>
+                              {item.paymentMode && item.paymentMode !== 'not_selected' && (
+                                <span className="text-[9px] text-slate-400 mt-0.5">
+                                  {item.paymentMode === 'cash' ? 'Cash' : 'UPI/Online'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-white">
                             ₹{(item.price || 0).toLocaleString('en-IN')}
                           </td>
@@ -1068,7 +1087,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
                                   clientPhone: item.clientPhone,
                                   price: item.price,
                                   status: item.status,
-                                  date: item.date
+                                  date: item.date,
+                                  paymentStatus: item.paymentStatus || 'pending',
+                                  paymentMode: item.paymentMode || 'not_selected'
                                 }
                               })}
                               className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-500 dark:text-indigo-300 text-[10px] font-bold uppercase transition-colors cursor-pointer"
@@ -1200,21 +1221,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] uppercase text-slate-400 mb-1">Job Status</label>
-                    <select
-                      value={editingItem.fields.status || 'pending'}
-                      onChange={(e) => setEditingItem({
-                        ...editingItem,
-                        fields: { ...editingItem.fields, status: e.target.value }
-                      })}
-                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="started">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Job Status</label>
+                      <select
+                        value={editingItem.fields.status || 'pending'}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, status: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="started">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Status</label>
+                      <select
+                        value={editingItem.fields.paymentStatus || 'pending'}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, paymentStatus: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="received">Received / Paid</option>
+                        <option value="outstanding">Outstanding</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-slate-400 mb-1">Payment Method</label>
+                      <select
+                        value={editingItem.fields.paymentMode || 'not_selected'}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          fields: { ...editingItem.fields, paymentMode: e.target.value }
+                        })}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-slate-50/50 dark:bg-slate-955/50 outline-none text-slate-700 dark:text-white font-bold"
+                      >
+                        <option value="not_selected">Not Selected</option>
+                        <option value="cash">💵 Cash</option>
+                        <option value="upi_online">📱 UPI / Online</option>
+                      </select>
+                    </div>
                   </div>
                 </>
               )}

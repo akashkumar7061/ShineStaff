@@ -41,6 +41,7 @@ export interface IJob extends Document {
   workerNotes?: string;
   cancelReason?: string;
   paymentStatus?: 'pending' | 'received' | 'outstanding';
+  paymentMode?: 'cash' | 'upi_online' | 'not_selected';
   rating?: number;
 
   visitId?: string;
@@ -116,6 +117,7 @@ const JobSchema = new Schema<IJob>({
   workerNotes: { type: String, default: '' },
   cancelReason: { type: String, default: '' },
   paymentStatus: { type: String, enum: ['pending', 'received', 'outstanding'], default: 'pending' },
+  paymentMode: { type: String, enum: ['cash', 'upi_online', 'not_selected'], default: 'not_selected' },
   rating: { type: Number, min: 1, max: 5 },
 
   visitId: { type: String, default: '' },

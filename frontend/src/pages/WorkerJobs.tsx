@@ -58,6 +58,7 @@ const WorkerJobs: React.FC = () => {
   const [activeAfterPhotoIndex, setActiveAfterPhotoIndex] = useState<number | null>(null);
   const [tempKms, setTempKms] = useState('');
   const [tempNotes, setTempNotes] = useState('');
+  const [tempPaymentMode, setTempPaymentMode] = useState<'cash' | 'upi_online' | 'not_selected'>('not_selected');
   const [submittingReport, setSubmittingReport] = useState(false);
   const [filterDate, setFilterDate] = useState(getTodayString());
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,6 +132,7 @@ const WorkerJobs: React.FC = () => {
     }
     setTempKms(job.fuelKmsTravelled?.toString() || '');
     setTempNotes(job.workerNotes || '');
+    setTempPaymentMode(job.paymentMode || 'not_selected');
   };
 
   const handleCameraCapture = (dataUrl: string, coords: { lat: number; lng: number }) => {
@@ -190,6 +192,10 @@ const WorkerJobs: React.FC = () => {
       alert('All 5 completion photos are mandatory to complete job');
       return;
     }
+    if (tempPaymentMode === 'not_selected') {
+      alert('Please select a payment method before submitting.');
+      return;
+    }
 
     setSubmittingReport(true);
     try {
@@ -198,7 +204,8 @@ const WorkerJobs: React.FC = () => {
           afterPhotoDataUrls: tempAfterPhotos,
           location: coords,
           manualFuelKms: Number(tempKms),
-          workerNotes: tempNotes
+          workerNotes: tempNotes,
+          paymentMode: tempPaymentMode
         });
         alert('Cleanup sheet submitted successfully! Job marked as completed.');
         setSelectedJob(null);
@@ -759,6 +766,21 @@ const WorkerJobs: React.FC = () => {
                 <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                   
 
+                  {/* Payment Mode Selector */}
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Payment Method *</label>
+                    <select
+                      value={tempPaymentMode}
+                      onChange={(e) => setTempPaymentMode(e.target.value as any)}
+                      disabled={!tempBeforePhoto}
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955 p-3 outline-none focus:border-secondary font-bold disabled:opacity-40"
+                    >
+                      <option value="not_selected">Select Payment Method...</option>
+                      <option value="cash">💵 Cash Payment</option>
+                      <option value="upi_online">📱 UPI / Online Payment</option>
+                    </select>
+                  </div>
+
                   {/* Remarks input */}
                   <div>
                     <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Cleanup Notes / Remarks</label>
@@ -789,6 +811,13 @@ const WorkerJobs: React.FC = () => {
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-450">Cleanup Notes:</span>
                     <span className="font-bold text-slate-700 dark:text-slate-200 max-w-[250px] text-right">{selectedJob.workerNotes || 'No notes logged'}</span>
+                  </div>
+
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-450">Payment Method:</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase">
+                      {selectedJob.paymentMode === 'cash' ? '💵 Cash' : selectedJob.paymentMode === 'upi_online' ? '📱 UPI / Online' : 'Not Selected'}
+                    </span>
                   </div>
 
 

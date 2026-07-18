@@ -464,7 +464,7 @@ Started: ${startedTime}`,
 
 export const completeJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { afterPhotoDataUrl, afterPhotoDataUrls, location, manualFuelKms, workerNotes } = req.body;
+  const { afterPhotoDataUrl, afterPhotoDataUrls, location, manualFuelKms, workerNotes, paymentMode } = req.body;
 
   if (!req.user || req.user.role !== 'worker') {
     return res.status(403).json({ message: 'Only workers can complete jobs' });
@@ -542,6 +542,9 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     job.fuelKmsTravelled = finalKms;
     job.fuelAllowance = fuelAllowance;
     job.workerNotes = workerNotes || '';
+    if (paymentMode) {
+      job.paymentMode = paymentMode as any;
+    }
 
     if (!job.timeline) job.timeline = [];
     job.timeline.push({
@@ -762,6 +765,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     fromLocation,
     toLocation,
     paymentStatus,
+    paymentMode,
     rating,
     status,
     cancelReason
@@ -869,6 +873,9 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     }
     if (paymentStatus !== undefined) {
       job.paymentStatus = paymentStatus;
+    }
+    if (paymentMode !== undefined) {
+      job.paymentMode = paymentMode;
     }
     if (rating !== undefined) {
       job.rating = Number(rating);
