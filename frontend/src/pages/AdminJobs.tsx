@@ -127,6 +127,33 @@ const getJobBadge = (status: string) => {
   }
 };
 
+const getPaymentBadge = (paymentStatus: string, paymentMode?: string) => {
+  const status = paymentStatus || 'pending';
+  let bgClass = 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+  let text = 'Pending';
+  
+  if (status === 'received') {
+    bgClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+    text = 'Paid';
+  } else if (status === 'outstanding') {
+    bgClass = 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+    text = 'Outstanding';
+  }
+  
+  let modeSuffix = '';
+  if (paymentMode === 'cash') {
+    modeSuffix = ' 💵';
+  } else if (paymentMode === 'upi_online') {
+    modeSuffix = ' 📱';
+  }
+  
+  return (
+    <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1 ml-1 ${bgClass}`}>
+      {text}{modeSuffix}
+    </span>
+  );
+};
+
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
@@ -177,6 +204,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [fuelAllowance, setFuelAllowance] = useState('');
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [savingJob, setSavingJob] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'received' | 'outstanding'>('pending');
+  const [paymentMode, setPaymentMode] = useState<string>('not_selected');
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [activeMapField, setActiveMapField] = useState<'from' | 'to'>('from');
   const [mapSearchQuery, setMapSearchQuery] = useState('');
@@ -632,7 +661,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         fuelKmsTravelled: Number(commuteKms) || 0,
         fuelAllowance: Number(fuelAllowance) || 0,
         fromLocation: fromLocation || '',
-        toLocation: toLocation || ''
+        toLocation: toLocation || '',
+        paymentStatus,
+        paymentMode
       };
 
       if (isEditMode && editingJobId) {
@@ -684,6 +715,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setLocationName(job.locationName || '');
     setPrice(job.price ? String(job.price) : '');
     setDate(job.date || '');
+    setPaymentStatus(job.paymentStatus || 'pending');
+    setPaymentMode(job.paymentMode || 'not_selected');
     
     if (job.timeSlot) {
       const parts = job.timeSlot.split(' - ');
@@ -776,6 +809,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setLocationName('');
     setPrice('');
     setDate(selectedDate);
+    setPaymentStatus('pending');
+    setPaymentMode('not_selected');
     setTimeSlot('08:00 AM - 02:00 PM');
     setStartTime('08:00');
     setEndTime('14:00');
@@ -1310,6 +1345,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                 className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
                               >
                                 {getJobBadge(j.status)}
+                                {getPaymentBadge(j.paymentStatus, j.paymentMode)}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                                   className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
@@ -1392,6 +1428,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                             className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
                           >
                             {getJobBadge(j.status)}
+                            {getPaymentBadge(j.paymentStatus, j.paymentMode)}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                               className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
@@ -1484,6 +1521,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     }`}>
                       {selectedJobForDrawer.status || 'confirmed'}
                     </span>
+                    {getPaymentBadge(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
                   </div>
                 </div>
 
@@ -2224,6 +2262,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">End Time</label>
                     <input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary" />
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Status</label>
+                  <select
+                    value={paymentStatus}
+                    onChange={(e) => setPaymentStatus(e.target.value as any)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="received">Received / Paid</option>
+                    <option value="outstanding">Outstanding</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method</label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => setPaymentMode(e.target.value)}
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
+                  >
+                    <option value="not_selected">Not Selected</option>
+                    <option value="cash">💵 Cash</option>
+                    <option value="upi_online">📱 UPI / Online</option>
+                  </select>
                 </div>
               </div>
 
