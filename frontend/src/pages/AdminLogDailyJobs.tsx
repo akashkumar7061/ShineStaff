@@ -150,9 +150,8 @@ const AdminLogDailyJobs: React.FC = () => {
     const reason = window.prompt('Please enter the reason for cancellation (optional):', 'Cancelled by Admin');
     if (reason === null) return; // User clicked cancel
     try {
-      await api.put(`/jobs/${jobId}`, {
-        status: 'cancelled',
-        cancelReason: reason || 'Cancelled by Admin'
+      await api.put(`/jobs/${jobId}/cancel`, {
+        reason: reason || 'Cancelled by Admin'
       });
       alert('Clean job marked as cancelled!');
       fetchData();
