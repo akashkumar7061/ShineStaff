@@ -593,7 +593,6 @@ const AdminProfile: React.FC = () => {
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:border-amber-500"
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium">Default password: <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded font-mono font-bold">admin123</code></p>
                 </div>
 
                 <div className="flex space-x-3 pt-2">
