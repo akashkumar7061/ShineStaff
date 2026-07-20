@@ -1712,28 +1712,32 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
             </select>
           </div>
 
-          {datePreset === 'custom' && (
-            <div className="flex items-center space-x-2 animate-fade-in">
-              <div>
-                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">From:</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white shadow-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">To:</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white shadow-sm"
-                />
-              </div>
+          <div className="flex items-center space-x-2 animate-fade-in">
+            <div>
+              <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">From Date:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setDatePreset('custom');
+                }}
+                className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white shadow-sm cursor-pointer"
+              />
             </div>
-          )}
+            <div>
+              <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">To Date:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setDatePreset('custom');
+                }}
+                className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white shadow-sm cursor-pointer"
+              />
+            </div>
+          </div>
         </div>
 
       </div>
@@ -2680,13 +2684,31 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       <span>+ Log Travel / Fuel Record</span>
                     </button>
 
-                    {/* Local date range summary */}
-                    <div className="flex items-center space-x-2 bg-slate-55 dark:bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-150/40 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                      <Calendar className="h-3.5 w-3.5 text-secondary" />
-                      <span>Date Range:</span>
-                      <span className="text-slate-800 dark:text-white font-extrabold">
-                        {new Date(startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} - {new Date(endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
+                    {/* Editable local date range summary pill */}
+                    <div className="flex flex-wrap items-center gap-2 bg-slate-55 dark:bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-150/40 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-3.5 w-3.5 text-secondary" />
+                        <span>Date Range:</span>
+                      </div>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          setDatePreset('custom');
+                        }}
+                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 text-xs font-extrabold text-slate-800 dark:text-white outline-none focus:border-secondary cursor-pointer"
+                      />
+                      <span>to</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          setDatePreset('custom');
+                        }}
+                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 text-xs font-extrabold text-slate-800 dark:text-white outline-none focus:border-secondary cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>
