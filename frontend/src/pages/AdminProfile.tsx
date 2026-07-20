@@ -31,7 +31,7 @@ import {
 interface IQR {
   _id: string;
   name: string;
-  company: 'SofaShine' | 'CleanCruisers' | 'ShineStaff' | 'All' | 'Custom';
+  company: 'SofaShine' | 'CleanCruisers' | 'All' | 'Custom';
   accountHolder: string;
   upiId: string;
   bankName: string;
@@ -812,7 +812,6 @@ const AdminProfile: React.FC = () => {
                   >
                     <option value="SofaShine">SofaShine</option>
                     <option value="CleanCruisers">CleanCruisers</option>
-                    <option value="ShineStaff">ShineStaff</option>
                     <option value="All">All Companies (Universal)</option>
                   </select>
                 </div>
