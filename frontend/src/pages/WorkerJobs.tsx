@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { ORIGINAL_PNB_QR_IMAGE } from '../utils/defaultQRImage';
 import CameraCapture from '../components/CameraCapture';
 import GPSAddress from '../components/GPSAddress';
 import {
@@ -836,7 +837,11 @@ const WorkerJobs: React.FC = () => {
                       ) : mappedQR ? (
                         <div className="space-y-3">
                           <div className="p-3 bg-white rounded-2xl inline-block border-4 border-emerald-500/30 shadow-inner">
-                            <img src={mappedQR.qrImage} alt={mappedQR.name} className="h-48 w-48 object-contain mx-auto" />
+                            <img
+                              src={mappedQR.qrImage && !mappedQR.qrImage.includes('svg+xml') ? mappedQR.qrImage : ORIGINAL_PNB_QR_IMAGE}
+                              alt={mappedQR.name}
+                              className="h-56 w-56 object-contain mx-auto"
+                            />
                           </div>
 
                           <div className="space-y-1.5 text-xs">

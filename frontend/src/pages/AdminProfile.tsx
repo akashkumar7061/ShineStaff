@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { ORIGINAL_PNB_QR_IMAGE } from '../utils/defaultQRImage';
 import {
   User as UserIcon,
   Phone,
@@ -704,7 +705,7 @@ const AdminProfile: React.FC = () => {
                         {/* Image Preview & Details */}
                         <div className="p-3 bg-white dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-800 flex items-center space-x-4 mb-4">
                           <img
-                            src={qr.qrImage}
+                            src={qr.qrImage && !qr.qrImage.includes('svg+xml') ? qr.qrImage : ORIGINAL_PNB_QR_IMAGE}
                             alt={qr.name}
                             className="h-20 w-20 object-contain rounded-xl border border-slate-100 dark:border-slate-800 bg-white p-1"
                           />
