@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import api from '../utils/api';
 import AdminBIDashboard from './AdminBIDashboard';
@@ -543,6 +543,39 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const workerTravel = getFilteredTravelLogs();
   const workerCommissions = getFilteredCommissions();
 
+  // Combined submitted travel & fuel records for the selected date range
+  const combinedTravelRecords = useMemo(() => {
+    const manual = workerTravel.map(log => ({
+      _id: log._id,
+      date: log.date,
+      workerId: log.workerId,
+      type: log.type,
+      typeLabel: log.type === 'job' ? 'Commute to Job' : 'Return Home',
+      fromLocation: log.fromLocation || 'Last Work Site',
+      toLocation: log.toLocation || 'Target/Home',
+      kms: Number(log.kms || 0),
+      allowance: Number(log.allowance || 0),
+      isJob: false,
+      raw: log
+    }));
+
+    const jobLogs = workerJobs.filter(j => (j.fuelKmsTravelled || 0) > 0).map(j => ({
+      _id: `job-${j._id}`,
+      date: j.date ? j.date.split('T')[0] : '',
+      workerId: j.workerId,
+      type: 'job_commute',
+      typeLabel: `Job Travel: ${j.title || 'Clean Job'}`,
+      fromLocation: j.fromLocation || 'Base / Previous Site',
+      toLocation: j.address || j.locationName || 'Client Site',
+      kms: Number(j.fuelKmsTravelled || 0),
+      allowance: Number(j.fuelKmsTravelled || 0) * globalFuelRate,
+      isJob: true,
+      raw: j
+    }));
+
+    return [...manual, ...jobLogs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [workerTravel, workerJobs, globalFuelRate]);
+
   const totalJobsCount = workerJobs.length;
   const totalWorkEarnings = metrics.earnings;
   const totalDistance = workerTravel.reduce((sum, log) => sum + (log.kms || 0), 0) + 
@@ -1067,7 +1100,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
         </head>
         <body>
           <h2>Worker Salary & Profit Statement - ${selectedWorker.name}</h2>
-          <p>Period: ${startDate} to ${endDate} | Company: ${companyFilter}</p>
+          <p>Date Range: ${startDate} to ${endDate} | Company: ${companyFilter}</p>
           <table>
             <thead>
               <tr>
@@ -1208,7 +1241,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text(`Worker: ${selectedWorker.name} (${selectedWorker.company})`, 14, 28);
-    doc.text(`Period: ${startDate} to ${endDate}`, 14, 34);
+    doc.text(`Date Range: ${startDate} to ${endDate}`, 14, 34);
     doc.text(`Generated At: ${new Date().toLocaleString()}`, 14, 40);
 
     // Table headers
@@ -1485,7 +1518,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text(`Worker: ${selectedWorker.name} (${selectedWorker.company})`, 14, 28);
-    doc.text(`Period: ${startDate} to ${endDate}`, 14, 34);
+    doc.text(`Date Range: ${startDate} to ${endDate}`, 14, 34);
     doc.text(`Generated At: ${new Date().toLocaleString()}`, 14, 40);
     
     // Summary Cards
@@ -1767,7 +1800,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         datePreset === 'last-month' ? `Last Month Deduction: ₹${totalProfit.toFixed(2)}` : 
                         datePreset === 'this-year' ? `This Year Deduction: ₹${totalProfit.toFixed(2)}` : 
                         datePreset === 'last-7' ? `7 Days Deduction: ₹${totalProfit.toFixed(2)}` : 
-                        `Period Deduction: ₹${totalProfit.toFixed(2)}`, 
+                        `Date Range Deduction: ₹${totalProfit.toFixed(2)}`, 
                   color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20', 
                   section: 'work-earnings' 
                 },
@@ -2538,7 +2571,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       ))}
                       {workerJobs.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="text-center py-8 text-slate-400">No completed jobs found for this period.</td>
+                          <td colSpan={7} className="text-center py-8 text-slate-400">No completed jobs found for this date range.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2634,16 +2667,27 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-150/40 dark:border-slate-800 pb-4">
                   <div>
                     <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest">Travel & Fuel Expenses details</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Lists travel distance records logged by Selected Worker.</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Complete record of travel distance and fuel entries logged for the selected date range.</p>
                   </div>
                   
-                  {/* Local date range summary */}
-                  <div className="flex items-center space-x-2 bg-slate-55 dark:bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-150/40 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                    <Calendar className="h-3.5 w-3.5 text-secondary" />
-                    <span>Period:</span>
-                    <span className="text-slate-800 dark:text-white font-extrabold">
-                      {new Date(startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} - {new Date(endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsTravelModalOpen(true)}
+                      className="px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Log Travel / Fuel Record</span>
+                    </button>
+
+                    {/* Local date range summary */}
+                    <div className="flex items-center space-x-2 bg-slate-55 dark:bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-150/40 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      <Calendar className="h-3.5 w-3.5 text-secondary" />
+                      <span>Date Range:</span>
+                      <span className="text-slate-800 dark:text-white font-extrabold">
+                        {new Date(startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} - {new Date(endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -2656,14 +2700,14 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                         <th className="px-4 py-3">Type</th>
                         <th className="px-4 py-3">From Location</th>
                         <th className="px-4 py-3">To Location</th>
-                        <th className="px-4 py-3">Distance</th>
+                        <th className="px-4 py-3">Distance & Fuel</th>
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {workerTravel.map(log => (
-                        <tr key={log._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
-                          {editingLog && editingLog._id === log._id ? (
+                      {combinedTravelRecords.map((item: any) => (
+                        <tr key={item._id} className="hover:bg-slate-55/50 dark:hover:bg-slate-900/30">
+                          {!item.isJob && editingLog && editingLog._id === item._id ? (
                             <>
                               <td className="px-4 py-3.5">
                                 <input
@@ -2676,8 +2720,8 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                               </td>
                               {selectedWorker._id === 'all' && (
                                 <td className="px-4 py-3.5">
-                                  <span className="block text-slate-800 dark:text-white font-extrabold">{log.workerId?.name || 'Unassigned'}</span>
-                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{log.workerId?.company || 'N/A'}</span>
+                                  <span className="block text-slate-800 dark:text-white font-extrabold">{item.raw.workerId?.name || 'Unassigned'}</span>
+                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{item.raw.workerId?.company || 'N/A'}</span>
                                 </td>
                               )}
                               <td className="px-4 py-3.5">
@@ -2748,50 +2792,56 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                             </>
                           ) : (
                             <>
-                              <td className="px-4 py-3.5">{log.date}</td>
+                              <td className="px-4 py-3.5">{item.date}</td>
                               {selectedWorker._id === 'all' && (
                                 <td className="px-4 py-3.5">
-                                  <span className="block text-slate-800 dark:text-white font-extrabold">{log.workerId?.name || 'Unassigned'}</span>
-                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{log.workerId?.company || 'N/A'}</span>
+                                  <span className="block text-slate-800 dark:text-white font-extrabold">{item.raw.workerId?.name || 'Unassigned'}</span>
+                                  <span className="text-[9px] text-slate-400 uppercase tracking-wider">{item.raw.workerId?.company || 'N/A'}</span>
                                 </td>
                               )}
                               <td className="px-4 py-3.5">
                                 <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                                  log.type === 'job' 
+                                  item.isJob
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                                    : item.type === 'job' 
                                     ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400' 
                                     : 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
                                 }`}>
-                                  {log.type === 'job' ? 'Commute to Job' : 'Return Home'}
+                                  {item.typeLabel}
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5">{log.fromLocation || 'Last Work Site'}</td>
-                              <td className="px-4 py-3.5">{log.toLocation || 'Target/Home'}</td>
-                              <td className="px-4 py-3.5">{Number(log.kms || 0).toFixed(2)} KM (₹{Number(log.allowance || 0).toFixed(2)})</td>
+                              <td className="px-4 py-3.5">{item.fromLocation}</td>
+                              <td className="px-4 py-3.5">{item.toLocation}</td>
+                              <td className="px-4 py-3.5">{item.kms.toFixed(2)} KM (₹{item.allowance.toFixed(2)})</td>
                               <td className="px-4 py-3.5 text-right">
-                                <div className="flex justify-end items-center space-x-2">
-                                  <button
-                                    onClick={() => setEditingLog({ ...log })}
-                                    className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-605 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                    <span className="text-[9px] uppercase font-bold">Edit</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteTravelLog(log._id)}
-                                    className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                    <span className="text-[9px] uppercase font-bold">Delete</span>
-                                  </button>
-                                </div>
+                                {!item.isJob ? (
+                                  <div className="flex justify-end items-center space-x-2">
+                                    <button
+                                      onClick={() => setEditingLog({ ...item.raw })}
+                                      className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-605 dark:bg-slate-800 dark:hover:bg-slate-700 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                      <span className="text-[9px] uppercase font-bold">Edit</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteTravelLog(item.raw._id)}
+                                      className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                      <span className="text-[9px] uppercase font-bold">Delete</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[9px] uppercase font-bold text-slate-400 italic">Job Record</span>
+                                )}
                               </td>
                             </>
                           )}
                         </tr>
                       ))}
-                      {workerTravel.length === 0 && (
+                      {combinedTravelRecords.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="text-center py-8 text-slate-400">No manual travel logs logged for this period.</td>
+                          <td colSpan={7} className="text-center py-8 text-slate-400">No travel or fuel records submitted for this date range.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2839,7 +2889,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       {workerCommissions.length === 0 ? (
                         <tr>
                           <td colSpan={10} className="text-center py-8 text-slate-400">
-                            No commissions logged for this selection/period.
+                            No commissions logged for this selection/date range.
                           </td>
                         </tr>
                       ) : (
@@ -3423,7 +3473,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                   <span className="text-slate-800 dark:text-white font-extrabold text-[10px] truncate block">{selectedWorker._id}</span>
                 </div>
                 <div>
-                  <span className="text-[8px] uppercase text-slate-400 block tracking-wider">Date Period</span>
+                  <span className="text-[8px] uppercase text-slate-400 block tracking-wider">Date Range</span>
                   <span className="text-slate-800 dark:text-white font-extrabold">{startDate} to {endDate}</span>
                 </div>
                 <div>
@@ -3745,7 +3795,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                       const isRev = item.category?.includes('REVENUE');
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                          <td className="px-4 py-3 text-slate-400">{item.date || 'Period Metric'}</td>
+                          <td className="px-4 py-3 text-slate-400">{item.date || 'Date Range Metric'}</td>
                           <td className="px-4 py-3">
                             <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
                               isRev 
