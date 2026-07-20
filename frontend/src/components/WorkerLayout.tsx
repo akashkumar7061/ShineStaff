@@ -46,13 +46,17 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
   const [activeQR, setActiveQR] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  const fetchWorkerQR = () => {
     if (user?.company) {
       api.get(`/qr/company/${user.company}`)
         .then(res => setActiveQR(res.data))
         .catch(err => console.error('Failed to fetch company QR:', err));
     }
-  }, [user]);
+  };
+
+  useEffect(() => {
+    fetchWorkerQR();
+  }, [user, qrModalOpen]);
 
   if (!user) return null;
 

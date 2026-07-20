@@ -72,20 +72,20 @@ export const getQRCodes = async (req: AuthRequest, res: Response) => {
 export const getCompanyActiveQR = async (req: AuthRequest, res: Response) => {
   const { company } = req.params;
   try {
-    // 1. Try to find active QR specifically mapped to this company
-    let qr = await QRCode.findOne({
-      company: { $regex: new RegExp(`^${company}$`, 'i') },
-      isActive: true
-    });
+    // 1. Primary priority: Return the QR that Admin explicitly marked as Default Primary (isDefault: true)
+    let qr = await QRCode.findOne({ isDefault: true, isActive: true });
 
-    // 2. Fallback to active QR mapped to 'All' or 'ShineStaff'
-    if (!qr) {
-      qr = await QRCode.findOne({ company: 'All', isActive: true });
+    // 2. Fallback: If no default primary QR is set, check company-specific active QR
+    if (!qr && company && company !== 'undefined') {
+      qr = await QRCode.findOne({
+        company: { $regex: new RegExp(`^${company}$`, 'i') },
+        isActive: true
+      });
     }
 
-    // 3. Fallback to Default active QR
+    // 3. Fallback to active QR mapped to 'All'
     if (!qr) {
-      qr = await QRCode.findOne({ isDefault: true, isActive: true });
+      qr = await QRCode.findOne({ company: 'All', isActive: true });
     }
 
     // 4. Fallback to any active QR
@@ -94,7 +94,7 @@ export const getCompanyActiveQR = async (req: AuthRequest, res: Response) => {
     }
 
     if (!qr) {
-      return res.status(404).json({ message: 'No active QR Code found for this company.' });
+      return res.status(404).json({ message: 'No active QR Code found.' });
     }
 
     res.json(qr);
