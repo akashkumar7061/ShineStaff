@@ -35,6 +35,7 @@ import AdminOvertime from './pages/AdminOvertime';
 import AdminOperationsHUD from './pages/AdminOperationsHUD';
 
 import AdminTravelExpenses from './pages/AdminTravelExpenses';
+import AdminPaymentCollection from './pages/AdminPaymentCollection';
 
 const queryClient = new QueryClient();
 
@@ -554,6 +555,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
                       <AdminTravelExpenses companyFilter="All" />
+                    </AdminRouteWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/payments"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminRouteWrapper>
+                      <AdminPaymentCollection />
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }

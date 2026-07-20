@@ -31,6 +31,9 @@ import biRoutes from './routes/biRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import commissionRoutes from './routes/commissionRoutes';
 import draftRoutes from './routes/draftRoutes';
+import qrRoutes from './routes/qrRoutes';
+import paymentRoutes from './routes/paymentRoutes';
+import QRCode from './models/QRCode';
 
 dotenv.config();
 
@@ -120,11 +123,65 @@ app.use('/api/bi', biRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/commissions', commissionRoutes);
 app.use('/api/drafts', draftRoutes);
+app.use('/api/qr', qrRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Base route
 app.get('/', (req, res) => {
   res.send('ShineStaff API Service is Running');
 });
+
+// Seed default QR codes if empty
+const seedDefaultQRCodes = async () => {
+  try {
+    const qrCount = await QRCode.countDocuments();
+    if (qrCount === 0) {
+      console.log('No QR codes found. Seeding default company QR codes...');
+
+      // Mock SVG Data URI for PNB QR
+      const mockPnbQRImage = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="%23ffffff"/><rect x="20" y="20" width="260" height="260" fill="none" stroke="%23a00000" stroke-width="4" rx="16"/><text x="150" y="55" font-family="sans-serif" font-weight="900" font-size="18" fill="%23a00000" text-anchor="middle">PNB UPI PAYMENT</text><text x="150" y="80" font-family="sans-serif" font-size="11" fill="%23666666" text-anchor="middle">Scan and Pay using any UPI app</text><rect x="60" y="100" width="180" height="180" fill="%23000000"/><rect x="70" y="110" width="160" height="160" fill="%23ffffff"/><rect x="80" y="120" width="50" height="50" fill="%23000000"/><rect x="90" y="130" width="30" height="30" fill="%23ffffff"/><rect x="100" y="140" width="10" height="10" fill="%23000000"/><rect x="170" y="120" width="50" height="50" fill="%23000000"/><rect x="180" y="130" width="30" height="30" fill="%23ffffff"/><rect x="190" y="140" width="10" height="10" fill="%23000000"/><rect x="80" y="200" width="50" height="50" fill="%23000000"/><rect x="90" y="210" width="30" height="30" fill="%23ffffff"/><rect x="100" y="220" width="10" height="10" fill="%23000000"/><circle cx="150" cy="190" r="18" fill="%23a00000"/><text x="150" y="195" font-family="sans-serif" font-weight="bold" font-size="13" fill="%23ffffff" text-anchor="middle">PNB</text><text x="150" y="280" font-family="sans-serif" font-weight="bold" font-size="11" fill="%23333333" text-anchor="middle">UPI ID: 8810319452@pnb</text></svg>`;
+
+      await QRCode.create([
+        {
+          name: 'SofaShine PNB QR',
+          company: 'SofaShine',
+          accountHolder: 'ADITYA RAY',
+          upiId: '8810319452@pnb',
+          bankName: 'Punjab National Bank (PNB)',
+          qrImage: mockPnbQRImage,
+          description: 'Official SofaShine Collection QR Code',
+          isActive: true,
+          isDefault: true
+        },
+        {
+          name: 'CleanCruisers QR',
+          company: 'CleanCruisers',
+          accountHolder: 'ADITYA RAY',
+          upiId: '8810319452@pnb',
+          bankName: 'Punjab National Bank (PNB)',
+          qrImage: mockPnbQRImage,
+          description: 'Official CleanCruisers Collection QR Code',
+          isActive: true,
+          isDefault: false
+        },
+        {
+          name: 'ShineStaff Central QR',
+          company: 'ShineStaff',
+          accountHolder: 'ADITYA RAY',
+          upiId: '8810319452@pnb',
+          bankName: 'Punjab National Bank (PNB)',
+          qrImage: mockPnbQRImage,
+          description: 'Central Corporate QR Code',
+          isActive: true,
+          isDefault: false
+        }
+      ]);
+      console.log('Default QR codes seeded successfully!');
+    }
+  } catch (error) {
+    console.error('Failed to seed default QR codes:', error);
+  }
+};
 
 // Seed admin database if empty
 const seedAdmin = async () => {
@@ -207,6 +264,7 @@ const clearAllDistancesAndLogsEver = async () => {
 const startServer = async () => {
   await connectDB();
   await seedAdmin();
+  await seedDefaultQRCodes();
   await backfillTravelLogs();
   await clearAllDistancesAndLogsEver();
 

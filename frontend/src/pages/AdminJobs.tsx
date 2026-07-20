@@ -776,6 +776,29 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
         setSelectedJobForDrawer(res.data);
       }
+      if (paymentStatus === 'received' && selectedJobForDrawer) {
+        const j = selectedJobForDrawer;
+        let qrData: any = null;
+        if (paymentMode === 'upi_online' && j.company) {
+          const qrRes = await api.get(`/qr/company/${j.company}`).catch(() => ({ data: null }));
+          qrData = qrRes.data;
+        }
+        await api.post('/payments/record', {
+          jobId: j._id,
+          invoiceNumber: j.visitId || `INV-${j._id.slice(-6)}`,
+          workerId: j.workerId?._id || j.workerId,
+          workerName: j.workerId?.name || 'Assigned Staff',
+          clientName: j.clientName,
+          clientPhone: j.clientPhone,
+          company: j.company,
+          amount: j.price || 0,
+          paymentMethod: paymentMode === 'cash' ? 'cash' : 'upi_online',
+          qrId: qrData?._id,
+          qrName: qrData?.name,
+          upiId: qrData?.upiId,
+          collectedBy: 'Admin'
+        }).catch(e => console.error('Auto payment record error:', e));
+      }
       fetchJobsAndWorkers();
     } catch (err) {
       alert('Failed to update payment details');
@@ -805,6 +828,31 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         paymentStatus: adminCompletePaymentStatus,
         paymentMode: adminCompletePaymentMode
       });
+
+      if (adminCompletePaymentStatus === 'received' && adminCompleteJobData) {
+        const j = adminCompleteJobData;
+        let qrData: any = null;
+        if (adminCompletePaymentMode === 'upi_online' && j.company) {
+          const qrRes = await api.get(`/qr/company/${j.company}`).catch(() => ({ data: null }));
+          qrData = qrRes.data;
+        }
+        await api.post('/payments/record', {
+          jobId: j._id,
+          invoiceNumber: j.visitId || `INV-${j._id.slice(-6)}`,
+          workerId: j.workerId?._id || j.workerId,
+          workerName: j.workerId?.name || 'Assigned Staff',
+          clientName: j.clientName,
+          clientPhone: j.clientPhone,
+          company: j.company,
+          amount: j.price || 0,
+          paymentMethod: adminCompletePaymentMode === 'cash' ? 'cash' : 'upi_online',
+          qrId: qrData?._id,
+          qrName: qrData?.name,
+          upiId: qrData?.upiId,
+          collectedBy: 'Admin'
+        }).catch(e => console.error('Auto payment record error:', e));
+      }
+
       alert('Job successfully marked completed by Admin.');
       setAdminCompleteModalOpen(false);
       if (selectedJobForDrawer && selectedJobForDrawer._id === adminCompleteJobData._id) {
