@@ -244,6 +244,11 @@ export const adminSubmitTravelLog = async (req: AuthRequest, res: Response) => {
 export const deleteTravelLog = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
+  // Ensure ONLY Admin role can delete travel commute records
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Only system Administrators can delete travel commute records.' });
+  }
+
   try {
     const log = await TravelLog.findById(id);
     if (!log) {

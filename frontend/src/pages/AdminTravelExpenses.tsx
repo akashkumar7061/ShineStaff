@@ -109,6 +109,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
   const [editingJob, setEditingJob] = useState<any>(null);
   const [editingLog, setEditingLog] = useState<any>(null);
   const [isTravelModalOpen, setIsTravelModalOpen] = useState<boolean>(false);
+  const [deleteConfirmLog, setDeleteConfirmLog] = useState<{ visible: boolean; id: string; details: string } | null>(null);
   
   // Commission Management States
   const [commissions, setCommissions] = useState<any[]>([]);
@@ -974,15 +975,20 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
     }
   };
 
-  const handleDeleteTravelLog = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this travel log?')) return;
+  const handleDeleteTravelLog = (id: string, details?: string) => {
+    setDeleteConfirmLog({ visible: true, id, details: details || 'Travel Commute Record' });
+  };
+
+  const confirmDeleteTravelLog = async () => {
+    if (!deleteConfirmLog?.id) return;
     try {
-      await api.delete(`/travel/${id}`);
-      alert('Travel log deleted successfully!');
+      await api.delete(`/travel/${deleteConfirmLog.id}`);
+      setDeleteConfirmLog(null);
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete travel log:', err);
-      alert('Failed to delete travel log.');
+      alert(err.response?.data?.message || 'Failed to delete travel log. Only system Administrators are authorized.');
+      setDeleteConfirmLog(null);
     }
   };
 
@@ -2846,7 +2852,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                                       <span className="text-[9px] uppercase font-bold">Edit</span>
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteTravelLog(item.raw._id)}
+                                      onClick={() => handleDeleteTravelLog(item.raw._id, `${item.date} - ${item.fromLocation} to ${item.toLocation} (${item.kms} KM)`)}
                                       className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 rounded cursor-pointer transition-all inline-flex items-center space-x-1"
                                     >
                                       <Trash2 className="h-3 w-3" />
@@ -4263,6 +4269,52 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Admin Confirmation Modal for Deleting Travel Commute Logs */}
+      {deleteConfirmLog && deleteConfirmLog.visible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setDeleteConfirmLog(null)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+          />
+          <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-md overflow-hidden animate-fade-in text-left p-6 space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-rose-100 dark:bg-rose-950/40 text-rose-600 rounded-2xl">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white tracking-wider">Confirm Admin Deletion</h3>
+                <p className="text-[11px] text-slate-400 font-bold mt-0.5">Only System Administrators can delete records</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Are you sure you want to permanently delete this travel log?
+              <div className="mt-2 font-bold text-rose-600 dark:text-rose-400">
+                {deleteConfirmLog.details}
+              </div>
+              <p className="mt-2 text-[10px] text-slate-400">This record will be permanently deleted from database and cannot be recovered.</p>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmLog(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteTravelLog}
+                className="px-5 py-2 text-xs font-black rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-all cursor-pointer flex items-center space-x-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Confirm Admin Delete</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
