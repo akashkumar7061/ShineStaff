@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
-import { ORIGINAL_PNB_QR_IMAGE } from '../utils/defaultQRImage';
 import {
   Menu,
   X,

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { ORIGINAL_PNB_QR_IMAGE } from '../utils/defaultQRImage';
 import CameraCapture from '../components/CameraCapture';
 import GPSAddress from '../components/GPSAddress';
 import {

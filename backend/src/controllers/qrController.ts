@@ -70,31 +70,12 @@ export const getQRCodes = async (req: AuthRequest, res: Response) => {
 
 // 4. Get Active Mapped QR Code for Worker Payment Screen by Company
 export const getCompanyActiveQR = async (req: AuthRequest, res: Response) => {
-  const { company } = req.params;
   try {
-    // 1. Primary priority: Return the QR that Admin explicitly marked as Default Primary (isDefault: true)
-    let qr = await QRCode.findOne({ isDefault: true, isActive: true });
-
-    // 2. Fallback: If no default primary QR is set, check company-specific active QR
-    if (!qr && company && company !== 'undefined') {
-      qr = await QRCode.findOne({
-        company: { $regex: new RegExp(`^${company}$`, 'i') },
-        isActive: true
-      });
-    }
-
-    // 3. Fallback to active QR mapped to 'All'
-    if (!qr) {
-      qr = await QRCode.findOne({ company: 'All', isActive: true });
-    }
-
-    // 4. Fallback to any active QR
-    if (!qr) {
-      qr = await QRCode.findOne({ isActive: true });
-    }
+    // Return ONLY the active QR code that Admin explicitly set as Default/Primary (isDefault: true)
+    const qr = await QRCode.findOne({ isDefault: true, isActive: true });
 
     if (!qr) {
-      return res.status(404).json({ message: 'No active QR Code found.' });
+      return res.status(404).json({ message: 'No default active QR Code configured by Admin.' });
     }
 
     res.json(qr);
