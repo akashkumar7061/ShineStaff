@@ -19,7 +19,9 @@ import {
   X,
   Search,
   Calendar,
-  Phone
+  Phone,
+  QrCode,
+  Copy
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -40,6 +42,7 @@ const getTomorrowString = () => {
 };
 
 const WorkerJobs: React.FC = () => {
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'accepted' | 'started' | 'completed'>('all');
@@ -59,9 +62,24 @@ const WorkerJobs: React.FC = () => {
   const [tempKms, setTempKms] = useState('');
   const [tempNotes, setTempNotes] = useState('');
   const [tempPaymentMode, setTempPaymentMode] = useState<'cash' | 'upi_online' | 'not_selected'>('not_selected');
+  const [mappedQR, setMappedQR] = useState<any>(null);
+  const [loadingQR, setLoadingQR] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [filterDate, setFilterDate] = useState(getTodayString());
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Auto-fetch mapped company QR code whenever UPI/Online is selected
+  useEffect(() => {
+    if (tempPaymentMode === 'upi_online' && selectedJob?.company) {
+      setLoadingQR(true);
+      api.get(`/qr/company/${selectedJob.company}`)
+        .then(res => setMappedQR(res.data))
+        .catch(err => console.error('Failed to fetch company QR:', err))
+        .finally(() => setLoadingQR(false));
+    } else {
+      setMappedQR(null);
+    }
+  }, [tempPaymentMode, selectedJob]);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -207,6 +225,25 @@ const WorkerJobs: React.FC = () => {
           workerNotes: tempNotes,
           paymentMode: tempPaymentMode
         });
+
+        if ((tempPaymentMode as string) !== 'not_selected') {
+          await api.post('/payments/record', {
+            jobId: selectedJob._id,
+            invoiceNumber: selectedJob.visitId || `INV-${selectedJob._id.slice(-6)}`,
+            workerId: selectedJob.workerId?._id || selectedJob.workerId,
+            workerName: user?.name || 'Worker',
+            clientName: selectedJob.clientName,
+            clientPhone: selectedJob.clientPhone,
+            company: selectedJob.company,
+            amount: selectedJob.price || 0,
+            paymentMethod: tempPaymentMode === 'cash' ? 'cash' : 'upi_online',
+            qrId: mappedQR?._id,
+            qrName: mappedQR?.name,
+            upiId: mappedQR?.upiId,
+            collectedBy: 'Worker'
+          }).catch(e => console.error('Worker payment record error:', e));
+        }
+
         alert('Cleanup sheet submitted successfully! Job marked as completed.');
         setSelectedJob(null);
         fetchJobs();
@@ -777,9 +814,66 @@ const WorkerJobs: React.FC = () => {
                     >
                       <option value="not_selected">Select Payment Method...</option>
                       <option value="cash">💵 Cash Payment</option>
-                      <option value="upi_online">📱 UPI / Online Payment</option>
+                      <option value="upi_online">📱 UPI / Online Payment (Scan QR)</option>
                     </select>
                   </div>
+
+                  {/* AUTOMATIC DISPLAY OF MAPPED QR CODE WHEN UPI / ONLINE IS SELECTED */}
+                  {tempPaymentMode === 'upi_online' && (
+                    <div className="p-4 bg-gradient-to-b from-slate-900 to-slate-950 text-white rounded-2xl border-2 border-emerald-500/50 shadow-2xl text-center space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider flex items-center space-x-1">
+                          <QrCode className="h-3.5 w-3.5 inline mr-1" />
+                          <span>{selectedJob.company} Payment QR Code</span>
+                        </span>
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[9px] font-extrabold rounded-full uppercase">
+                          Official Corporate QR
+                        </span>
+                      </div>
+
+                      {loadingQR ? (
+                        <div className="p-6 text-xs text-slate-400 font-bold">Loading company payment QR code...</div>
+                      ) : mappedQR ? (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-white rounded-2xl inline-block border-4 border-emerald-500/30 shadow-inner">
+                            <img src={mappedQR.qrImage} alt={mappedQR.name} className="h-48 w-48 object-contain mx-auto" />
+                          </div>
+
+                          <div className="space-y-1.5 text-xs">
+                            <div className="text-slate-300 font-medium">Account Holder: <span className="font-extrabold text-white">{mappedQR.accountHolder}</span></div>
+                            <div className="flex items-center justify-center space-x-2 bg-slate-800/80 py-1.5 px-3 rounded-xl max-w-xs mx-auto border border-slate-700">
+                              <span className="font-mono text-emerald-400 font-extrabold text-xs">{mappedQR.upiId}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(mappedQR.upiId);
+                                  alert('UPI ID copied to clipboard!');
+                                }}
+                                className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded font-bold hover:bg-emerald-600 cursor-pointer inline-flex items-center space-x-1"
+                              >
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-semibold">{mappedQR.bankName}</div>
+                          </div>
+
+                          {selectedJob.price !== undefined && (
+                            <div className="bg-emerald-500/20 border border-emerald-500/40 p-2.5 rounded-xl text-center shadow-inner">
+                              <span className="block text-[9px] uppercase font-extrabold text-emerald-400 tracking-wider">Amount to Pay</span>
+                              <span className="text-xl font-black text-white">₹{selectedJob.price}</span>
+                            </div>
+                          )}
+
+                          <p className="text-[10px] text-slate-300 font-semibold leading-tight pt-1 bg-slate-800/50 p-2 rounded-xl border border-slate-800">
+                            📲 Ask customer to scan this QR code with Google Pay, PhonePe, or Paytm app to pay ₹{selectedJob.price}.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-4 text-xs text-rose-400 font-bold">No active QR code configured for {selectedJob.company}. Contact Admin.</div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Remarks input */}
                   <div>
