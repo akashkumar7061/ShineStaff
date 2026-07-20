@@ -834,11 +834,11 @@ const WorkerJobs: React.FC = () => {
 
                       {loadingQR ? (
                         <div className="p-6 text-xs text-slate-400 font-bold">Loading company payment QR code...</div>
-                      ) : mappedQR ? (
+                      ) : mappedQR && mappedQR.qrImage ? (
                         <div className="space-y-3">
                           <div className="p-3 bg-white rounded-2xl inline-block border-4 border-emerald-500/30 shadow-inner">
                             <img
-                              src={mappedQR.qrImage && !mappedQR.qrImage.includes('svg+xml') ? mappedQR.qrImage : ORIGINAL_PNB_QR_IMAGE}
+                              src={mappedQR.qrImage}
                               alt={mappedQR.name}
                               className="h-56 w-56 object-contain mx-auto"
                             />

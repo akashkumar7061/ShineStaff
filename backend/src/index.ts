@@ -266,7 +266,7 @@ const clearAllDistancesAndLogsEver = async () => {
 const startServer = async () => {
   await connectDB();
   await seedAdmin();
-  await seedDefaultQRCodes();
+  // await seedDefaultQRCodes();
   await backfillTravelLogs();
   await clearAllDistancesAndLogsEver();
 

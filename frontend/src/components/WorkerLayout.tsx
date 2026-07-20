@@ -216,47 +216,61 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
               <X className="h-5 w-5" />
             </button>
 
-            <div className="border-b border-slate-800 pb-3">
-              <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">
-                ⭐ Primary Payment QR Code
-              </span>
-              <h3 className="text-base font-bold text-white mt-0.5">{user.company} Official QR</h3>
-            </div>
+            {activeQR && activeQR.qrImage ? (
+              <>
+                <div className="border-b border-slate-800 pb-3">
+                  <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">
+                    ⭐ Primary Payment QR Code
+                  </span>
+                  <h3 className="text-base font-bold text-white mt-0.5">{user.company} Official QR</h3>
+                </div>
 
-            <div className="p-3 bg-white rounded-2xl inline-block border-4 border-emerald-500/30 shadow-inner">
-              <img
-                src={activeQR?.qrImage && !activeQR.qrImage.includes('svg+xml') ? activeQR.qrImage : ORIGINAL_PNB_QR_IMAGE}
-                alt={activeQR?.name || 'Payment QR'}
-                className="h-52 w-52 object-contain mx-auto"
-              />
-            </div>
+                <div className="p-3 bg-white rounded-2xl inline-block border-4 border-emerald-500/30 shadow-inner">
+                  <img
+                    src={activeQR.qrImage}
+                    alt={activeQR.name || 'Payment QR'}
+                    className="h-52 w-52 object-contain mx-auto"
+                  />
+                </div>
 
-            <div className="space-y-1.5 text-xs">
-              <div className="text-slate-300 font-medium">Account Holder: <span className="font-extrabold text-white">{activeQR?.accountHolder || 'ADITYA RAY'}</span></div>
-              
-              <div className="flex items-center justify-center space-x-2 bg-slate-800/80 py-2 px-3 rounded-xl max-w-xs mx-auto border border-slate-700">
-                <span className="font-mono text-emerald-400 font-extrabold text-xs">{activeQR?.upiId || '8810319452@pnb'}</span>
-                <button
-                  type="button"
-                  onClick={() => handleCopyUPI(activeQR?.upiId || '8810319452@pnb')}
-                  className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded font-bold hover:bg-emerald-600 cursor-pointer inline-flex items-center space-x-1"
-                >
-                  {copied ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                  <span>{copied ? 'Copied' : 'Copy'}</span>
-                </button>
+                <div className="space-y-1.5 text-xs">
+                  <div className="text-slate-300 font-medium">Account Holder: <span className="font-extrabold text-white">{activeQR.accountHolder}</span></div>
+                  
+                  <div className="flex items-center justify-center space-x-2 bg-slate-800/80 py-2 px-3 rounded-xl max-w-xs mx-auto border border-slate-700">
+                    <span className="font-mono text-emerald-400 font-extrabold text-xs">{activeQR.upiId}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyUPI(activeQR.upiId)}
+                      className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded font-bold hover:bg-emerald-600 cursor-pointer inline-flex items-center space-x-1"
+                    >
+                      {copied ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      <span>{copied ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+
+                  <div className="text-[10px] text-slate-400 font-semibold">{activeQR.bankName || 'Punjab National Bank (PNB)'}</div>
+                </div>
+
+                <p className="text-[10px] text-slate-300 font-medium leading-tight bg-slate-800/50 p-2.5 rounded-xl border border-slate-800">
+                  📲 Customer ko Google Pay, PhonePe, Paytm ya BHIM app se scan karke payment karne bole.
+                </p>
+              </>
+            ) : (
+              <div className="py-8 space-y-4">
+                <div className="mx-auto w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                  <QrCode className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-bold text-white">No Active QR Configured</h3>
+                <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                  Admin has not set up any default primary QR Code yet. Please contact Admin to configure one.
+                </p>
               </div>
-
-              <div className="text-[10px] text-slate-400 font-semibold">{activeQR?.bankName || 'Punjab National Bank (PNB)'}</div>
-            </div>
-
-            <p className="text-[10px] text-slate-300 font-medium leading-tight bg-slate-800/50 p-2.5 rounded-xl border border-slate-800">
-              📲 Customer ko Google Pay, PhonePe, Paytm ya BHIM app se scan karke payment karne bole.
-            </p>
+            )}
 
             <button
               type="button"
               onClick={() => setQrModalOpen(false)}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs shadow transition-all active:scale-95"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs shadow transition-all active:scale-95 cursor-pointer"
             >
               Close QR Screen
             </button>

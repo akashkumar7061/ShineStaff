@@ -29,13 +29,11 @@ const WorkerQR: React.FC = () => {
       if (res.data) {
         setActiveQR(res.data);
       } else {
-        // Fallback fetch default primary QR
-        const allRes = await api.get('/qr');
-        const defaultQR = allRes.data.find((q: any) => q.isDefault && q.isActive) || allRes.data[0];
-        setActiveQR(defaultQR || null);
+        setActiveQR(null);
       }
     } catch (err) {
       console.error('Failed to fetch default QR:', err);
+      setActiveQR(null);
     } finally {
       setLoading(false);
     }
@@ -96,11 +94,17 @@ const WorkerQR: React.FC = () => {
             </span>
 
             <div className="p-4 bg-white rounded-3xl border-4 border-emerald-500/30 shadow-2xl inline-block">
-              <img
-                src={activeQR.qrImage && !activeQR.qrImage.includes('svg+xml') ? activeQR.qrImage : ORIGINAL_PNB_QR_IMAGE}
-                alt={activeQR.name}
-                className="h-56 w-56 object-contain mx-auto"
-              />
+              {activeQR.qrImage ? (
+                <img
+                  src={activeQR.qrImage}
+                  alt={activeQR.name}
+                  className="h-56 w-56 object-contain mx-auto"
+                />
+              ) : (
+                <div className="h-56 w-56 flex items-center justify-center text-rose-500 font-bold text-xs p-4 bg-slate-50 rounded-2xl">
+                  No QR image uploaded by Admin.
+                </div>
+              )}
             </div>
 
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
