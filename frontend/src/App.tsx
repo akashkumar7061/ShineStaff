@@ -15,6 +15,7 @@ import WorkerAttendance from './pages/WorkerAttendance';
 import WorkerLeaves from './pages/WorkerLeaves';
 import WorkerSalary from './pages/WorkerSalary';
 import WorkerProfile from './pages/WorkerProfile';
+import WorkerQR from './pages/WorkerQR';
 
 import WorkerLayout from './components/WorkerLayout';
 import AdminLayout from './components/AdminLayout';
@@ -492,6 +493,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="worker">
                     <WorkerPortalWrapper>
                       <WorkerProfile />
+                    </WorkerPortalWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/qr"
+                element={
+                  <ProtectedRoute allowedRole="worker">
+                    <WorkerPortalWrapper>
+                      <WorkerQR />
                     </WorkerPortalWrapper>
                   </ProtectedRoute>
                 }

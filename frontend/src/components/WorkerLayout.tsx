@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import api from '../utils/api';
+import { ORIGINAL_PNB_QR_IMAGE } from '../utils/defaultQRImage';
 import {
   Menu,
   X,
@@ -14,7 +16,10 @@ import {
   Calendar,
   ClipboardList,
   User as UserIcon,
-  Sparkles
+  Sparkles,
+  QrCode,
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 
 interface WorkerLayoutProps {
@@ -24,6 +29,7 @@ interface WorkerLayoutProps {
 const menuItems = [
   { name: 'Home Dashboard', path: '/worker', icon: Clock, color: 'text-secondary' },
   { name: 'Cleanups', path: '/worker/jobs', icon: Compass, color: 'text-amber-500' },
+  { name: 'Payment QR Code', path: '/worker/qr', icon: QrCode, color: 'text-emerald-500' },
   { name: 'Leave Tracker', path: '/worker/leaves', icon: ClipboardList, color: 'text-rose-500' },
   { name: 'Salary & Payouts', path: '/worker/salary', icon: DollarSign, color: 'text-emerald-500' },
   { name: 'My Attendance', path: '/worker/attendance', icon: Calendar, color: 'text-teal-500' },
@@ -36,12 +42,29 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [activeQR, setActiveQR] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (user?.company) {
+      api.get(`/qr/company/${user.company}`)
+        .then(res => setActiveQR(res.data))
+        .catch(err => console.error('Failed to fetch company QR:', err));
+    }
+  }, [user]);
 
   if (!user) return null;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleCopyUPI = (upiId: string) => {
+    navigator.clipboard.writeText(upiId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -66,6 +89,17 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* TOP RIGHT PAYMENT QR CODE BUTTON */}
+          <button
+            type="button"
+            onClick={() => setQrModalOpen(true)}
+            className="flex items-center space-x-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1.5 text-xs font-black text-white shadow-md hover:scale-105 transition-all cursor-pointer active:scale-95"
+            title="Open Payment Collection QR"
+          >
+            <QrCode className="h-4 w-4" />
+            <span className="hidden xs:inline">Payment QR</span>
+          </button>
+
           <button
             onClick={toggleTheme}
             className="rounded-full p-2 text-slate-505 hover:bg-slate-105 dark:hover:bg-slate-900 transition-colors"
@@ -81,7 +115,7 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
             <LogOut className="h-4.5 w-4.5" />
           </button>
 
-          <div className="rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
+          <div className="hidden sm:block rounded-full bg-gradient-to-r from-secondary to-blue-500 px-3 py-1 text-xs font-bold text-white shadow-sm uppercase tracking-wider">
             {user.company}
           </div>
         </div>
@@ -164,6 +198,69 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
       <div className="relative z-10 transition-all duration-300 px-4 sm:px-6">
         {children}
       </div>
+
+      {/* QUICK HEADER PAYMENT QR MODAL */}
+      {qrModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-sm bg-gradient-to-b from-slate-900 to-slate-950 text-white rounded-3xl p-6 shadow-2xl border-2 border-emerald-500/50 text-center space-y-4">
+            
+            <button
+              type="button"
+              onClick={() => setQrModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white rounded-full p-1.5 hover:bg-slate-800 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="border-b border-slate-800 pb-3">
+              <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">
+                ⭐ Primary Payment QR Code
+              </span>
+              <h3 className="text-base font-bold text-white mt-0.5">{user.company} Official QR</h3>
+            </div>
+
+            <div className="p-3 bg-white rounded-2xl inline-block border-4 border-emerald-500/30 shadow-inner">
+              <img
+                src={activeQR?.qrImage && !activeQR.qrImage.includes('svg+xml') ? activeQR.qrImage : ORIGINAL_PNB_QR_IMAGE}
+                alt={activeQR?.name || 'Payment QR'}
+                className="h-52 w-52 object-contain mx-auto"
+              />
+            </div>
+
+            <div className="space-y-1.5 text-xs">
+              <div className="text-slate-300 font-medium">Account Holder: <span className="font-extrabold text-white">{activeQR?.accountHolder || 'ADITYA RAY'}</span></div>
+              
+              <div className="flex items-center justify-center space-x-2 bg-slate-800/80 py-2 px-3 rounded-xl max-w-xs mx-auto border border-slate-700">
+                <span className="font-mono text-emerald-400 font-extrabold text-xs">{activeQR?.upiId || '8810319452@pnb'}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyUPI(activeQR?.upiId || '8810319452@pnb')}
+                  className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded font-bold hover:bg-emerald-600 cursor-pointer inline-flex items-center space-x-1"
+                >
+                  {copied ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+
+              <div className="text-[10px] text-slate-400 font-semibold">{activeQR?.bankName || 'Punjab National Bank (PNB)'}</div>
+            </div>
+
+            <p className="text-[10px] text-slate-300 font-medium leading-tight bg-slate-800/50 p-2.5 rounded-xl border border-slate-800">
+              📲 Customer ko Google Pay, PhonePe, Paytm ya BHIM app se scan karke payment karne bole.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setQrModalOpen(false)}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs shadow transition-all active:scale-95"
+            >
+              Close QR Screen
+            </button>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
