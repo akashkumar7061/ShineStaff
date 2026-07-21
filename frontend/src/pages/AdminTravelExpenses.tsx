@@ -63,6 +63,10 @@ const getPastDateString = (daysAgo: number) => {
   d.setDate(d.getDate() - daysAgo);
   return d.toISOString().split('T')[0];
 };
+const getFirstDayOfMonthString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+};
 
 const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter }) => {
   const [loading, setLoading] = useState(true);
@@ -79,7 +83,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
 
   // Date Filters
   const [datePreset, setDatePreset] = useState<string>('this-month');
-  const [startDate, setStartDate] = useState(getPastDateString(30));
+  const [startDate, setStartDate] = useState(getFirstDayOfMonthString());
   const [endDate, setEndDate] = useState(getTodayString());
 
   // Active Tab/Section State

@@ -268,7 +268,7 @@ const startServer = async () => {
   await seedAdmin();
   // await seedDefaultQRCodes();
   await backfillTravelLogs();
-  await clearAllDistancesAndLogsEver();
+  // await clearAllDistancesAndLogsEver();
 
   // Start delayed job notification scheduler
   setInterval(async () => {
