@@ -33,6 +33,9 @@ import commissionRoutes from './routes/commissionRoutes';
 import draftRoutes from './routes/draftRoutes';
 import qrRoutes from './routes/qrRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import whatsappRoutes from './routes/whatsappRoutes';
+import { backfillCustomerContacts } from './utils/whatsappHelper';
+import { runScheduledTasks, simulateWhatsAppStatusUpdates } from './utils/whatsappScheduler';
 import QRCode from './models/QRCode';
 
 dotenv.config();
@@ -125,6 +128,7 @@ app.use('/api/commissions', commissionRoutes);
 app.use('/api/drafts', draftRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Base route
 app.get('/', (req, res) => {
@@ -268,7 +272,18 @@ const startServer = async () => {
   await seedAdmin();
   // await seedDefaultQRCodes();
   await backfillTravelLogs();
+  await backfillCustomerContacts();
   // await clearAllDistancesAndLogsEver();
+
+  // Start WhatsApp Scheduler (Runs every 30 seconds for real-time updates and interactive testing)
+  setInterval(async () => {
+    try {
+      await runScheduledTasks();
+      await simulateWhatsAppStatusUpdates();
+    } catch (err) {
+      console.error('Error in WhatsApp scheduler interval:', err);
+    }
+  }, 30 * 1000);
 
   // Start delayed job notification scheduler
   setInterval(async () => {

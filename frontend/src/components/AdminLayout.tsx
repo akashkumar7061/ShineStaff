@@ -23,7 +23,8 @@ import {
   Activity,
   ClipboardList,
   Compass,
-  Wallet
+  Wallet,
+  MessageSquare
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -51,6 +52,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
     { name: 'Worker Management', path: '/admin/workers', icon: Users, color: 'text-indigo-500' },
     { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
+    { name: '📱 WhatsApp & Engagement', path: '/admin/whatsapp-engagement', icon: MessageSquare, color: 'text-emerald-600' },
     { name: 'Payment Collection', path: '/admin/payments', icon: Wallet, color: 'text-emerald-500' },
     { name: 'Payroll & Salary', path: '/admin/salary', icon: DollarSign, color: 'text-teal-500' },
     { name: 'Overtime Charges', path: '/admin/overtime', icon: Clock, color: 'text-amber-500' },

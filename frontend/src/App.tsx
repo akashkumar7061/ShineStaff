@@ -22,6 +22,7 @@ import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminWorkers from './pages/AdminWorkers';
 import AdminJobs from './pages/AdminJobs';
+import AdminWhatsAppEngagement from './pages/AdminWhatsAppEngagement';
 import AdminSalary from './pages/AdminSalary';
 import AdminReports from './pages/AdminReports';
 import AdminSettings from './pages/AdminSettings';
@@ -596,6 +597,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
                       <AdminJobs companyFilter="All" />
+                    </AdminRouteWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/whatsapp-engagement"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminRouteWrapper>
+                      <AdminWhatsAppEngagement />
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }

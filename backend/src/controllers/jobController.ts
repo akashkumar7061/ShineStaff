@@ -7,6 +7,7 @@ import TravelLog from '../models/TravelLog';
 import Commission from '../models/Commission';
 import { uploadToCloudinary } from '../config/cloudinary';
 import { sendWhatsAppAlert } from '../utils/whatsapp';
+import { syncCustomerAndScheduleReminder } from '../utils/whatsappHelper';
 import { sendMail } from '../config/mailer';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
@@ -557,6 +558,9 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
+    // Sync customer and schedule service reminder
+    await syncCustomerAndScheduleReminder(job);
+
     // Create travel log for this completed cleanup job
     try {
       const todayStart = new Date();
@@ -934,6 +938,10 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
+    if (status === 'completed') {
+      await syncCustomerAndScheduleReminder(job);
+    }
+
     logAudit(req, {
       action: 'updated',
       entityType: 'Job',
@@ -1226,6 +1234,9 @@ export const adminCompleteJob = async (req: AuthRequest, res: Response) => {
     });
 
     await job.save();
+
+    // Sync customer and schedule service reminder
+    await syncCustomerAndScheduleReminder(job);
 
     // Log Audit Log
     logAudit(req, {
