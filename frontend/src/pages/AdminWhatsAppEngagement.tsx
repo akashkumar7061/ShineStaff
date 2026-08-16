@@ -742,14 +742,33 @@ const AdminWhatsAppEngagement: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Image URL (Optional):</label>
-                        <input
-                          type="url"
-                          placeholder="e.g. https://images.unsplash.com/photo-1581578731548"
-                          value={campaignImageUrl}
-                          onChange={(e) => setCampaignImageUrl(e.target.value)}
-                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                        />
+                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Image (Optional):</label>
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setCampaignImageUrl(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 outline-none focus:border-secondary dark:text-white"
+                          />
+                          {campaignImageUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setCampaignImageUrl('')}
+                              className="px-2.5 py-2.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-black uppercase cursor-pointer transition-all"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 

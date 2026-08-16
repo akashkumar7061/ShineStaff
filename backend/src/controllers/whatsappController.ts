@@ -8,6 +8,7 @@ import WhatsAppSetting from '../models/WhatsAppSetting';
 import Job from '../models/Job';
 import { sendWhatsAppMessage, backfillCustomerContacts } from '../utils/whatsappHelper';
 import { logAudit } from '../utils/auditLog';
+import { uploadToCloudinary } from '../config/cloudinary';
 import mongoose from 'mongoose';
 
 /**
@@ -360,10 +361,23 @@ export const createCampaign = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Campaign name and message text are mandatory.' });
     }
 
+    let finalImageUrl = '';
+    if (imageUrl) {
+      if (imageUrl.startsWith('data:image/')) {
+        try {
+          finalImageUrl = await uploadToCloudinary(imageUrl, 'whatsapp_campaigns');
+        } catch (uploadErr) {
+          console.error('Failed to upload campaign image to Cloudinary:', uploadErr);
+        }
+      } else {
+        finalImageUrl = imageUrl;
+      }
+    }
+
     const campaign = new WhatsAppCampaign({
       name,
       messageText,
-      imageUrl,
+      imageUrl: finalImageUrl,
       status: scheduleTime ? 'scheduled' : 'sent',
       scheduledTime: scheduleTime ? new Date(scheduleTime) : undefined,
       filtersUsed: { selectedIds, targetFilters }
