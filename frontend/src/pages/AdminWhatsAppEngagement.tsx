@@ -663,7 +663,12 @@ const AdminWhatsAppEngagement: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'history' && filterMessageType === 'All') {
+                    setFilterMessageType('marketing');
+                  }
+                }}
                 className={`flex items-center space-x-2 border-b-2 py-2 px-3 text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
                   active
                     ? 'border-secondary text-secondary'
@@ -1398,16 +1403,6 @@ const AdminWhatsAppEngagement: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <select
-                    value={filterMessageType}
-                    onChange={(e) => setFilterMessageType(e.target.value)}
-                    className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 outline-none focus:border-secondary dark:text-white"
-                  >
-                    <option value="All">All Message Types</option>
-                    <option value="reminder">Reminders Only</option>
-                    <option value="marketing">Marketing Blasts Only</option>
-                  </select>
-
                   <button
                     onClick={() => handleExportCSV('history')}
                     className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
@@ -1416,6 +1411,40 @@ const AdminWhatsAppEngagement: React.FC = () => {
                     <span>Export CSV</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Sub-Tabs: Section Split */}
+              <div className="flex space-x-2 border-b border-slate-100 dark:border-slate-800 pb-0.5">
+                <button
+                  onClick={() => setFilterMessageType('marketing')}
+                  className={`pb-2 px-3 text-xs font-black uppercase tracking-wider transition-all cursor-pointer border-b-2 ${
+                    filterMessageType === 'marketing'
+                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-450'
+                      : 'border-transparent text-slate-400 hover:text-slate-655'
+                  }`}
+                >
+                  📢 Marketing Blasts History
+                </button>
+                <button
+                  onClick={() => setFilterMessageType('reminder')}
+                  className={`pb-2 px-3 text-xs font-black uppercase tracking-wider transition-all cursor-pointer border-b-2 ${
+                    filterMessageType === 'reminder'
+                      ? 'border-amber-500 text-amber-600 dark:text-amber-450'
+                      : 'border-transparent text-slate-400 hover:text-slate-655'
+                  }`}
+                >
+                  🔔 Service Reminders History
+                </button>
+                <button
+                  onClick={() => setFilterMessageType('All')}
+                  className={`pb-2 px-3 text-xs font-black uppercase tracking-wider transition-all cursor-pointer border-b-2 ${
+                    filterMessageType === 'All'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-450'
+                      : 'border-transparent text-slate-400 hover:text-slate-655'
+                  }`}
+                >
+                  All Logs Combined
+                </button>
               </div>
 
               {/* Message Feed Table */}
