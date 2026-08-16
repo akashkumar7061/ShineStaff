@@ -59,6 +59,8 @@ const AdminWhatsAppEngagement: React.FC = () => {
   const [filterInactiveDays, setFilterInactiveDays] = useState('');
   const [filterHasReminder, setFilterHasReminder] = useState('false');
   const [customerPage, setCustomerPage] = useState(1);
+  const [filterRepeatOnly, setFilterRepeatOnly] = useState(false);
+  const [filterMessageType, setFilterMessageType] = useState('All');
 
   // Marketing Campaign Form
   const [campaignName, setCampaignName] = useState('');
@@ -125,6 +127,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
       if (filterMinSpent) params.append('minSpent', filterMinSpent);
       if (filterInactiveDays) params.append('inactiveDays', filterInactiveDays);
       if (filterHasReminder === 'true') params.append('hasReminder', 'true');
+      if (filterRepeatOnly) params.append('repeatOnly', 'true');
       params.append('page', String(customerPage));
       params.append('limit', '50');
 
@@ -157,7 +160,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
     if (activeTab === 'history') {
       fetchHistory();
     }
-  }, [activeTab, searchQuery, filterService, filterCompany, filterLocation, filterMinSpent, filterInactiveDays, filterHasReminder, customerPage]);
+  }, [activeTab, searchQuery, filterService, filterCompany, filterLocation, filterMinSpent, filterInactiveDays, filterHasReminder, filterRepeatOnly, customerPage]);
 
   // Real-time status update simulator check: Refresh logs and reminders stats every 10s
   useEffect(() => {
@@ -265,6 +268,12 @@ const AdminWhatsAppEngagement: React.FC = () => {
       .replace(/{{company_name}}/g, sampleCustomer.company)
       .replace(/{{offer}}/g, offerText);
   }, [campaignMessage, offerText]);
+
+  const filteredHistory = useMemo(() => {
+    if (!history) return [];
+    if (filterMessageType === 'All') return history;
+    return history.filter((msg: any) => msg.messageType === filterMessageType);
+  }, [history, filterMessageType]);
 
   // Create Campaign (Launch or Schedule)
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -390,7 +399,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
       ]);
     } else {
       headers = ['Recipient Name', 'Phone Number', 'Message Type', 'Message Text', 'Sent Date', 'Status'];
-      rows = history.map(h => [
+      rows = filteredHistory.map(h => [
         `"${h.recipientName}"`,
         `"${h.phoneNumber}"`,
         `"${h.messageType}"`,
@@ -454,7 +463,20 @@ const AdminWhatsAppEngagement: React.FC = () => {
       {/* Analytics KPI Row */}
       {analytics && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="glass-card p-4 flex flex-col justify-between shadow-sm">
+          <div 
+            onClick={() => {
+              setActiveTab('contacts');
+              setFilterRepeatOnly(false);
+              setSearchQuery('');
+              setFilterService('');
+              setFilterCompany('All');
+              setFilterLocation('');
+              setFilterMinSpent('');
+              setFilterInactiveDays('');
+              setFilterHasReminder('false');
+            }}
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+          >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Total Customers</span>
             <div className="flex items-baseline space-x-2 mt-2">
               <span className="text-2xl font-black text-slate-800 dark:text-white">{analytics.totalCustomers}</span>
@@ -463,7 +485,13 @@ const AdminWhatsAppEngagement: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="glass-card p-4 flex flex-col justify-between shadow-sm">
+          <div 
+            onClick={() => {
+              setActiveTab('history');
+              setFilterMessageType('reminder');
+            }}
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+          >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Reminders Sent</span>
             <div className="flex items-baseline space-x-2 mt-2">
               <span className="text-2xl font-black text-slate-800 dark:text-white">{analytics.remindersSent}</span>
@@ -472,7 +500,13 @@ const AdminWhatsAppEngagement: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="glass-card p-4 flex flex-col justify-between shadow-sm">
+          <div 
+            onClick={() => {
+              setActiveTab('history');
+              setFilterMessageType('marketing');
+            }}
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+          >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Marketing Blasts</span>
             <div className="flex items-baseline space-x-2 mt-2">
               <span className="text-2xl font-black text-slate-800 dark:text-white">{analytics.marketingSent}</span>
@@ -481,7 +515,20 @@ const AdminWhatsAppEngagement: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="glass-card p-4 flex flex-col justify-between shadow-sm">
+          <div 
+            onClick={() => {
+              setActiveTab('contacts');
+              setFilterRepeatOnly(true);
+              setSearchQuery('');
+              setFilterService('');
+              setFilterCompany('All');
+              setFilterLocation('');
+              setFilterMinSpent('');
+              setFilterInactiveDays('');
+              setFilterHasReminder('false');
+            }}
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+          >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Repeat Bookings</span>
             <div className="flex items-baseline space-x-2 mt-2">
               <span className="text-2xl font-black text-slate-800 dark:text-white">{analytics.repeatBookings}</span>
@@ -490,13 +537,31 @@ const AdminWhatsAppEngagement: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="glass-card p-4 flex flex-col justify-between shadow-sm">
+          <div 
+            onClick={() => {
+              setActiveTab('contacts');
+              setFilterRepeatOnly(true);
+              setSearchQuery('');
+              setFilterService('');
+              setFilterCompany('All');
+              setFilterLocation('');
+              setFilterMinSpent('');
+              setFilterInactiveDays('');
+              setFilterHasReminder('false');
+            }}
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+          >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Repeat Revenue</span>
             <div className="flex items-baseline space-x-2 mt-2">
               <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">₹{analytics.revenueFromRepeat.toLocaleString()}</span>
             </div>
           </div>
-          <div className="glass-card p-4 flex flex-col justify-between shadow-sm">
+          <div 
+            onClick={() => {
+              setActiveTab('reminders');
+            }}
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+          >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Retention & Conv.</span>
             <div className="flex flex-col mt-2">
               <span className="text-xs font-black text-slate-800 dark:text-white">Retention: {analytics.customerRetentionRate}%</span>
@@ -1040,6 +1105,16 @@ const AdminWhatsAppEngagement: React.FC = () => {
                     />
                   </div>
 
+                  <label className="flex items-center space-x-1.5 text-xs font-bold text-slate-500 cursor-pointer bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 shadow-sm">
+                    <input
+                      type="checkbox"
+                      checked={filterRepeatOnly}
+                      onChange={(e) => setFilterRepeatOnly(e.target.checked)}
+                      className="rounded border-slate-205 text-secondary outline-none focus:ring-1 focus:ring-secondary"
+                    />
+                    <span>Repeat Only</span>
+                  </label>
+
                   <button
                     onClick={() => handleExportCSV('customers')}
                     className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
@@ -1128,13 +1203,25 @@ const AdminWhatsAppEngagement: React.FC = () => {
                   <p className="text-[10px] text-slate-400">Full audit log feed of all transactional service alerts and promo campaigns dispatched.</p>
                 </div>
 
-                <button
-                  onClick={() => handleExportCSV('history')}
-                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
-                >
-                  <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-                  <span>Export CSV</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <select
+                    value={filterMessageType}
+                    onChange={(e) => setFilterMessageType(e.target.value)}
+                    className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 outline-none focus:border-secondary dark:text-white"
+                  >
+                    <option value="All">All Message Types</option>
+                    <option value="reminder">Reminders Only</option>
+                    <option value="marketing">Marketing Blasts Only</option>
+                  </select>
+
+                  <button
+                    onClick={() => handleExportCSV('history')}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
               </div>
 
               {/* Message Feed Table */}
@@ -1151,7 +1238,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {history.map((h) => (
+                    {filteredHistory.map((h) => (
                       <tr key={h._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                         <td className="px-4 py-3.5 text-slate-800 dark:text-white font-extrabold">{h.recipientName}</td>
                         <td className="px-4 py-3.5">{h.phoneNumber}</td>

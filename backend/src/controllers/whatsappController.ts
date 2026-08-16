@@ -82,7 +82,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
  */
 export const getCustomers = async (req: AuthRequest, res: Response) => {
   try {
-    const { search, service, company, location, minSpent, inactiveDays, hasReminder, limit = 100, page = 1 } = req.query;
+    const { search, service, company, location, minSpent, inactiveDays, hasReminder, repeatOnly, limit = 100, page = 1 } = req.query;
 
     const query: any = {};
 
@@ -122,7 +122,12 @@ export const getCustomers = async (req: AuthRequest, res: Response) => {
       query.lastServiceDate = { $lte: cutOff };
     }
 
-    // 7. Filter by upcoming service reminder status
+    // 7. Filter by Repeat Customers
+    if (repeatOnly === 'true') {
+      query.totalServicesTaken = { $gt: 1 };
+    }
+
+    // 8. Filter by upcoming service reminder status
     if (hasReminder === 'true') {
       query.nextReminderDate = { $exists: true, $ne: null };
       query.reminderStatus = 'pending';
