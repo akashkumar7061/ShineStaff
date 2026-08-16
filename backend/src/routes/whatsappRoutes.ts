@@ -14,7 +14,9 @@ import {
   getMessageHistory,
   getWhatsAppSettings,
   updateWhatsAppSettings,
-  triggerManualBackfill
+  triggerManualBackfill,
+  editMessageLog,
+  deleteMessageLog
 } from '../controllers/whatsappController';
 
 const router = Router();
@@ -34,6 +36,8 @@ router.post('/reminders/:id/send', sendManualReminder);
 router.post('/campaigns', createCampaign);
 router.get('/campaigns', getCampaigns);
 router.get('/history', getMessageHistory);
+router.put('/history/:id', editMessageLog);
+router.delete('/history/:id', deleteMessageLog);
 router.get('/settings', getWhatsAppSettings);
 router.put('/settings', updateWhatsAppSettings);
 router.post('/settings/trigger-backfill', triggerManualBackfill);

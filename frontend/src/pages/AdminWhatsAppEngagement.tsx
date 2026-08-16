@@ -28,7 +28,9 @@ import {
   Eye,
   Settings2,
   UserCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 
 const AdminWhatsAppEngagement: React.FC = () => {
@@ -353,11 +355,27 @@ const AdminWhatsAppEngagement: React.FC = () => {
       .replace(/{{offer}}/g, offerText);
   }, [campaignMessage, offerText]);
 
+  const [historySearch, setHistorySearch] = useState('');
+  const [editingLog, setEditingLog] = useState<any | null>(null);
+  const [editMessageText, setEditMessageText] = useState('');
+
   const filteredHistory = useMemo(() => {
     if (!history) return [];
-    if (filterMessageType === 'All') return history;
-    return history.filter((msg: any) => msg.messageType === filterMessageType);
-  }, [history, filterMessageType]);
+    let items = history;
+    if (filterMessageType !== 'All') {
+      items = items.filter((msg: any) => msg.messageType === filterMessageType);
+    }
+    if (historySearch.trim() !== '') {
+      const q = historySearch.toLowerCase().trim();
+      items = items.filter((msg: any) => {
+        const nameMatch = msg.recipientName?.toLowerCase().includes(q);
+        const phoneMatch = msg.phoneNumber?.toLowerCase().includes(q);
+        const textMatch = msg.messageText?.toLowerCase().includes(q);
+        return nameMatch || phoneMatch || textMatch;
+      });
+    }
+    return items;
+  }, [history, filterMessageType, historySearch]);
 
   // Create Campaign (Launch or Schedule)
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -429,6 +447,40 @@ const AdminWhatsAppEngagement: React.FC = () => {
       fetchData();
     } catch (error) {
       console.error('Error saving settings:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Edit WhatsApp message log helper
+  const handleEditLog = async (logId: string) => {
+    if (!editMessageText.trim()) return;
+    setActionLoading(`edit-${logId}`);
+    try {
+      await api.put(`/whatsapp/history/${logId}`, { messageText: editMessageText });
+      alert('Message log updated successfully.');
+      setEditingLog(null);
+      setEditMessageText('');
+      fetchHistory();
+    } catch (error) {
+      console.error('Error editing message log:', error);
+      alert('Failed to edit message log.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Delete WhatsApp message log helper
+  const handleDeleteLog = async (logId: string) => {
+    if (!window.confirm('Are you sure you want to delete this message log? This action cannot be undone.')) return;
+    setActionLoading(`delete-${logId}`);
+    try {
+      await api.delete(`/whatsapp/history/${logId}`);
+      alert('Message log deleted successfully.');
+      fetchHistory();
+    } catch (error) {
+      console.error('Error deleting message log:', error);
+      alert('Failed to delete message log.');
     } finally {
       setActionLoading(null);
     }
@@ -1409,7 +1461,6 @@ const AdminWhatsAppEngagement: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: MESSAGE HISTORY LOG */}
           {activeTab === 'history' && (
             <div className="glass-card p-6 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-150/40 dark:border-slate-800 pb-4">
@@ -1418,7 +1469,17 @@ const AdminWhatsAppEngagement: React.FC = () => {
                   <p className="text-[10px] text-slate-400">Full audit log feed of all transactional service alerts and promo campaigns dispatched.</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <input
+                      type="text"
+                      placeholder="Search name, phone, offer..."
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      className="w-full sm:w-60 text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 pl-8 pr-3 py-2 outline-none focus:border-secondary dark:text-white"
+                    />
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  </div>
                   <button
                     onClick={() => handleExportCSV('history')}
                     className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
@@ -1474,6 +1535,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
                       <th className="px-4 py-3">Message Snippet</th>
                       <th className="px-4 py-3">Sent Time</th>
                       <th className="px-4 py-3 text-right">Delivery Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1501,16 +1563,87 @@ const AdminWhatsAppEngagement: React.FC = () => {
                             {h.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <div className="flex items-center justify-end space-x-1.5">
+                            <button
+                              onClick={() => {
+                                setEditingLog(h);
+                                setEditMessageText(h.messageText);
+                              }}
+                              className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-555 dark:text-slate-400 cursor-pointer transition-all"
+                              title="Edit Message Text"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLog(h._id)}
+                              disabled={actionLoading === `delete-${h._id}`}
+                              className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 cursor-pointer transition-all disabled:opacity-50"
+                              title="Delete Message Record"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
-                    {history.length === 0 && (
+                    {filteredHistory.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-slate-400">No messages dispatched yet.</td>
+                        <td colSpan={7} className="text-center py-8 text-slate-400">No matching message logs found.</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Edit Message Log Modal */}
+              {editingLog && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+                  <div className="glass-card max-w-lg w-full p-6 space-y-4 animate-scale-up">
+                    <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                      <h3 className="text-xs font-black uppercase text-slate-855 dark:text-white flex items-center space-x-1.5">
+                        <Edit2 className="h-4 w-4 text-emerald-500" />
+                        <span>📝 Edit Message Log Record</span>
+                      </h3>
+                      <button onClick={() => setEditingLog(null)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all cursor-pointer">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-extrabold uppercase mb-1">Recipient Name</span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-white">{editingLog.recipientName} ({editingLog.phoneNumber})</span>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-extrabold uppercase mb-1">Message Text Content:</label>
+                        <textarea
+                          value={editMessageText}
+                          onChange={(e) => setEditMessageText(e.target.value)}
+                          rows={6}
+                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-2 border-t border-slate-150/40 dark:border-slate-800">
+                      <button
+                        onClick={() => setEditingLog(null)}
+                        className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-black text-slate-500 hover:bg-slate-55 dark:hover:bg-slate-900 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleEditLog(editingLog._id)}
+                        disabled={actionLoading === `edit-${editingLog._id}`}
+                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md cursor-pointer disabled:opacity-50"
+                      >
+                        {actionLoading === `edit-${editingLog._id}` ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

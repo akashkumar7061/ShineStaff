@@ -687,3 +687,63 @@ export const createCustomer = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+/**
+ * Edits a specific message log's messageText in the communication history.
+ */
+export const editMessageLog = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { messageText } = req.body;
+
+    if (!messageText) {
+      return res.status(400).json({ message: 'Message text cannot be empty.' });
+    }
+
+    const updated = await WhatsAppMessage.findByIdAndUpdate(
+      id,
+      { $set: { messageText } },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Message log not found.' });
+    }
+
+    logAudit(req, {
+      action: 'updated',
+      entityType: 'WhatsAppMessage',
+      entityId: id,
+      summary: `Edited message log text for message to ${updated.recipientName}.`
+    });
+
+    res.status(200).json({ message: 'Message log updated successfully', messageLog: updated });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * Deletes a specific message log from the communication history.
+ */
+export const deleteMessageLog = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deleted = await WhatsAppMessage.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Message log not found.' });
+    }
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'WhatsAppMessage',
+      entityId: id,
+      summary: `Deleted message log record for message to ${deleted.recipientName}.`
+    });
+
+    res.status(200).json({ message: 'Message log deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
