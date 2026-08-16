@@ -356,6 +356,66 @@ export const sendManualReminder = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Instantly triggers and sends multiple pending reminder messages.
+ */
+export const sendBulkManualReminders = async (req: AuthRequest, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No reminder IDs provided.' });
+    }
+
+    let settings = await WhatsAppSetting.findOne({ settingId: 'global' });
+    if (!settings) {
+      settings = new WhatsAppSetting({ settingId: 'global' });
+      await settings.save();
+    }
+
+    const reminders = await ServiceReminder.find({ _id: { $in: ids } }).populate('customerId');
+    let successCount = 0;
+
+    for (const reminder of reminders) {
+      const contact = reminder.customerId as any;
+      if (!contact) continue;
+
+      // Build template message text
+      let messageText = settings.reminderMessageTemplate || '';
+      messageText = messageText
+        .replace(/{{customer_name}}/g, contact.name)
+        .replace(/{{service_name}}/g, reminder.serviceName)
+        .replace(/{{last_service_date}}/g, contact.lastServiceDate ? new Date(contact.lastServiceDate).toLocaleDateString() : '')
+        .replace(/{{company_name}}/g, contact.company === 'All' ? 'SofaShine' : contact.company)
+        .replace(/{{reminder_days}}/g, String(settings.defaultReminderDays));
+
+      const result = await sendWhatsAppMessage(contact.phone, messageText, contact.name, 'reminder', {
+        customerId: contact._id,
+        reminderId: reminder._id
+      });
+
+      if (result.success) {
+        contact.reminderStatus = 'sent';
+        await contact.save();
+        successCount++;
+      } else {
+        contact.reminderStatus = 'failed';
+        await contact.save();
+      }
+    }
+
+    logAudit(req, {
+      action: 'sent_reminders_bulk',
+      entityType: 'ServiceReminder',
+      entityId: 'bulk',
+      summary: `Manually triggered and sent ${successCount} service reminders in bulk.`
+    });
+
+    res.status(200).json({ message: `Bulk reminder task complete. Sent ${successCount} successfully out of ${reminders.length}.` });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
  * Creates and logs a bulk/filtered WhatsApp marketing campaign (sends now or schedules for later).
  */
 export const createCampaign = async (req: AuthRequest, res: Response) => {
@@ -535,7 +595,7 @@ export const getWhatsAppSettings = async (req: AuthRequest, res: Response) => {
  */
 export const updateWhatsAppSettings = async (req: AuthRequest, res: Response) => {
   try {
-    const { defaultReminderDays, serviceReminderDays, reminderMessageTemplate, marketingMessageTemplate, whatsappApiUrl, whatsappAccessToken, whatsappPhoneNumberId, useMockApi } = req.body;
+    const { defaultReminderDays, serviceReminderDays, reminderMessageTemplate, marketingMessageTemplate, whatsappApiUrl, whatsappAccessToken, whatsappPhoneNumberId, useMockApi, enableAutoReminders } = req.body;
 
     const settings = await WhatsAppSetting.findOneAndUpdate(
       { settingId: 'global' },
@@ -548,7 +608,8 @@ export const updateWhatsAppSettings = async (req: AuthRequest, res: Response) =>
           whatsappApiUrl,
           whatsappAccessToken,
           whatsappPhoneNumberId,
-          useMockApi: !!useMockApi
+          useMockApi: !!useMockApi,
+          enableAutoReminders: enableAutoReminders !== undefined ? !!enableAutoReminders : true
         }
       },
       { new: true, upsert: true }

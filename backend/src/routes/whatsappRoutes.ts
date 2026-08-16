@@ -8,6 +8,7 @@ import {
   createCustomer,
   getReminders,
   sendManualReminder,
+  sendBulkManualReminders,
   createCampaign,
   getCampaigns,
   getMessageHistory,
@@ -28,6 +29,7 @@ router.post('/customers', createCustomer);
 router.get('/customers/:id', getCustomerDetail);
 router.put('/customers/:id/opt-out', updateCustomerOptOut);
 router.get('/reminders', getReminders);
+router.post('/reminders/bulk-send', sendBulkManualReminders);
 router.post('/reminders/:id/send', sendManualReminder);
 router.post('/campaigns', createCampaign);
 router.get('/campaigns', getCampaigns);

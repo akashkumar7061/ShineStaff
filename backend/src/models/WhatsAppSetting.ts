@@ -13,10 +13,12 @@ export interface IWhatsAppSetting extends Document {
   whatsappAccessToken?: string;
   whatsappPhoneNumberId?: string;
   useMockApi: boolean;
+  enableAutoReminders: boolean;
 }
 
 const WhatsAppSettingSchema = new Schema<IWhatsAppSetting>({
   settingId: { type: String, default: 'global', unique: true },
+  enableAutoReminders: { type: Boolean, default: true },
   defaultReminderDays: { type: Number, default: 30 },
   serviceReminderDays: [{
     serviceName: { type: String, required: true },

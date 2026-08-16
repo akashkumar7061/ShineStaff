@@ -13,44 +13,48 @@ export const runScheduledTasks = async () => {
     const now = new Date();
 
     // 1. Process Due Service Reminders
-    const reminders = await ServiceReminder.find({
-      status: 'pending',
-      reminderDate: { $lte: now }
-    }).populate('customerId');
+    let settings = await WhatsAppSetting.findOne({ settingId: 'global' });
+    if (!settings) {
+      settings = new WhatsAppSetting({ settingId: 'global' });
+      await settings.save();
+    }
 
-    if (reminders.length > 0) {
-      console.log(`[WhatsApp Scheduler] Found ${reminders.length} due service reminders.`);
-      let settings = await WhatsAppSetting.findOne({ settingId: 'global' });
-      if (!settings) {
-        settings = new WhatsAppSetting({ settingId: 'global' });
-        await settings.save();
-      }
+    if (settings.enableAutoReminders !== false) {
+      const reminders = await ServiceReminder.find({
+        status: 'pending',
+        reminderDate: { $lte: now }
+      }).populate('customerId');
 
-      for (const reminder of reminders) {
-        const contact = reminder.customerId as any;
-        if (!contact) continue;
+      if (reminders.length > 0) {
+        console.log(`[WhatsApp Scheduler] Found ${reminders.length} due service reminders.`);
+        for (const reminder of reminders) {
+          const contact = reminder.customerId as any;
+          if (!contact) continue;
 
-        // Populate dynamic variables in reminder template
-        let messageText = settings.reminderMessageTemplate || '';
-        messageText = messageText
-          .replace(/{{customer_name}}/g, contact.name)
-          .replace(/{{service_name}}/g, reminder.serviceName)
-          .replace(/{{last_service_date}}/g, contact.lastServiceDate ? new Date(contact.lastServiceDate).toLocaleDateString() : '')
-          .replace(/{{company_name}}/g, contact.company === 'All' ? 'SofaShine' : contact.company)
-          .replace(/{{reminder_days}}/g, String(settings.defaultReminderDays));
+          // Populate dynamic variables in reminder template
+          let messageText = settings.reminderMessageTemplate || '';
+          messageText = messageText
+            .replace(/{{customer_name}}/g, contact.name)
+            .replace(/{{service_name}}/g, reminder.serviceName)
+            .replace(/{{last_service_date}}/g, contact.lastServiceDate ? new Date(contact.lastServiceDate).toLocaleDateString() : '')
+            .replace(/{{company_name}}/g, contact.company === 'All' ? 'SofaShine' : contact.company)
+            .replace(/{{reminder_days}}/g, String(settings.defaultReminderDays));
 
-        const res = await sendWhatsAppMessage(contact.phone, messageText, contact.name, 'reminder', {
-          customerId: contact._id,
-          reminderId: reminder._id
-        });
+          const res = await sendWhatsAppMessage(contact.phone, messageText, contact.name, 'reminder', {
+            customerId: contact._id,
+            reminderId: reminder._id
+          });
 
-        if (res.success) {
-          contact.reminderStatus = 'sent';
-        } else {
-          contact.reminderStatus = 'failed';
+          if (res.success) {
+            contact.reminderStatus = 'sent';
+          } else {
+            contact.reminderStatus = 'failed';
+          }
+          await contact.save();
         }
-        await contact.save();
       }
+    } else {
+      console.log(`[WhatsApp Scheduler] Automatic Service Reminders are currently disabled in settings.`);
     }
 
     // 2. Process Due Marketing Campaigns
