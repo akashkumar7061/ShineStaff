@@ -79,6 +79,17 @@ const AdminWhatsAppEngagement: React.FC = () => {
   const [activeProfileData, setActiveProfileData] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
+  // Add Contact Modal states
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactAltPhone, setNewContactAltPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactCompany, setNewContactCompany] = useState('SofaShine');
+  const [newContactService, setNewContactService] = useState('General Clean');
+  const [newContactSpent, setNewContactSpent] = useState('0');
+  const [newContactLastDate, setNewContactLastDate] = useState(new Date().toISOString().split('T')[0]);
+
   // Settings form states
   const [defaultReminderDays, setDefaultReminderDays] = useState(30);
   const [serviceReminderDays, setServiceReminderDays] = useState<any[]>([]);
@@ -201,6 +212,47 @@ const AdminWhatsAppEngagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error updating opt-out:', error);
+    }
+  };
+
+  // Add Manual Customer Contact
+  const handleAddContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContactName || !newContactPhone) return;
+
+    setActionLoading('add-contact');
+    try {
+      await api.post('/whatsapp/customers', {
+        name: newContactName,
+        phone: newContactPhone,
+        alternatePhone: newContactAltPhone,
+        email: newContactEmail,
+        company: newContactCompany,
+        serviceTaken: newContactService,
+        lastServiceDate: newContactLastDate,
+        totalAmountSpent: Number(newContactSpent) || 0
+      });
+
+      // Reset Form
+      setNewContactName('');
+      setNewContactPhone('');
+      setNewContactAltPhone('');
+      setNewContactEmail('');
+      setNewContactCompany('SofaShine');
+      setNewContactService('General Clean');
+      setNewContactSpent('0');
+      setNewContactLastDate(new Date().toISOString().split('T')[0]);
+      setShowAddContactModal(false);
+
+      // Refresh data
+      fetchCustomers();
+      const analyticsRes = await api.get('/whatsapp/analytics');
+      setAnalytics(analyticsRes.data);
+    } catch (error: any) {
+      console.error('Error manual customer add:', error);
+      alert(error.response?.data?.message || 'Failed to add customer contact.');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -1116,6 +1168,14 @@ const AdminWhatsAppEngagement: React.FC = () => {
                   </label>
 
                   <button
+                    onClick={() => setShowAddContactModal(true)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add to Contact</span>
+                  </button>
+
+                  <button
                     onClick={() => handleExportCSV('customers')}
                     className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer"
                   >
@@ -1536,6 +1596,145 @@ const AdminWhatsAppEngagement: React.FC = () => {
 
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* POPUP / MODAL: Add Customer Contact Manual Entry */}
+      {showAddContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-950 rounded-2xl border border-slate-205 dark:border-slate-800 shadow-2xl p-6 relative flex flex-col space-y-4 animate-scale-up text-slate-800 dark:text-slate-100">
+            <button
+              onClick={() => setShowAddContactModal(false)}
+              className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div>
+              <span className="text-[9px] uppercase tracking-wider text-emerald-500 font-extrabold block">Manual Database Entry</span>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white mt-1 uppercase">Add New Customer Contact</h3>
+              <p className="text-[10px] text-slate-400">Instantly seed a customer into the WhatsApp marketing and reminders cycle.</p>
+            </div>
+
+            <form onSubmit={handleAddContactSubmit} className="space-y-3.5 text-xs font-bold text-slate-500">
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Customer Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={newContactName}
+                  onChange={(e) => setNewContactName(e.target.value)}
+                  className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">WhatsApp Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. +919876543210"
+                    value={newContactPhone}
+                    onChange={(e) => setNewContactPhone(e.target.value)}
+                    className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Alternate Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +919876543211"
+                    value={newContactAltPhone}
+                    onChange={(e) => setNewContactAltPhone(e.target.value)}
+                    className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. john@example.com"
+                    value={newContactEmail}
+                    onChange={(e) => setNewContactEmail(e.target.value)}
+                    className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Company / Brand</label>
+                  <select
+                    value={newContactCompany}
+                    onChange={(e) => setNewContactCompany(e.target.value)}
+                    className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                  >
+                    <option value="SofaShine">SofaShine</option>
+                    <option value="CleanCruisers">CleanCruisers</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Service Taken</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sofa Cleaning"
+                    value={newContactService}
+                    onChange={(e) => setNewContactService(e.target.value)}
+                    className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Total Amount Spent (₹)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 1500"
+                    value={newContactSpent}
+                    onChange={(e) => setNewContactSpent(e.target.value)}
+                    className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Last Cleanup Date</label>
+                <input
+                  type="date"
+                  value={newContactLastDate}
+                  onChange={(e) => setNewContactLastDate(e.target.value)}
+                  className="w-full text-xs font-bold rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-150/40 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddContactModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-655 dark:text-slate-400 text-xs font-bold cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading === 'add-contact'}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center space-x-1.5 disabled:opacity-50"
+                >
+                  {actionLoading === 'add-contact' ? (
+                    <>
+                      <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Contact</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import {
   getCustomers,
   getCustomerDetail,
   updateCustomerOptOut,
+  createCustomer,
   getReminders,
   sendManualReminder,
   createCampaign,
@@ -23,6 +24,7 @@ router.use(authorizeRoles('admin'));
 
 router.get('/analytics', getAnalytics);
 router.get('/customers', getCustomers);
+router.post('/customers', createCustomer);
 router.get('/customers/:id', getCustomerDetail);
 router.put('/customers/:id/opt-out', updateCustomerOptOut);
 router.get('/reminders', getReminders);

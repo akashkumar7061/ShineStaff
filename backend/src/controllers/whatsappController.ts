@@ -578,3 +578,47 @@ export const triggerManualBackfill = async (req: AuthRequest, res: Response) => 
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+/**
+ * Manually adds a customer contact to the database.
+ */
+export const createCustomer = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, phone, alternatePhone, email, company, serviceTaken, lastServiceDate, totalAmountSpent } = req.body;
+
+    if (!name || !phone) {
+      return res.status(400).json({ message: 'Customer Name and WhatsApp Number are required.' });
+    }
+
+    // Check if phone number already exists
+    let existingContact = await CustomerContact.findOne({ phone });
+    if (existingContact) {
+      return res.status(400).json({ message: `A customer contact with WhatsApp number ${phone} already exists.` });
+    }
+
+    const newContact = new CustomerContact({
+      name,
+      phone,
+      alternatePhone,
+      email,
+      company: company || 'SofaShine',
+      serviceTaken: serviceTaken || 'Manual Entry',
+      lastServiceDate: lastServiceDate ? new Date(lastServiceDate) : new Date(),
+      totalAmountSpent: Number(totalAmountSpent) || 0,
+      totalServicesTaken: 1
+    });
+
+    await newContact.save();
+
+    logAudit(req, {
+      action: 'created',
+      entityType: 'CustomerContact',
+      entityId: newContact._id.toString(),
+      summary: `Manually added customer contact "${name}" with phone ${phone}`
+    });
+
+    res.status(201).json({ message: 'Customer contact added successfully', contact: newContact });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
