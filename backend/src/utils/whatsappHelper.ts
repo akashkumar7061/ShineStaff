@@ -170,6 +170,21 @@ export const sendWhatsAppMessage = async (
 
     const { customerId, campaignId, reminderId } = relationIds;
 
+    // Resolve company-specific WhatsApp credentials based on recipient customer contact
+    const contact = await CustomerContact.findOne({ phone: phoneNumber });
+    const company = contact ? contact.company : 'All';
+
+    let activePhoneNumberId = settings.whatsappPhoneNumberId;
+    let activeAccessToken = settings.whatsappAccessToken;
+
+    if (company === 'SofaShine') {
+      activePhoneNumberId = settings.sofaShinePhoneNumberId || settings.whatsappPhoneNumberId;
+      activeAccessToken = settings.sofaShineAccessToken || settings.whatsappAccessToken;
+    } else if (company === 'CleanCruisers') {
+      activePhoneNumberId = settings.cleanCruisersPhoneNumberId || settings.whatsappPhoneNumberId;
+      activeAccessToken = settings.cleanCruisersAccessToken || settings.whatsappAccessToken;
+    }
+
     // Simulate sending failure for test numbers ending in 999 or exactly 1234567890
     if (phoneNumber.endsWith('999') || phoneNumber === '1234567890') {
       const errorMsg = 'Failed to send message: recipient phone number is marked for failure simulation.';
@@ -201,7 +216,7 @@ export const sendWhatsAppMessage = async (
 
     if (settings.useMockApi) {
       // Mock API flow
-      console.log(`[WhatsApp Mock API] Sending ${messageType} to ${recipientName} (${phoneNumber}) [Image: ${imageUrl || 'None'}]:\n"${messageText}"`);
+      console.log(`[WhatsApp Mock API] Sending ${messageType} to ${recipientName} (${phoneNumber}) using company "${company}" credentials (Phone ID: ${activePhoneNumberId}):\n"${messageText}"`);
 
       const msg = new WhatsAppMessage({
         customerId,
@@ -228,11 +243,12 @@ export const sendWhatsAppMessage = async (
       return { success: true, messageId: msg._id };
     } else {
       // Live WhatsApp Cloud API flow (Meta Graph API)
-      if (!settings.whatsappPhoneNumberId || !settings.whatsappAccessToken) {
-        throw new Error('WhatsApp Phone Number ID or Access Token is missing in settings.');
+      if (!activePhoneNumberId || !activeAccessToken) {
+        throw new Error(`WhatsApp credentials (Phone Number ID or Access Token) are missing in settings for company "${company}".`);
       }
 
-      const url = `${settings.whatsappApiUrl}/${settings.whatsappPhoneNumberId}/messages`;
+      console.log(`[WhatsApp Helper] Sending live API message to ${phoneNumber} using "${company}" credentials (Phone ID: ${activePhoneNumberId}).`);
+      const url = `${settings.whatsappApiUrl}/${activePhoneNumberId}/messages`;
       
       let payload: any;
       if (imageUrl) {
@@ -262,7 +278,7 @@ export const sendWhatsAppMessage = async (
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${settings.whatsappAccessToken}`,
+          'Authorization': `Bearer ${activeAccessToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)

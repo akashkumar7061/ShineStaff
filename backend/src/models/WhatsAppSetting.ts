@@ -12,6 +12,10 @@ export interface IWhatsAppSetting extends Document {
   whatsappApiUrl?: string;
   whatsappAccessToken?: string;
   whatsappPhoneNumberId?: string;
+  sofaShinePhoneNumberId?: string;
+  sofaShineAccessToken?: string;
+  cleanCruisersPhoneNumberId?: string;
+  cleanCruisersAccessToken?: string;
   useMockApi: boolean;
   enableAutoReminders: boolean;
 }
@@ -35,6 +39,10 @@ const WhatsAppSettingSchema = new Schema<IWhatsAppSetting>({
   whatsappApiUrl: { type: String, default: 'https://graph.facebook.com/v17.0' },
   whatsappAccessToken: { type: String, default: '' },
   whatsappPhoneNumberId: { type: String, default: '' },
+  sofaShinePhoneNumberId: { type: String, default: '' },
+  sofaShineAccessToken: { type: String, default: '' },
+  cleanCruisersPhoneNumberId: { type: String, default: '' },
+  cleanCruisersAccessToken: { type: String, default: '' },
   useMockApi: { type: Boolean, default: true } // Defaults to mock API for demonstration and seamless local testing
 }, {
   timestamps: true

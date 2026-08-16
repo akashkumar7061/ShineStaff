@@ -595,7 +595,7 @@ export const getWhatsAppSettings = async (req: AuthRequest, res: Response) => {
  */
 export const updateWhatsAppSettings = async (req: AuthRequest, res: Response) => {
   try {
-    const { defaultReminderDays, serviceReminderDays, reminderMessageTemplate, marketingMessageTemplate, whatsappApiUrl, whatsappAccessToken, whatsappPhoneNumberId, useMockApi, enableAutoReminders } = req.body;
+    const { defaultReminderDays, serviceReminderDays, reminderMessageTemplate, marketingMessageTemplate, whatsappApiUrl, whatsappAccessToken, whatsappPhoneNumberId, useMockApi, enableAutoReminders, sofaShinePhoneNumberId, sofaShineAccessToken, cleanCruisersPhoneNumberId, cleanCruisersAccessToken } = req.body;
 
     const settings = await WhatsAppSetting.findOneAndUpdate(
       { settingId: 'global' },
@@ -608,6 +608,10 @@ export const updateWhatsAppSettings = async (req: AuthRequest, res: Response) =>
           whatsappApiUrl,
           whatsappAccessToken,
           whatsappPhoneNumberId,
+          sofaShinePhoneNumberId,
+          sofaShineAccessToken,
+          cleanCruisersPhoneNumberId,
+          cleanCruisersAccessToken,
           useMockApi: !!useMockApi,
           enableAutoReminders: enableAutoReminders !== undefined ? !!enableAutoReminders : true
         }

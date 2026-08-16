@@ -99,6 +99,10 @@ const AdminWhatsAppEngagement: React.FC = () => {
   const [reminderTemplate, setReminderTemplate] = useState('');
   const [useMockApi, setUseMockApi] = useState(true);
   const [enableAutoReminders, setEnableAutoReminders] = useState(true);
+  const [sofaShinePhoneNumberId, setSofaShinePhoneNumberId] = useState('');
+  const [sofaShineAccessToken, setSofaShineAccessToken] = useState('');
+  const [cleanCruisersPhoneNumberId, setCleanCruisersPhoneNumberId] = useState('');
+  const [cleanCruisersAccessToken, setCleanCruisersAccessToken] = useState('');
 
   // Fetch central data
   const fetchData = async () => {
@@ -122,6 +126,10 @@ const AdminWhatsAppEngagement: React.FC = () => {
         setReminderTemplate(settingsRes.data.reminderMessageTemplate);
         setUseMockApi(settingsRes.data.useMockApi);
         setEnableAutoReminders(settingsRes.data.enableAutoReminders !== false);
+        setSofaShinePhoneNumberId(settingsRes.data.sofaShinePhoneNumberId || '');
+        setSofaShineAccessToken(settingsRes.data.sofaShineAccessToken || '');
+        setCleanCruisersPhoneNumberId(settingsRes.data.cleanCruisersPhoneNumberId || '');
+        setCleanCruisersAccessToken(settingsRes.data.cleanCruisersAccessToken || '');
       }
     } catch (error) {
       console.error('Error fetching WhatsApp engagement data:', error);
@@ -411,7 +419,11 @@ const AdminWhatsAppEngagement: React.FC = () => {
         serviceReminderDays,
         reminderMessageTemplate: reminderTemplate,
         useMockApi,
-        enableAutoReminders
+        enableAutoReminders,
+        sofaShinePhoneNumberId,
+        sofaShineAccessToken,
+        cleanCruisersPhoneNumberId,
+        cleanCruisersAccessToken
       });
       alert('Settings updated successfully!');
       fetchData();
@@ -695,6 +707,11 @@ const AdminWhatsAppEngagement: React.FC = () => {
           {/* TAB 1: SERVICE REMINDERS */}
           {activeTab === 'reminders' && (
             <div className="space-y-6">
+              {useMockApi && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-[10px] font-bold">
+                  ⚠️ API Simulation Mock Mode is currently ON in settings. Service reminders will be simulated in the history log but will NOT be sent to real phones. Go to "Module Settings" to disable Mock Mode and enter your Meta Phone ID & Access Tokens for real delivery.
+                </div>
+              )}
               
               {/* BULK ACTION BAR */}
               {selectedReminderIds.length > 0 && (
@@ -985,6 +1002,12 @@ const AdminWhatsAppEngagement: React.FC = () => {
                   </div>
 
                   <form onSubmit={handleCreateCampaign} className="space-y-4">
+                    {useMockApi && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-[10px] font-bold">
+                        ⚠️ API Simulation Mock Mode is currently ON in settings. Sending this campaign will log it in the database history but will NOT send real WhatsApp messages to the recipients. Go to "Module Settings" to disable Mock Mode and enter your Meta Phone ID & Access Tokens for real delivery.
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Name:</label>
@@ -1543,6 +1566,72 @@ const AdminWhatsAppEngagement: React.FC = () => {
                       <div className="w-9 h-5 bg-slate-350 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-655 peer-checked:bg-secondary"></div>
                     </label>
                   </div>
+
+                  {useMockApi ? (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-[10px] font-bold">
+                      ⚠️ API Simulation Mock Mode is ON. WhatsApp messages are simulated in the history log but will NOT be sent to real phones. Turn this off and enter Meta Credentials below to send actual WhatsApp messages.
+                    </div>
+                  ) : (
+                    <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-4 animate-slide-in">
+                      <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-455">🏢 Company WhatsApp Gateway Credentials</h4>
+                      
+                      {/* SofaShine Credentials */}
+                      <div className="p-3 border border-slate-150/40 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-950/10 space-y-2.5">
+                        <div className="flex items-center space-x-1.5 text-xs font-black text-slate-800 dark:text-white">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>SofaShine (Sender ID: 9315576914)</span>
+                        </div>
+                        <div>
+                          <label className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">WhatsApp Phone Number ID:</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 1048473950293"
+                            value={sofaShinePhoneNumberId}
+                            onChange={(e) => setSofaShinePhoneNumberId(e.target.value)}
+                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">WhatsApp Access Token:</label>
+                          <input
+                            type="password"
+                            placeholder="EAAGz..."
+                            value={sofaShineAccessToken}
+                            onChange={(e) => setSofaShineAccessToken(e.target.value)}
+                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* CleanCruisers Credentials */}
+                      <div className="p-3 border border-slate-150/40 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-950/10 space-y-2.5">
+                        <div className="flex items-center space-x-1.5 text-xs font-black text-slate-800 dark:text-white">
+                          <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                          <span>CleanCruisers (Sender ID: 8920230357)</span>
+                        </div>
+                        <div>
+                          <label className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">WhatsApp Phone Number ID:</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 1048473950294"
+                            value={cleanCruisersPhoneNumberId}
+                            onChange={(e) => setCleanCruisersPhoneNumberId(e.target.value)}
+                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">WhatsApp Access Token:</label>
+                          <input
+                            type="password"
+                            placeholder="EAAGz..."
+                            value={cleanCruisersAccessToken}
+                            onChange={(e) => setCleanCruisersAccessToken(e.target.value)}
+                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Global Default Service Reminder period (Days):</label>
