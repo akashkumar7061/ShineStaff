@@ -845,19 +845,29 @@ const AdminWhatsAppEngagement: React.FC = () => {
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
                   {reminders.upcoming.map((r: any) => (
-                    <div key={r._id} className="py-3.5">
-                      <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                        {r.customerId?.name || 'Unknown Client'}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        {r.serviceName}
-                      </span>
-                      <div className="flex items-center justify-between mt-1 text-[10px]">
-                        <span className="font-bold text-slate-500">Due: {new Date(r.reminderDate).toLocaleDateString()}</span>
-                        <span className="font-bold text-blue-500 uppercase tracking-wider">
-                          In {Math.round((new Date(r.reminderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} Days
+                    <div key={r._id} className="py-3.5 flex justify-between items-center gap-4">
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
+                          {r.customerId?.name || 'Unknown Client'}
                         </span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          {r.serviceName} | WhatsApp: {r.customerId?.phone || 'N/A'}
+                        </span>
+                        <div className="flex items-center space-x-3.5 mt-1 text-[10px]">
+                          <span className="font-bold text-slate-500">Due: {new Date(r.reminderDate).toLocaleDateString()}</span>
+                          <span className="font-bold text-blue-500 uppercase tracking-wider">
+                            In {Math.round((new Date(r.reminderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} Days
+                          </span>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => handleSendReminder(r._id)}
+                        disabled={actionLoading === r._id}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1 disabled:opacity-50"
+                      >
+                        <Send className="h-3 w-3" />
+                        <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
+                      </button>
                     </div>
                   ))}
                   {reminders.upcoming.length === 0 && (
