@@ -9,6 +9,7 @@ export interface IWhatsAppMessage extends Document {
   messageType: 'reminder' | 'marketing';
   serviceName?: string;
   messageText: string;
+  imageUrl?: string;
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   sentTime: Date;
   errorDetails?: string;
@@ -23,6 +24,7 @@ const WhatsAppMessageSchema = new Schema<IWhatsAppMessage>({
   messageType: { type: String, enum: ['reminder', 'marketing'], required: true },
   serviceName: { type: String, default: '' },
   messageText: { type: String, required: true },
+  imageUrl: { type: String, default: '' },
   status: { type: String, enum: ['pending', 'sent', 'delivered', 'read', 'failed'], default: 'pending' },
   sentTime: { type: Date, default: Date.now },
   errorDetails: { type: String, default: '' }

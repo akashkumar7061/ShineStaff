@@ -102,7 +102,7 @@ export const runScheduledTasks = async () => {
           await sendWhatsAppMessage(target.phone, message, target.name, 'marketing', {
             customerId: target._id,
             campaignId: campaign._id
-          });
+          }, campaign.imageUrl);
           sentCount++;
         }
 

@@ -354,7 +354,7 @@ export const sendManualReminder = async (req: AuthRequest, res: Response) => {
  */
 export const createCampaign = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, messageText, selectedIds, targetFilters, scheduleTime } = req.body;
+    const { name, messageText, imageUrl, selectedIds, targetFilters, scheduleTime } = req.body;
 
     if (!name || !messageText) {
       return res.status(400).json({ message: 'Campaign name and message text are mandatory.' });
@@ -363,6 +363,7 @@ export const createCampaign = async (req: AuthRequest, res: Response) => {
     const campaign = new WhatsAppCampaign({
       name,
       messageText,
+      imageUrl,
       status: scheduleTime ? 'scheduled' : 'sent',
       scheduledTime: scheduleTime ? new Date(scheduleTime) : undefined,
       filtersUsed: { selectedIds, targetFilters }
@@ -407,7 +408,7 @@ export const createCampaign = async (req: AuthRequest, res: Response) => {
         await sendWhatsAppMessage(target.phone, personalizedMsg, target.name, 'marketing', {
           customerId: target._id,
           campaignId: campaign._id
-        });
+        }, campaign.imageUrl);
         sentCount++;
       }
 

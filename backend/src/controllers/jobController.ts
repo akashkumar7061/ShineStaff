@@ -315,6 +315,9 @@ export const createJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
+    // Sync customer details immediately
+    await syncCustomerAndScheduleReminder(job);
+
     const companyLabel = `${company} Services`;
     const visitCode = `Visit #${generatedVisitId}`;
     const scheduledTime = `${date || 'Today'} • ${timeSlot || 'ASAP'}`;
@@ -938,9 +941,8 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
-    if (status === 'completed') {
-      await syncCustomerAndScheduleReminder(job);
-    }
+    // Sync customer and reschedule reminder if status changes to completed
+    await syncCustomerAndScheduleReminder(job);
 
     logAudit(req, {
       action: 'updated',

@@ -44,6 +44,7 @@ export const syncCustomerAndScheduleReminder = async (job: any) => {
     const alternatePhone = normalizePhone(job.alternatePhone || '');
     const email = job.clientEmail || '';
     const company = job.company || 'All';
+    const isCompleted = job.status === 'completed';
 
     // 1. Get or create WhatsAppSettings
     let settings = await WhatsAppSetting.findOne({ settingId: 'global' });
@@ -55,19 +56,23 @@ export const syncCustomerAndScheduleReminder = async (job: any) => {
     // 2. Fetch or create CustomerContact
     let contact = await CustomerContact.findOne({ phone });
     if (contact) {
-      // Re-booking occurred: recalculate stats
+      // Re-booking occurred: update information
       contact.name = job.clientName || contact.name;
       contact.alternatePhone = alternatePhone || contact.alternatePhone;
       contact.email = email || contact.email;
       contact.company = company as any;
-      contact.serviceTaken = serviceName;
-      contact.lastServiceDate = completedDate;
-      contact.lastServiceName = serviceName;
-      contact.lastServiceAmount = amount;
       contact.serviceLocation = location || contact.serviceLocation;
-      contact.totalServicesTaken += 1;
-      contact.totalAmountSpent += amount;
-      contact.reminderStatus = 'pending';
+
+      // Update statistics and service information ONLY if job is completed
+      if (isCompleted) {
+        contact.serviceTaken = serviceName;
+        contact.lastServiceDate = completedDate;
+        contact.lastServiceName = serviceName;
+        contact.lastServiceAmount = amount;
+        contact.totalServicesTaken += 1;
+        contact.totalAmountSpent += amount;
+        contact.reminderStatus = 'pending';
+      }
     } else {
       // New customer: create contact record
       contact = new CustomerContact({
@@ -76,59 +81,66 @@ export const syncCustomerAndScheduleReminder = async (job: any) => {
         alternatePhone,
         email,
         company: company as any,
-        serviceTaken: serviceName,
-        lastServiceDate: completedDate,
-        lastServiceName: serviceName,
-        lastServiceAmount: amount,
+        serviceTaken: isCompleted ? serviceName : '',
+        lastServiceDate: isCompleted ? completedDate : (job.createdAt || new Date()),
+        lastServiceName: isCompleted ? serviceName : '',
+        lastServiceAmount: isCompleted ? amount : 0,
         serviceLocation: location,
-        totalServicesTaken: 1,
-        totalAmountSpent: amount,
-        reminderStatus: 'pending',
+        totalServicesTaken: isCompleted ? 1 : 0,
+        totalAmountSpent: isCompleted ? amount : 0,
+        reminderStatus: isCompleted ? 'pending' : 'no_reminder',
         marketingOptOut: false
       });
     }
 
-    // 3. Calculate next reminder days based on settings
-    let reminderDays = settings.defaultReminderDays || 30;
-    if (settings.serviceReminderDays && settings.serviceReminderDays.length > 0) {
-      const match = settings.serviceReminderDays.find(
-        (rule) => rule.serviceName.toLowerCase() === serviceName.toLowerCase()
-      );
-      if (match) {
-        reminderDays = match.days;
-      } else {
-        // Try substring search (e.g. "Sofa" in "Sofa Cleaning")
-        const subMatch = settings.serviceReminderDays.find(
-          (rule) => serviceName.toLowerCase().includes(rule.serviceName.toLowerCase()) || 
-                    rule.serviceName.toLowerCase().includes(serviceName.toLowerCase())
+    // 3. ONLY schedule reminder if the job is completed
+    if (isCompleted) {
+      let reminderDays = settings.defaultReminderDays || 30;
+      if (settings.serviceReminderDays && settings.serviceReminderDays.length > 0) {
+        const match = settings.serviceReminderDays.find(
+          (rule) => rule.serviceName.toLowerCase() === serviceName.toLowerCase()
         );
-        if (subMatch) {
-          reminderDays = subMatch.days;
+        if (match) {
+          reminderDays = match.days;
+        } else {
+          // Try substring search (e.g. "Sofa" in "Sofa Cleaning")
+          const subMatch = settings.serviceReminderDays.find(
+            (rule) => serviceName.toLowerCase().includes(rule.serviceName.toLowerCase()) || 
+                      rule.serviceName.toLowerCase().includes(serviceName.toLowerCase())
+          );
+          if (subMatch) {
+            reminderDays = subMatch.days;
+          }
         }
       }
+
+      const nextReminder = new Date(completedDate.getTime() + reminderDays * 24 * 60 * 60 * 1000);
+      contact.nextReminderDate = nextReminder;
+      contact.reminderStatus = 'pending';
+      await contact.save();
+
+      // 4. Cancel any previous pending reminders for this customer to prevent duplicate alerts
+      await ServiceReminder.updateMany(
+        { customerId: contact._id, status: 'pending' },
+        { $set: { status: 'cancelled' } }
+      );
+
+      // 5. Create new pending Service Reminder
+      const reminder = new ServiceReminder({
+        customerId: contact._id,
+        jobId: job._id,
+        serviceName,
+        reminderDate: nextReminder,
+        status: 'pending'
+      });
+      await reminder.save();
+
+      console.log(`[WhatsApp Helper] Successfully synced customer contact for "${contact.name}" and scheduled next service reminder for ${nextReminder.toDateString()} (${reminderDays} days interval).`);
+    } else {
+      // Just save customer details if it's not completed
+      await contact.save();
+      console.log(`[WhatsApp Helper] Synced customer details for "${contact.name}" (Status: ${job.status}). No reminder scheduled.`);
     }
-
-    const nextReminder = new Date(completedDate.getTime() + reminderDays * 24 * 60 * 60 * 1000);
-    contact.nextReminderDate = nextReminder;
-    await contact.save();
-
-    // 4. Cancel any previous pending reminders for this customer to prevent duplicate alerts
-    await ServiceReminder.updateMany(
-      { customerId: contact._id, status: 'pending' },
-      { $set: { status: 'cancelled' } }
-    );
-
-    // 5. Create new pending Service Reminder
-    const reminder = new ServiceReminder({
-      customerId: contact._id,
-      jobId: job._id,
-      serviceName,
-      reminderDate: nextReminder,
-      status: 'pending'
-    });
-    await reminder.save();
-
-    console.log(`[WhatsApp Helper] Successfully synced customer contact for "${contact.name}" and scheduled next service reminder for ${nextReminder.toDateString()} (${reminderDays} days interval).`);
   } catch (error) {
     console.error('[WhatsApp Helper] Error in syncCustomerAndScheduleReminder:', error);
   }
@@ -146,7 +158,8 @@ export const sendWhatsAppMessage = async (
     customerId?: mongoose.Types.ObjectId;
     campaignId?: mongoose.Types.ObjectId;
     reminderId?: mongoose.Types.ObjectId;
-  }
+  },
+  imageUrl?: string
 ): Promise<any> => {
   try {
     let settings = await WhatsAppSetting.findOne({ settingId: 'global' });
@@ -168,6 +181,7 @@ export const sendWhatsAppMessage = async (
         phoneNumber,
         messageType,
         messageText,
+        imageUrl: imageUrl || '',
         status: 'failed',
         sentTime: new Date(),
         errorDetails: errorMsg
@@ -187,7 +201,7 @@ export const sendWhatsAppMessage = async (
 
     if (settings.useMockApi) {
       // Mock API flow
-      console.log(`[WhatsApp Mock API] Sending ${messageType} to ${recipientName} (${phoneNumber}):\n"${messageText}"`);
+      console.log(`[WhatsApp Mock API] Sending ${messageType} to ${recipientName} (${phoneNumber}) [Image: ${imageUrl || 'None'}]:\n"${messageText}"`);
 
       const msg = new WhatsAppMessage({
         customerId,
@@ -197,6 +211,7 @@ export const sendWhatsAppMessage = async (
         phoneNumber,
         messageType,
         messageText,
+        imageUrl: imageUrl || '',
         status: 'sent', // Will be transitioned to delivered/read by worker
         sentTime: new Date()
       });
@@ -219,16 +234,30 @@ export const sendWhatsAppMessage = async (
 
       const url = `${settings.whatsappApiUrl}/${settings.whatsappPhoneNumberId}/messages`;
       
-      const payload = {
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: phoneNumber.startsWith('+') ? phoneNumber.substring(1) : phoneNumber,
-        type: 'text',
-        text: {
-          preview_url: false,
-          body: messageText
-        }
-      };
+      let payload: any;
+      if (imageUrl) {
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: phoneNumber.startsWith('+') ? phoneNumber.substring(1) : phoneNumber,
+          type: 'image',
+          image: {
+            link: imageUrl,
+            caption: messageText
+          }
+        };
+      } else {
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: phoneNumber.startsWith('+') ? phoneNumber.substring(1) : phoneNumber,
+          type: 'text',
+          text: {
+            preview_url: false,
+            body: messageText
+          }
+        };
+      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -253,6 +282,7 @@ export const sendWhatsAppMessage = async (
         phoneNumber,
         messageType,
         messageText,
+        imageUrl: imageUrl || '',
         status: 'sent',
         sentTime: new Date()
       });
@@ -280,6 +310,7 @@ export const sendWhatsAppMessage = async (
       phoneNumber,
       messageType,
       messageText,
+      imageUrl: imageUrl || '',
       status: 'failed',
       sentTime: new Date(),
       errorDetails: errorMsg
@@ -300,7 +331,7 @@ export const sendWhatsAppMessage = async (
 };
 
 /**
- * Startup task: Iterates over all historic completed jobs and builds the CustomerContact database.
+ * Startup task: Iterates over all historic jobs and builds the CustomerContact database.
  */
 export const backfillCustomerContacts = async () => {
   try {
@@ -310,12 +341,12 @@ export const backfillCustomerContacts = async () => {
       return;
     }
 
-    console.log('[WhatsApp Helper] Starting startup backfill of customer contacts from completed jobs...');
-    const completedJobs = await Job.find({ status: 'completed' }).sort({ completedAt: 1 });
-    console.log(`[WhatsApp Helper] Found ${completedJobs.length} completed jobs to process.`);
+    console.log('[WhatsApp Helper] Starting startup backfill of customer contacts from all historical jobs...');
+    const allJobs = await Job.find({}).sort({ createdAt: 1 });
+    console.log(`[WhatsApp Helper] Found ${allJobs.length} total jobs to process.`);
 
     let count = 0;
-    for (const job of completedJobs) {
+    for (const job of allJobs) {
       if (job.clientPhone && isValidWhatsAppPhone(job.clientPhone)) {
         await syncCustomerAndScheduleReminder(job);
         count++;

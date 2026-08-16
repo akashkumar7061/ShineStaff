@@ -62,6 +62,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
 
   // Marketing Campaign Form
   const [campaignName, setCampaignName] = useState('');
+  const [campaignImageUrl, setCampaignImageUrl] = useState('');
   const [campaignMessage, setCampaignMessage] = useState(
     "Hi {{customer_name}},\n\nIt's been some time since your last {{service_name}} service. Book again today and get 15% off!\n\nUse Code: REPEAT15"
   );
@@ -275,6 +276,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
       const payload: any = {
         name: campaignName,
         messageText: campaignMessage,
+        imageUrl: campaignImageUrl || undefined,
         scheduleTime: scheduleCampaign && scheduleTime ? scheduleTime : undefined
       };
 
@@ -293,6 +295,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
       await api.post('/whatsapp/campaigns', payload);
       // Reset form
       setCampaignName('');
+      setCampaignImageUrl('');
       setCampaignMessage("Hi {{customer_name}},\n\nBook {{service_name}} again today and get {{offer}}!");
       setSelectedCustomerIds([]);
       setScheduleCampaign(false);
@@ -726,16 +729,28 @@ const AdminWhatsAppEngagement: React.FC = () => {
                   </div>
 
                   <form onSubmit={handleCreateCampaign} className="space-y-4">
-                    <div>
-                      <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Name:</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. SofaShine Festival Offer 2026"
-                        value={campaignName}
-                        onChange={(e) => setCampaignName(e.target.value)}
-                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Name:</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. SofaShine Festival Offer 2026"
+                          value={campaignName}
+                          onChange={(e) => setCampaignName(e.target.value)}
+                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Image URL (Optional):</label>
+                        <input
+                          type="url"
+                          placeholder="e.g. https://images.unsplash.com/photo-1581578731548"
+                          value={campaignImageUrl}
+                          onChange={(e) => setCampaignImageUrl(e.target.value)}
+                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -888,10 +903,22 @@ const AdminWhatsAppEngagement: React.FC = () => {
                 <div className="glass-card p-6 bg-emerald-500/[0.02] border-emerald-500/10 space-y-4">
                   <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Live Preview (Demo Customer)</span>
                   
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-white dark:bg-slate-950/70 shadow-sm relative leading-relaxed text-xs">
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-white dark:bg-slate-950/70 shadow-sm relative leading-relaxed text-xs space-y-3">
                     {/* Simulated WhatsApp chat message layout */}
                     <div className="absolute top-2 left-2 text-[8px] uppercase tracking-wider font-extrabold text-emerald-500">WhatsApp message</div>
-                    <div className="pt-4 font-sans font-medium whitespace-pre-wrap text-slate-700 dark:text-slate-200">
+                    {campaignImageUrl && (
+                      <div className="pt-4 max-h-[200px] overflow-hidden rounded-lg border border-slate-100 dark:border-slate-800">
+                        <img
+                          src={campaignImageUrl}
+                          alt="Campaign attachment"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className={`${campaignImageUrl ? '' : 'pt-4'} font-sans font-medium whitespace-pre-wrap text-slate-700 dark:text-slate-200`}>
                       {campaignPreviewMessage}
                     </div>
                   </div>
