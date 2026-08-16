@@ -779,206 +779,199 @@ const AdminWhatsAppEngagement: React.FC = () => {
                 </div>
               </div>
 
-              {/* Reminders Lists (Split: Overdue/Today vs Upcoming) */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* 1. Today's and Overdue lists */}
-                <div className="lg:col-span-2 space-y-6">
-                  
-                  {/* Today's Reminders Card */}
-                  <div className="glass-card p-6 space-y-4">
-                    <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
-                      <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        <span>🔔 Today's Service Reminders</span>
-                      </h3>
-                      <div className="flex items-center space-x-3">
-                        {reminders.today.length > 0 && (
-                          <label className="text-[9px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={reminders.today.every((r: any) => selectedReminderIds.includes(r._id))}
-                              onChange={(e) => {
-                                const todayIds = reminders.today.map((r: any) => r._id);
-                                if (e.target.checked) {
-                                  setSelectedReminderIds(prev => Array.from(new Set([...prev, ...todayIds])));
-                                } else {
-                                  setSelectedReminderIds(prev => prev.filter(id => !todayIds.includes(id)));
-                                }
-                              }}
-                              className="rounded border-slate-255 h-3.5 w-3.5 cursor-pointer text-emerald-500 outline-none focus:ring-0"
-                            />
-                            <span>Select All</span>
-                          </label>
-                        )}
-                        <span className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold">
-                          {reminders.today.length} pending
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {reminders.today.map((r: any) => {
-                        const isChecked = selectedReminderIds.includes(r._id);
-                        return (
-                          <div key={r._id} className="py-3 flex justify-between items-center gap-4">
-                            <div className="flex items-center space-x-3 min-w-0 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedReminderIds([...selectedReminderIds, r._id]);
-                                  } else {
-                                    setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
-                                  }
-                                }}
-                                className="rounded border-slate-255 text-emerald-555 outline-none focus:ring-0 h-4 w-4 cursor-pointer"
-                              />
-                              <div className="min-w-0">
-                                <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                                  {r.customerId?.name || 'Unknown Client'}
-                                </span>
-                                <span className="text-[10px] text-slate-400 block mt-0.5">
-                                  {r.serviceName} | Last Cleaned: {r.customerId?.lastServiceDate ? new Date(r.customerId.lastServiceDate).toLocaleDateString() : 'N/A'}
-                                </span>
-                                <span className="text-[10px] font-bold text-emerald-500 block mt-0.5">
-                                  WhatsApp: {r.customerId?.phone}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleSendReminder(r._id)}
-                              disabled={actionLoading === r._id}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5 disabled:opacity-50"
-                            >
-                              <Send className="h-3 w-3" />
-                              <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
-                            </button>
-                          </div>
-                        );
-                      })}
-                      {reminders.today.length === 0 && (
-                        <p className="text-center py-6 text-xs text-slate-400">No service reminders scheduled for today.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Overdue Reminders Card */}
-                  <div className="glass-card p-6 space-y-4">
-                    <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
-                      <h3 className="text-xs font-black text-rose-500 uppercase tracking-widest flex items-center space-x-1.5">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span>⚠️ Overdue Reminders</span>
-                      </h3>
-                      <div className="flex items-center space-x-3">
-                        {reminders.overdue.length > 0 && (
-                          <label className="text-[9px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={reminders.overdue.every((r: any) => selectedReminderIds.includes(r._id))}
-                              onChange={(e) => {
-                                const overdueIds = reminders.overdue.map((r: any) => r._id);
-                                if (e.target.checked) {
-                                  setSelectedReminderIds(prev => Array.from(new Set([...prev, ...overdueIds])));
-                                } else {
-                                  setSelectedReminderIds(prev => prev.filter(id => !overdueIds.includes(id)));
-                                }
-                              }}
-                              className="rounded border-slate-255 h-3.5 w-3.5 cursor-pointer text-rose-500 outline-none focus:ring-0"
-                            />
-                            <span>Select All</span>
-                          </label>
-                        )}
-                        <span className="text-[9px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold">
-                          {reminders.overdue.length} overdue
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
-                      {reminders.overdue.map((r: any) => {
-                        const isChecked = selectedReminderIds.includes(r._id);
-                        return (
-                          <div key={r._id} className="py-3 flex justify-between items-center gap-4">
-                            <div className="flex items-center space-x-3 min-w-0 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedReminderIds([...selectedReminderIds, r._id]);
-                                  } else {
-                                    setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
-                                  }
-                                }}
-                                className="rounded border-slate-255 text-rose-555 outline-none focus:ring-0 h-4 w-4 cursor-pointer"
-                              />
-                              <div className="min-w-0">
-                                <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                                  {r.customerId?.name || 'Unknown Client'}
-                                </span>
-                                <span className="text-[10px] text-slate-400 block mt-0.5">
-                                  {r.serviceName} | Scheduled Date: {new Date(r.reminderDate).toLocaleDateString()}
-                                </span>
-                                <span className="text-[10px] font-bold text-rose-500 block mt-0.5">
-                                  Overdue by: {Math.round((Date.now() - new Date(r.reminderDate).getTime()) / (1000 * 60 * 60 * 24))} Days
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleSendReminder(r._id)}
-                              disabled={actionLoading === r._id}
-                              className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5 disabled:opacity-50"
-                            >
-                              <Send className="h-3 w-3" />
-                              <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
-                            </button>
-                          </div>
-                        );
-                      })}
-                      {reminders.overdue.length === 0 && (
-                        <p className="text-center py-6 text-xs text-slate-400">Great! No overdue reminders currently.</p>
-                      )}
-                    </div>
-                  </div>
-
+              {/* Upcoming Reminders on top */}
+              <div className="glass-card p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
+                    <Clock className="h-4 w-4 text-emerald-500" />
+                    <span>📅 Upcoming Reminders</span>
+                  </h3>
+                  <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-bold">
+                    {reminders.upcoming.length} upcoming
+                  </span>
                 </div>
 
-                {/* 2. Upcoming reminders */}
-                <div className="space-y-6">
-                  <div className="glass-card p-6 space-y-4">
-                    <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
-                      <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
-                        <Clock className="h-4 w-4 text-emerald-500" />
-                        <span>📅 Upcoming Reminders</span>
-                      </h3>
-                      <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-bold">
-                        {reminders.upcoming.length} upcoming
+                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
+                  {reminders.upcoming.map((r: any) => (
+                    <div key={r._id} className="py-3.5">
+                      <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
+                        {r.customerId?.name || 'Unknown Client'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        {r.serviceName}
+                      </span>
+                      <div className="flex items-center justify-between mt-1 text-[10px]">
+                        <span className="font-bold text-slate-500">Due: {new Date(r.reminderDate).toLocaleDateString()}</span>
+                        <span className="font-bold text-blue-500 uppercase tracking-wider">
+                          In {Math.round((new Date(r.reminderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} Days
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {reminders.upcoming.length === 0 && (
+                    <p className="text-center py-6 text-xs text-slate-400">No upcoming reminders scheduled.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Reminders Lists (Split: Today vs Overdue) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Today's Reminders Card */}
+                <div className="glass-card p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <span>🔔 Today's Service Reminders</span>
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      {reminders.today.length > 0 && (
+                        <label className="text-[9px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={reminders.today.every((r: any) => selectedReminderIds.includes(r._id))}
+                            onChange={(e) => {
+                              const todayIds = reminders.today.map((r: any) => r._id);
+                              if (e.target.checked) {
+                                setSelectedReminderIds(prev => Array.from(new Set([...prev, ...todayIds])));
+                              } else {
+                                setSelectedReminderIds(prev => prev.filter(id => !todayIds.includes(id)));
+                              }
+                            }}
+                            className="rounded border-slate-255 h-3.5 w-3.5 cursor-pointer text-emerald-500 outline-none focus:ring-0"
+                          />
+                          <span>Select All</span>
+                        </label>
+                      )}
+                      <span className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold">
+                        {reminders.today.length} pending
                       </span>
                     </div>
+                  </div>
 
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[500px] overflow-y-auto pr-1">
-                      {reminders.upcoming.map((r: any) => (
-                        <div key={r._id} className="py-3.5">
-                          <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                            {r.customerId?.name || 'Unknown Client'}
-                          </span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            {r.serviceName}
-                          </span>
-                          <div className="flex items-center justify-between mt-1 text-[10px]">
-                            <span className="font-bold text-slate-500">Due: {new Date(r.reminderDate).toLocaleDateString()}</span>
-                            <span className="font-bold text-blue-500 uppercase tracking-wider">
-                              In {Math.round((new Date(r.reminderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} Days
-                            </span>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
+                    {reminders.today.map((r: any) => {
+                      const isChecked = selectedReminderIds.includes(r._id);
+                      return (
+                        <div key={r._id} className="py-3 flex justify-between items-center gap-4">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedReminderIds([...selectedReminderIds, r._id]);
+                                } else {
+                                  setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
+                                }
+                              }}
+                              className="rounded border-slate-255 text-emerald-555 outline-none focus:ring-0 h-4 w-4 cursor-pointer"
+                            />
+                            <div className="min-w-0">
+                              <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
+                                {r.customerId?.name || 'Unknown Client'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {r.serviceName} | Last Cleaned: {r.customerId?.lastServiceDate ? new Date(r.customerId.lastServiceDate).toLocaleDateString() : 'N/A'}
+                              </span>
+                              <span className="text-[10px] font-bold text-emerald-500 block mt-0.5">
+                                WhatsApp: {r.customerId?.phone}
+                              </span>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => handleSendReminder(r._id)}
+                            disabled={actionLoading === r._id}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5 disabled:opacity-50"
+                          >
+                            <Send className="h-3 w-3" />
+                            <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
+                          </button>
                         </div>
-                      ))}
-                      {reminders.upcoming.length === 0 && (
-                        <p className="text-center py-6 text-xs text-slate-400">No upcoming reminders scheduled.</p>
+                      );
+                    })}
+                    {reminders.today.length === 0 && (
+                      <p className="text-center py-6 text-xs text-slate-400">No service reminders scheduled for today.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Overdue Reminders Card */}
+                <div className="glass-card p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                    <h3 className="text-xs font-black text-rose-500 uppercase tracking-widest flex items-center space-x-1.5">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>⚠️ Overdue Reminders</span>
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      {reminders.overdue.length > 0 && (
+                        <label className="text-[9px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={reminders.overdue.every((r: any) => selectedReminderIds.includes(r._id))}
+                            onChange={(e) => {
+                              const overdueIds = reminders.overdue.map((r: any) => r._id);
+                              if (e.target.checked) {
+                                setSelectedReminderIds(prev => Array.from(new Set([...prev, ...overdueIds])));
+                              } else {
+                                setSelectedReminderIds(prev => prev.filter(id => !overdueIds.includes(id)));
+                              }
+                            }}
+                            className="rounded border-slate-255 h-3.5 w-3.5 cursor-pointer text-rose-500 outline-none focus:ring-0"
+                          />
+                          <span>Select All</span>
+                        </label>
                       )}
+                      <span className="text-[9px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold">
+                        {reminders.overdue.length} overdue
+                      </span>
                     </div>
+                  </div>
+
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
+                    {reminders.overdue.map((r: any) => {
+                      const isChecked = selectedReminderIds.includes(r._id);
+                      return (
+                        <div key={r._id} className="py-3 flex justify-between items-center gap-4">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedReminderIds([...selectedReminderIds, r._id]);
+                                } else {
+                                  setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
+                                }
+                              }}
+                              className="rounded border-slate-255 text-rose-555 outline-none focus:ring-0 h-4 w-4 cursor-pointer"
+                            />
+                            <div className="min-w-0">
+                              <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
+                                {r.customerId?.name || 'Unknown Client'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {r.serviceName} | Scheduled Date: {new Date(r.reminderDate).toLocaleDateString()}
+                              </span>
+                              <span className="text-[10px] font-bold text-rose-500 block mt-0.5">
+                                Overdue by: {Math.round((Date.now() - new Date(r.reminderDate).getTime()) / (1000 * 60 * 60 * 24))} Days
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleSendReminder(r._id)}
+                            disabled={actionLoading === r._id}
+                            className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5 disabled:opacity-50"
+                          >
+                            <Send className="h-3 w-3" />
+                            <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {reminders.overdue.length === 0 && (
+                      <p className="text-center py-6 text-xs text-slate-400">Great! No overdue reminders currently.</p>
+                    )}
                   </div>
                 </div>
 
