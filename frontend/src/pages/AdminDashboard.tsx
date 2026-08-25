@@ -518,10 +518,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
       case 'sales':
         title = 'Total Sales (Scheduled Cleans)';
         data = jobsList.filter(j => isWithinRange(j.date));
+        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         break;
       case 'revenue':
         title = 'Total Revenue (Completed Cleans)';
         data = jobsList.filter(j => j.status === 'completed' && isWithinRange(j.date));
+        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         break;
       case 'expenses':
         title = 'Total Operating Expenses';
@@ -586,10 +588,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
       case 'outstanding':
         title = 'Outstanding Payments (Completed Unpaid)';
         data = jobsList.filter(j => j.status === 'completed' && j.paymentStatus !== 'received' && isWithinRange(j.date));
+        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         break;
       case 'received':
         title = 'Received Payments (Completed Paid)';
         data = jobsList.filter(j => j.status === 'completed' && j.paymentStatus === 'received' && isWithinRange(j.date));
+        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         break;
       case 'customers':
         title = 'Client Booking Activity (Repeat & Unique)';
