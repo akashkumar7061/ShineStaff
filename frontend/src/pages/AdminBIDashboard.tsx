@@ -424,17 +424,23 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({
   const openDrillDown = (type: 'sales' | 'revenue' | 'expenses' | 'profit' | 'gross' | 'outstanding' | 'received' | 'customers') => {
     if (!analytics) return;
     
+    const isWithinRange = (dateStr: string) => {
+      if (!dateStr) return false;
+      const d = dateStr.split('T')[0];
+      return d >= startDate && d <= endDate;
+    };
+
     let title = '';
     let data: any[] = [];
 
     switch (type) {
       case 'sales':
         title = 'Total Sales (Scheduled Cleans)';
-        data = jobs;
+        data = jobs.filter(j => isWithinRange(j.date));
         break;
       case 'revenue':
         title = 'Total Revenue (Completed Cleans)';
-        data = jobs.filter(j => j.status === 'completed');
+        data = jobs.filter(j => j.status === 'completed' && isWithinRange(j.date));
         break;
       case 'expenses':
         title = 'Total Operating Expenses';
@@ -498,17 +504,17 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({
         break;
       case 'outstanding':
         title = 'Outstanding Payments (Completed Unpaid)';
-        data = jobs.filter(j => j.status === 'completed' && j.paymentStatus !== 'received');
+        data = jobs.filter(j => j.status === 'completed' && j.paymentStatus !== 'received' && isWithinRange(j.date));
         break;
       case 'received':
         title = 'Received Payments (Completed Paid)';
-        data = jobs.filter(j => j.status === 'completed' && j.paymentStatus === 'received');
+        data = jobs.filter(j => j.status === 'completed' && j.paymentStatus === 'received' && isWithinRange(j.date));
         break;
       case 'customers':
         title = 'Client Booking Activity (Repeat & Unique)';
         const map: { [phone: string]: { name: string; phone: string; count: number; address?: string } } = {};
         jobs.forEach(j => {
-          if (j.clientPhone) {
+          if (j.clientPhone && isWithinRange(j.date)) {
             if (!map[j.clientPhone]) {
               map[j.clientPhone] = { 
                 name: j.clientName, 
