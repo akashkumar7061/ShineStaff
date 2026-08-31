@@ -16,6 +16,13 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 
+const getTodayString = () => new Date().toISOString().split('T')[0];
+const getPastDateString = (daysAgo: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
+};
+
 const escapeCSV = (val: any) => {
   if (val === null || val === undefined) return '';
   let str = String(val);
@@ -28,6 +35,47 @@ const escapeCSV = (val: any) => {
 
 const AdminDatabaseBackup: React.FC = () => {
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  // Date Filter States
+  const [preset, setPreset] = useState<string>('all-time');
+  const [startDate, setStartDate] = useState(getPastDateString(30));
+  const [endDate, setEndDate] = useState(getTodayString());
+
+  const handlePresetChange = (p: string) => {
+    setPreset(p);
+    const today = getTodayString();
+    
+    if (p === 'today') {
+      setStartDate(today);
+      setEndDate(today);
+    } else if (p === 'yesterday') {
+      const yesterday = getPastDateString(1);
+      setStartDate(yesterday);
+      setEndDate(yesterday);
+    } else if (p === 'last-7') {
+      setStartDate(getPastDateString(7));
+      setEndDate(today);
+    } else if (p === 'this-month') {
+      const d = new Date();
+      const firstDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      setStartDate(firstDay);
+      setEndDate(today);
+    } else if (p === 'last-month') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 1);
+      const firstDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+      setStartDate(firstDay);
+      setEndDate(lastDay);
+    }
+  };
+
+  const isWithinRange = (itemDate: any) => {
+    if (preset === 'all-time') return true;
+    if (!itemDate) return false;
+    const cleanDate = typeof itemDate === 'string' ? itemDate.split('T')[0] : new Date(itemDate).toISOString().split('T')[0];
+    return cleanDate >= startDate && cleanDate <= endDate;
+  };
 
   // Individual Table Exporters
   const exportJobs = (jobs: any[]) => {
@@ -144,57 +192,67 @@ const AdminDatabaseBackup: React.FC = () => {
       const response = await api.get('/bi/export-all');
       const data = response.data;
       let csvData = '';
-      let filename = `shinestaff_${section}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      const dateSuffix = preset === 'all-time' ? 'all_time' : `${startDate}_to_${endDate}`;
+      let filename = `shinestaff_${section}_export_${dateSuffix}.csv`;
 
       switch (section) {
         case 'jobs':
-          csvData = exportJobs(data.jobs || []);
+          csvData = exportJobs((data.jobs || []).filter((j: any) => isWithinRange(j.date)));
           break;
         case 'expenses':
-          csvData = exportExpenses(data.expenses || []);
+          csvData = exportExpenses((data.expenses || []).filter((e: any) => isWithinRange(e.date)));
           break;
         case 'workers':
-          csvData = exportWorkers(data.workers || []);
+          // Workers are global, but filter joiningDate if a filter range is set
+          csvData = exportWorkers((data.workers || []).filter((w: any) => isWithinRange(w.joiningDate)));
           break;
         case 'attendance':
-          csvData = exportAttendance(data.attendance || []);
+          csvData = exportAttendance((data.attendance || []).filter((a: any) => isWithinRange(a.date)));
           break;
         case 'leaves':
-          csvData = exportLeaves(data.leaves || []);
+          csvData = exportLeaves((data.leaves || []).filter((l: any) => isWithinRange(l.startDate) || isWithinRange(l.endDate)));
           break;
         case 'salary':
-          csvData = exportSalaryRequests(data.salaryRequests || []);
+          csvData = exportSalaryRequests((data.salaryRequests || []).filter((sr: any) => {
+            const startMonth = startDate.substring(0, 7);
+            const endMonth = endDate.substring(0, 7);
+            return preset === 'all-time' || (sr.month >= startMonth && sr.month <= endMonth);
+          }));
           break;
         case 'travel':
-          csvData = exportTravelLogs(data.travelLogs || []);
+          csvData = exportTravelLogs((data.travelLogs || []).filter((tl: any) => isWithinRange(tl.date)));
           break;
         case 'commissions':
-          csvData = exportCommissions(data.commissions || []);
+          csvData = exportCommissions((data.commissions || []).filter((c: any) => isWithinRange(c.jobDate)));
           break;
         case 'reminders':
-          csvData = exportServiceReminders(data.serviceReminders || []);
+          csvData = exportServiceReminders((data.serviceReminders || []).filter((sr: any) => isWithinRange(sr.reminderDate)));
           break;
         case 'campaigns':
-          csvData = exportWhatsAppCampaigns(data.whatsAppCampaigns || []);
+          csvData = exportWhatsAppCampaigns((data.whatsAppCampaigns || []).filter((wc: any) => isWithinRange(wc.createdAt)));
           break;
         case 'audit-logs':
-          csvData = exportAuditLogs(data.auditLogs || []);
+          csvData = exportAuditLogs((data.auditLogs || []).filter((al: any) => isWithinRange(al.createdAt)));
           break;
         case 'master-dump':
-          // Consolidated CSV including all tables sequentially
+          // Consolidated CSV including all tables filtered sequentially
           csvData = '\uFEFF';
-          csvData += exportJobs(data.jobs || []) + '\r\n\r\n';
-          csvData += exportExpenses(data.expenses || []) + '\r\n\r\n';
-          csvData += exportWorkers(data.workers || []) + '\r\n\r\n';
-          csvData += exportAttendance(data.attendance || []) + '\r\n\r\n';
-          csvData += exportLeaves(data.leaves || []) + '\r\n\r\n';
-          csvData += exportSalaryRequests(data.salaryRequests || []) + '\r\n\r\n';
-          csvData += exportTravelLogs(data.travelLogs || []) + '\r\n\r\n';
-          csvData += exportCommissions(data.commissions || []) + '\r\n\r\n';
-          csvData += exportServiceReminders(data.serviceReminders || []) + '\r\n\r\n';
-          csvData += exportWhatsAppCampaigns(data.whatsAppCampaigns || []) + '\r\n\r\n';
-          csvData += exportAuditLogs(data.auditLogs || []);
-          filename = `shinestaff_master_consolidated_export_${new Date().toISOString().split('T')[0]}.csv`;
+          csvData += exportJobs((data.jobs || []).filter((j: any) => isWithinRange(j.date))) + '\r\n\r\n';
+          csvData += exportExpenses((data.expenses || []).filter((e: any) => isWithinRange(e.date))) + '\r\n\r\n';
+          csvData += exportWorkers((data.workers || []).filter((w: any) => isWithinRange(w.joiningDate))) + '\r\n\r\n';
+          csvData += exportAttendance((data.attendance || []).filter((a: any) => isWithinRange(a.date))) + '\r\n\r\n';
+          csvData += exportLeaves((data.leaves || []).filter((l: any) => isWithinRange(l.startDate) || isWithinRange(l.endDate))) + '\r\n\r\n';
+          csvData += exportSalaryRequests((data.salaryRequests || []).filter((sr: any) => {
+            const startMonth = startDate.substring(0, 7);
+            const endMonth = endDate.substring(0, 7);
+            return preset === 'all-time' || (sr.month >= startMonth && sr.month <= endMonth);
+          })) + '\r\n\r\n';
+          csvData += exportTravelLogs((data.travelLogs || []).filter((tl: any) => isWithinRange(tl.date))) + '\r\n\r\n';
+          csvData += exportCommissions((data.commissions || []).filter((c: any) => isWithinRange(c.jobDate))) + '\r\n\r\n';
+          csvData += exportServiceReminders((data.serviceReminders || []).filter((sr: any) => isWithinRange(sr.reminderDate))) + '\r\n\r\n';
+          csvData += exportWhatsAppCampaigns((data.whatsAppCampaigns || []).filter((wc: any) => isWithinRange(wc.createdAt))) + '\r\n\r\n';
+          csvData += exportAuditLogs((data.auditLogs || []).filter((al: any) => isWithinRange(al.createdAt)));
+          filename = `shinestaff_master_consolidated_export_${dateSuffix}.csv`;
           break;
         default:
           break;
@@ -260,6 +318,58 @@ const AdminDatabaseBackup: React.FC = () => {
             </>
           )}
         </button>
+      </div>
+
+      {/* Date Filters Selectors Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div>
+          <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center space-x-2">
+            <span>📅</span>
+            <span>Filter Backup Records By Date Range</span>
+          </h3>
+          <p className="text-[10px] text-slate-400 mt-0.5">Restrict downloaded CSV files to only include entries created or scheduled within the selected period.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+          <div>
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Quick Date Filter:</label>
+            <select
+              value={preset}
+              onChange={(e) => handlePresetChange(e.target.value)}
+              className="w-full sm:w-44 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:text-white shadow-sm"
+            >
+              <option value="all-time">All Time (No Filter)</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last-7">Last 7 Days</option>
+              <option value="this-month">This Month</option>
+              <option value="last-month">Last Month</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+
+          {preset === 'custom' && (
+            <div className="flex items-center space-x-2 animate-fade-in">
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">From:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">To:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white shadow-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Grid of collections */}
