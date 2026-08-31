@@ -25,6 +25,7 @@ import AdminJobs from './pages/AdminJobs';
 import AdminWhatsAppEngagement from './pages/AdminWhatsAppEngagement';
 import AdminSalary from './pages/AdminSalary';
 import AdminReports from './pages/AdminReports';
+import AdminDatabaseBackup from './pages/AdminDatabaseBackup';
 import AdminSettings from './pages/AdminSettings';
 import AdminAuditLog from './pages/AdminAuditLog';
 import AdminBIDashboard from './pages/AdminBIDashboard';
@@ -628,6 +629,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
                       <AdminReports />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/database-backup"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
+                      <AdminDatabaseBackup />
                     </AdminLayout>
                   </ProtectedRoute>
                 }
