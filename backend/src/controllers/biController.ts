@@ -5,6 +5,11 @@ import TravelLog from '../models/TravelLog';
 import SalaryRequest from '../models/SalaryRequest';
 import User from '../models/User';
 import Attendance from '../models/Attendance';
+import Leave from '../models/Leave';
+import AuditLog from '../models/AuditLog';
+import Commission from '../models/Commission';
+import ServiceReminder from '../models/ServiceReminder';
+import WhatsAppCampaign from '../models/WhatsAppCampaign';
 import { AuthRequest } from '../middleware/auth';
 
 export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
@@ -321,5 +326,61 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const exportAllData = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden. Admin access required.' });
+    }
+
+    const [
+      jobs,
+      expenses,
+      workers,
+      attendance,
+      leaves,
+      salaryRequests,
+      travelLogs,
+      auditLogs,
+      commissions,
+      serviceReminders,
+      whatsAppCampaigns
+    ] = await Promise.all([
+      Job.find().populate('workerId', 'name email phone company role status').lean(),
+      Expense.find().lean(),
+      User.find().select('-password').lean(),
+      Attendance.find().populate('workerId', 'name email phone').lean(),
+      Leave.find().populate('workerId', 'name email phone').lean(),
+      SalaryRequest.find().populate('workerId', 'name email phone').lean(),
+      TravelLog.find().populate('workerId', 'name email phone').lean(),
+      AuditLog.find().populate('userId', 'name email role').lean(),
+      Commission.find().populate('workerId', 'name email').lean(),
+      ServiceReminder.find().lean(),
+      WhatsAppCampaign.find().lean()
+    ]);
+
+    const dataDump = {
+      exportedAt: new Date().toISOString(),
+      exportedBy: req.user.id,
+      jobs,
+      expenses,
+      workers,
+      attendance,
+      leaves,
+      salaryRequests,
+      travelLogs,
+      auditLogs,
+      commissions,
+      serviceReminders,
+      whatsAppCampaigns
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=shinestaff_master_analytics_dump_${new Date().toISOString().split('T')[0]}.json`);
+    return res.status(200).json(dataDump);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to export master data dump', error: error.message });
   }
 };

@@ -15,6 +15,7 @@ import {
   Award,
   Download,
   Printer,
+  Database,
   Plus,
   Trash2,
   HelpCircle,
@@ -542,6 +543,23 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({
     setDrillDown({ title, type, data });
   };
 
+  const downloadMasterData = async () => {
+    try {
+      const response = await api.get('/bi/export-all');
+      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `shinestaff_master_analytics_dump_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to download master database dump');
+    }
+  };
+
   // --- Professional Excel Export ---
   const exportToExcel = () => {
     if (!analytics) return;
@@ -725,6 +743,15 @@ const AdminBIDashboard: React.FC<AdminBIDashboardProps> = ({
               </div>
             </>
           )}
+
+          <button
+            onClick={downloadMasterData}
+            className="flex items-center space-x-1.5 bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-650 dark:text-indigo-300 font-bold text-xs rounded-xl px-4 py-2.5 transition-colors cursor-pointer"
+            title="Download complete raw database tables in JSON format for advanced BI and data analytics"
+          >
+            <Database className="h-4 w-4" />
+            <span className="hidden md:inline">Export Master Database</span>
+          </button>
 
           <button
             onClick={exportToExcel}
