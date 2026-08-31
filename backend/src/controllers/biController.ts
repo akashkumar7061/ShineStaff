@@ -355,7 +355,7 @@ export const exportAllData = async (req: AuthRequest, res: Response) => {
       Leave.find().populate('workerId', 'name email phone').lean(),
       SalaryRequest.find().populate('workerId', 'name email phone').lean(),
       TravelLog.find().populate('workerId', 'name email phone').lean(),
-      AuditLog.find().populate('userId', 'name email role').lean(),
+      AuditLog.find().populate('adminId', 'name email role').lean(),
       Commission.find().populate('workerId', 'name email').lean(),
       ServiceReminder.find().lean(),
       WhatsAppCampaign.find().lean()
