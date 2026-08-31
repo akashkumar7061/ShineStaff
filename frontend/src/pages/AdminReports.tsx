@@ -5,7 +5,8 @@ import {
   Users,
   Calendar,
   DollarSign,
-  Camera
+  Camera,
+  Database
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -23,9 +24,11 @@ const AdminReports: React.FC = () => {
   const [startDate, setStartDate] = useState(getTodayString);
   const [endDate, setEndDate] = useState(getTodayString);
 
-  const triggerDownload = (reportType: 'attendance' | 'workers' | 'salary' | 'photos') => {
+  const triggerDownload = (reportType: 'attendance' | 'workers' | 'salary' | 'photos' | 'master-data') => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    let url = `/api/reports/${reportType}?token=${token}`;
+    let url = reportType === 'master-data'
+      ? `/api/bi/export-all?token=${token}`
+      : `/api/reports/${reportType}?token=${token}`;
 
     if (reportType === 'attendance' && startDate && endDate) {
       url += `&startDate=${startDate}&endDate=${endDate}`;
@@ -164,6 +167,28 @@ const AdminReports: React.FC = () => {
           >
             <Download className="h-4 w-4" />
             <span>Download Photo Logs</span>
+          </button>
+        </div>
+
+        {/* 5. Master Database Analytics Dump Card */}
+        <div className="glass-card p-6 flex flex-col justify-between space-y-6">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1.5">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Database Backup & Analytics</span>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Master Data Dump (JSON)</h3>
+              <p className="text-xs text-slate-455">Downloads a complete raw database snapshot (all bookings, expenses, worker logs, checklist items, and campaigns) in JSON format for offline Power BI or python analysis.</p>
+            </div>
+            <div className="rounded-xl bg-indigo-500/10 text-indigo-500 p-2.5">
+              <Database className="h-5 w-5" />
+            </div>
+          </div>
+
+          <button
+            onClick={() => triggerDownload('master-data')}
+            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download Master Database Dump</span>
           </button>
         </div>
 
