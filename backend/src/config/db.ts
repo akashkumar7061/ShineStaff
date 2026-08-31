@@ -3,6 +3,7 @@ import User from '../models/User';
 
 export const connectDB = async () => {
   try {
+    mongoose.set('strictPopulate', false);
     const connStr = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/shinestaff';
     const conn = await mongoose.connect(connStr);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
