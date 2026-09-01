@@ -18,13 +18,14 @@ export const getSettings = async (req: Request, res: Response) => {
 };
 
 export const updateSettings = async (req: AuthRequest, res: Response) => {
-  const {
+    const {
     sofaShineLogoDataUrl,
     cleanCruisersLogoDataUrl,
     fuelAllowanceRate,
     lateTimeGraceMins,
     halfDayThresholdHours,
-    adminEmailForAlerts
+    adminEmailForAlerts,
+    googleMapsApiKey
   } = req.body;
 
   try {
@@ -44,6 +45,9 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
     settings.lateTimeGraceMins = lateTimeGraceMins !== undefined ? Number(lateTimeGraceMins) : settings.lateTimeGraceMins;
     settings.halfDayThresholdHours = halfDayThresholdHours !== undefined ? Number(halfDayThresholdHours) : settings.halfDayThresholdHours;
     settings.adminEmailForAlerts = adminEmailForAlerts !== undefined ? adminEmailForAlerts : settings.adminEmailForAlerts;
+    if (googleMapsApiKey !== undefined) {
+      settings.googleMapsApiKey = googleMapsApiKey.trim();
+    }
 
     await settings.save();
 

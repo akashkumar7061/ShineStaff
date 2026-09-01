@@ -52,6 +52,10 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
   const [monthlySalary, setMonthlySalary] = useState('');
   const [company, setCompany] = useState<'SofaShine' | 'CleanCruisers' | 'Both'>('SofaShine');
   const [photoDataUrl, setPhotoDataUrl] = useState('');
+  const [homeAddress, setHomeAddress] = useState('');
+  const [homeLat, setHomeLat] = useState<string>('');
+  const [homeLng, setHomeLng] = useState<string>('');
+  const [detectingGPS, setDetectingGPS] = useState(false);
 
   const fetchWorkers = async () => {
     setLoading(true);
@@ -69,6 +73,26 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     fetchWorkers();
   }, [companyFilter]);
 
+  const handleDetectHomeGPS = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+    setDetectingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setHomeLat(pos.coords.latitude.toFixed(6));
+        setHomeLng(pos.coords.longitude.toFixed(6));
+        setDetectingGPS(false);
+      },
+      (err) => {
+        alert('Could not detect GPS location: ' + err.message);
+        setDetectingGPS(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleAddWorker = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -78,6 +102,11 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
         password,
         phone,
         address,
+        homeLocation: {
+          address: homeAddress || address,
+          lat: homeLat ? Number(homeLat) : undefined,
+          lng: homeLng ? Number(homeLng) : undefined
+        },
         aadhaarNumber,
         dailySalary: Number(dailySalary) || 0,
         monthlySalary: Number(monthlySalary) || 0,
@@ -103,6 +132,11 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
         email,
         phone,
         address,
+        homeLocation: {
+          address: homeAddress || address,
+          lat: homeLat ? Number(homeLat) : undefined,
+          lng: homeLng ? Number(homeLng) : undefined
+        },
         aadhaarNumber,
         dailySalary: Number(dailySalary) || 0,
         monthlySalary: Number(monthlySalary) || 0,
@@ -174,9 +208,12 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     setEmail(worker.email);
     setPhone(worker.phone);
     setAddress(worker.address || '');
+    setHomeAddress(worker.homeLocation?.address || worker.address || '');
+    setHomeLat(worker.homeLocation?.lat !== undefined ? String(worker.homeLocation.lat) : '');
+    setHomeLng(worker.homeLocation?.lng !== undefined ? String(worker.homeLocation.lng) : '');
     setAadhaarNumber(worker.aadhaarNumber || '');
-    setDailySalary(worker.dailySalary.toString());
-    setMonthlySalary(worker.monthlySalary.toString());
+    setDailySalary(worker.dailySalary ? worker.dailySalary.toString() : '');
+    setMonthlySalary(worker.monthlySalary ? worker.monthlySalary.toString() : '');
     setCompany(worker.company);
     setPhotoDataUrl(worker.photo || '');
     setEditModalOpen(true);
@@ -189,6 +226,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     setPassword('');
     setPhone('');
     setAddress('');
+    setHomeAddress('');
+    setHomeLat('');
+    setHomeLng('');
     setAadhaarNumber('');
     setDailySalary('');
     setMonthlySalary('');
@@ -431,6 +471,50 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                 <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary resize-none" />
               </div>
 
+              {/* Home Location (for Google Maps daily KM calculation) */}
+              <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
+                    🏠 Home Location (For Daily KM & Fuel Route)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDetectHomeGPS}
+                    disabled={detectingGPS}
+                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+                  >
+                    <span>{detectingGPS ? 'Detecting GPS...' : '📍 Use Current GPS'}</span>
+                  </button>
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={homeAddress}
+                    onChange={(e) => setHomeAddress(e.target.value)}
+                    placeholder="Home Landmark / Street Address"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="any"
+                    value={homeLat}
+                    onChange={(e) => setHomeLat(e.target.value)}
+                    placeholder="Home Latitude (e.g. 28.6139)"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    value={homeLng}
+                    onChange={(e) => setHomeLng(e.target.value)}
+                    placeholder="Home Longitude (e.g. 77.2090)"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Worker Profile Photo</label>
                 <input type="file" accept="image/*" onChange={handlePhotoUpload} className="w-full text-xs outline-none" />
@@ -515,6 +599,50 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
               <div>
                 <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Address</label>
                 <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary resize-none" />
+              </div>
+
+              {/* Home Location (for Google Maps daily KM calculation) */}
+              <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">
+                    🏠 Home Location (For Daily KM & Fuel Route)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDetectHomeGPS}
+                    disabled={detectingGPS}
+                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+                  >
+                    <span>{detectingGPS ? 'Detecting GPS...' : '📍 Use Current GPS'}</span>
+                  </button>
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={homeAddress}
+                    onChange={(e) => setHomeAddress(e.target.value)}
+                    placeholder="Home Landmark / Street Address"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="any"
+                    value={homeLat}
+                    onChange={(e) => setHomeLat(e.target.value)}
+                    placeholder="Home Latitude (e.g. 28.6139)"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    value={homeLng}
+                    onChange={(e) => setHomeLng(e.target.value)}
+                    placeholder="Home Longitude (e.g. 77.2090)"
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary"
+                  />
+                </div>
               </div>
 
               <div>

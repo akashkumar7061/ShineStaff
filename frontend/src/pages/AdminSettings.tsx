@@ -6,7 +6,8 @@ import {
   Clock,
   Sparkles,
   Upload,
-  Coins
+  Coins,
+  MapPin
 } from 'lucide-react';
 
 const AdminSettings: React.FC = () => {
@@ -18,6 +19,7 @@ const AdminSettings: React.FC = () => {
   const [lateTimeGraceMins, setLateTimeGraceMins] = useState('');
   const [halfDayThresholdHours, setHalfDayThresholdHours] = useState('');
   const [adminEmailForAlerts, setAdminEmailForAlerts] = useState('');
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
 
   // Logo previews
   const [sofaLogo, setSofaLogo] = useState('');
@@ -28,10 +30,11 @@ const AdminSettings: React.FC = () => {
     try {
       const res = await api.get('/settings');
       const s = res.data;
-      setFuelAllowanceRate(s.fuelAllowanceRate.toString());
-      setLateTimeGraceMins(s.lateTimeGraceMins.toString());
-      setHalfDayThresholdHours(s.halfDayThresholdHours.toString());
+      setFuelAllowanceRate(s.fuelAllowanceRate ? s.fuelAllowanceRate.toString() : '4');
+      setLateTimeGraceMins(s.lateTimeGraceMins ? s.lateTimeGraceMins.toString() : '15');
+      setHalfDayThresholdHours(s.halfDayThresholdHours ? s.halfDayThresholdHours.toString() : '4');
       setAdminEmailForAlerts(s.adminEmailForAlerts || '');
+      setGoogleMapsApiKey(s.googleMapsApiKey || '');
       setSofaLogo(s.sofaShineLogo || '');
       setCruiserLogo(s.cleanCruisersLogo || '');
     } catch (err) {
@@ -69,6 +72,7 @@ const AdminSettings: React.FC = () => {
         lateTimeGraceMins: Number(lateTimeGraceMins),
         halfDayThresholdHours: Number(halfDayThresholdHours),
         adminEmailForAlerts,
+        googleMapsApiKey,
         sofaShineLogoDataUrl: sofaLogo,
         cleanCruisersLogoDataUrl: cruiserLogo
       });
@@ -124,6 +128,29 @@ const AdminSettings: React.FC = () => {
                   className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Google Maps Distance Matrix API Configuration */}
+          <div className="glass-card p-6 space-y-4">
+            <div className="flex items-center space-x-2 text-secondary mb-2">
+              <MapPin className="h-5 w-5" />
+              <h3 className="text-sm font-bold uppercase tracking-wider">Google Maps Distance Calculation</h3>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">
+                Google Maps API Key (Distance Matrix API)
+              </label>
+              <input
+                type="text"
+                value={googleMapsApiKey}
+                onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+                placeholder="Paste your Google Maps API Key (e.g. AIzaSy...)"
+                className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary font-mono"
+              />
+              <span className="block text-[10px] text-slate-400 mt-1.5">
+                Used to calculate accurate road driving distances (KM) for daily worker travel routes (Home ➔ Sites ➔ Home). If blank, the system automatically calculates distance using OpenStreetMap road routing.
+              </span>
             </div>
           </div>
 

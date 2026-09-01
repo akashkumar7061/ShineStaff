@@ -90,109 +90,119 @@ export const getWorkerDetails = async (req: Request, res: Response) => {
 };
 
 export const addWorker = async (req: Request, res: Response) => {
-  const {
-    name,
-    email,
-    password,
-    phone,
-    address,
-    aadhaarNumber,
-    dailySalary,
-    monthlySalary,
-    company,
-    photoDataUrl
-  } = req.body;
-
-  try {
-    const targetEmail = email || `${phone}@shinestaff.com`;
-    const existing = await User.findOne({ email: targetEmail });
-    if (existing) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
-
-    let photoUrl = '';
-    if (photoDataUrl) {
-      photoUrl = await uploadToCloudinary(photoDataUrl, 'worker_photos');
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password || 'worker123', salt);
-
-    const worker = new User({
+    const {
       name,
-      email: targetEmail,
-      password: hashedPassword,
-      role: 'worker',
-      company,
+      email,
+      password,
       phone,
       address,
+      homeLocation,
       aadhaarNumber,
-      dailySalary: Number(dailySalary) || Number((Number(monthlySalary || 0) / 30).toFixed(2)),
-      monthlySalary: Number(monthlySalary) || Number((Number(dailySalary || 0) * 30).toFixed(2)),
-      photo: photoUrl,
-      status: 'active',
-      joiningDate: new Date()
-    });
+      dailySalary,
+      monthlySalary,
+      company,
+      photoDataUrl
+    } = req.body;
 
-    await worker.save();
-    
-    // Exclude password in response
-    const workerObj = worker.toObject();
-    delete workerObj.password;
+    try {
+      const targetEmail = email || `${phone}@shinestaff.com`;
+      const existing = await User.findOne({ email: targetEmail });
+      if (existing) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
 
-    res.status(201).json({ message: 'Worker created successfully', worker: workerObj });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
+      let photoUrl = '';
+      if (photoDataUrl) {
+        photoUrl = await uploadToCloudinary(photoDataUrl, 'worker_photos');
+      }
 
-export const editWorker = async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const {
-    name,
-    email,
-    phone,
-    address,
-    aadhaarNumber,
-    dailySalary,
-    monthlySalary,
-    company,
-    status,
-    photoDataUrl
-  } = req.body;
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password || 'worker123', salt);
 
-  try {
-    const worker = await User.findById(id);
-    if (!worker || worker.role !== 'worker') {
-      return res.status(404).json({ message: 'Worker not found' });
+      const worker = new User({
+        name,
+        email: targetEmail,
+        password: hashedPassword,
+        role: 'worker',
+        company,
+        phone,
+        address,
+        homeLocation: homeLocation || { address: address || '', lat: undefined, lng: undefined },
+        aadhaarNumber,
+        dailySalary: Number(dailySalary) || Number((Number(monthlySalary || 0) / 30).toFixed(2)),
+        monthlySalary: Number(monthlySalary) || Number((Number(dailySalary || 0) * 30).toFixed(2)),
+        photo: photoUrl,
+        status: 'active',
+        joiningDate: new Date()
+      });
+
+      await worker.save();
+      
+      // Exclude password in response
+      const workerObj = worker.toObject();
+      delete workerObj.password;
+
+      res.status(201).json({ message: 'Worker created successfully', worker: workerObj });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
+  };
 
-    if (photoDataUrl && !photoDataUrl.startsWith('http')) {
-      worker.photo = await uploadToCloudinary(photoDataUrl, 'worker_photos');
-    }
+  export const editWorker = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const {
+      name,
+      email,
+      phone,
+      address,
+      homeLocation,
+      aadhaarNumber,
+      dailySalary,
+      monthlySalary,
+      company,
+      status,
+      photoDataUrl
+    } = req.body;
 
-    worker.name = name || worker.name;
-    worker.email = email || worker.email;
-    worker.phone = phone || worker.phone;
-    worker.address = address !== undefined ? address : worker.address;
-    worker.aadhaarNumber = aadhaarNumber !== undefined ? aadhaarNumber : worker.aadhaarNumber;
-    let finalMonthly = monthlySalary !== undefined ? Number(monthlySalary) : worker.monthlySalary;
-    let finalDaily = dailySalary !== undefined ? Number(dailySalary) : worker.dailySalary;
+    try {
+      const worker = await User.findById(id);
+      if (!worker || worker.role !== 'worker') {
+        return res.status(404).json({ message: 'Worker not found' });
+      }
 
-    if (monthlySalary !== undefined && Number(monthlySalary) !== worker.monthlySalary) {
-      finalMonthly = Number(monthlySalary);
-      finalDaily = Number((finalMonthly / 30).toFixed(2));
-    } else if (dailySalary !== undefined && Number(dailySalary) !== worker.dailySalary) {
-      finalDaily = Number(dailySalary);
-      finalMonthly = Number((finalDaily * 30).toFixed(2));
-    }
+      if (photoDataUrl && !photoDataUrl.startsWith('http')) {
+        worker.photo = await uploadToCloudinary(photoDataUrl, 'worker_photos');
+      }
 
-    worker.dailySalary = finalDaily;
-    worker.monthlySalary = finalMonthly;
-    worker.company = company || worker.company;
-    worker.status = status || worker.status;
+      worker.name = name || worker.name;
+      worker.email = email || worker.email;
+      worker.phone = phone || worker.phone;
+      worker.address = address !== undefined ? address : worker.address;
+      if (homeLocation !== undefined) {
+        worker.homeLocation = {
+          address: homeLocation.address !== undefined ? homeLocation.address : (worker.homeLocation?.address || worker.address || ''),
+          lat: homeLocation.lat !== undefined ? (Number(homeLocation.lat) || undefined) : worker.homeLocation?.lat,
+          lng: homeLocation.lng !== undefined ? (Number(homeLocation.lng) || undefined) : worker.homeLocation?.lng
+        };
+      }
+      worker.aadhaarNumber = aadhaarNumber !== undefined ? aadhaarNumber : worker.aadhaarNumber;
+      let finalMonthly = monthlySalary !== undefined ? Number(monthlySalary) : worker.monthlySalary;
+      let finalDaily = dailySalary !== undefined ? Number(dailySalary) : worker.dailySalary;
 
-    await worker.save();
+      if (monthlySalary !== undefined && Number(monthlySalary) !== worker.monthlySalary) {
+        finalMonthly = Number(monthlySalary);
+        finalDaily = Number((finalMonthly / 30).toFixed(2));
+      } else if (dailySalary !== undefined && Number(dailySalary) !== worker.dailySalary) {
+        finalDaily = Number(dailySalary);
+        finalMonthly = Number((finalDaily * 30).toFixed(2));
+      }
+
+      worker.dailySalary = finalDaily;
+      worker.monthlySalary = finalMonthly;
+      worker.company = company || worker.company;
+      worker.status = status || worker.status;
+
+      await worker.save();
 
     logAudit(req, {
       action: 'updated',

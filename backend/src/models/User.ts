@@ -18,6 +18,11 @@ export interface IUser extends Document {
     lat: number;
     lng: number;
   };
+  homeLocation?: {
+    address?: string;
+    lat?: number;
+    lng?: number;
+  };
   lastActive?: Date;
   pushSubscriptions?: Array<{
     endpoint: string;
@@ -43,6 +48,11 @@ const UserSchema = new Schema<IUser>({
   monthlySalary: { type: Number, default: 0 },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   currentLocation: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
+  homeLocation: {
+    address: { type: String, default: '' },
     lat: { type: Number },
     lng: { type: Number }
   },

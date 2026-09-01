@@ -1,9 +1,12 @@
 import { Response } from 'express';
 import TravelLog from '../models/TravelLog';
 import Job from '../models/Job';
+import User from '../models/User';
+import Settings from '../models/Settings';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { logAudit } from '../utils/auditLog';
+import { calculateLegDistance } from '../services/googleMapsService';
 
 export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   const { date, type, jobId, kms } = req.body;
@@ -281,5 +284,312 @@ export const deleteTravelLog = async (req: AuthRequest, res: Response) => {
     res.status(200).json({ message: 'Travel log deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * Calculates daily chain route (Home -> Site 1 -> Mid-day Site 2 -> ... -> Home)
+ * for all workers on a specified date using Google Maps Distance Matrix API.
+ */
+export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Response) => {
+  try {
+    const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
+
+    // Fetch global settings for fuel allowance rate & Google Maps API key
+    let settings = await Settings.findOne({ settingsId: 'global' });
+    if (!settings) {
+      settings = new Settings({ settingsId: 'global' });
+      await settings.save();
+    }
+    const fuelRate = settings.fuelAllowanceRate || 4;
+    const apiKey = settings.googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY || '';
+
+    // Fetch all active workers
+    const workers = await User.find({ role: 'worker', status: 'active' })
+      .select('name email phone company photo homeLocation currentLocation status')
+      .lean();
+
+    const startOfDay = new Date(`${targetDate}T00:00:00.000Z`);
+    const endOfDay = new Date(`${targetDate}T23:59:59.999Z`);
+
+    // Fetch all jobs scheduled or worked on targetDate
+    const allJobs = await Job.find({
+      $or: [
+        { date: targetDate },
+        { startedAt: { $gte: startOfDay, $lte: endOfDay } },
+        { completedAt: { $gte: startOfDay, $lte: endOfDay } }
+      ],
+      status: { $nin: ['cancelled'] }
+    })
+      .select('title company workerId clientName clientPhone address locationName location beforePhotoGPS afterPhotoGPS status date timeSlot startedAt completedAt beforePhotoTime')
+      .lean();
+
+    // Fetch existing TravelLogs for this date to determine if already approved
+    const existingLogs = await TravelLog.find({ date: targetDate }).lean();
+
+    const workerSummaries = await Promise.all(
+      workers.map(async (worker: any) => {
+        // Filter jobs assigned to this worker
+        const workerJobs = allJobs.filter(
+          (j: any) => j.workerId && j.workerId.toString() === worker._id.toString()
+        );
+
+        const workerLogs = existingLogs.filter(
+          (l: any) => l.workerId && l.workerId.toString() === worker._id.toString()
+        );
+        const isApproved = workerLogs.some((l: any) => l.status === 'approved');
+        const approvedAllowance = workerLogs
+          .filter((l: any) => l.status === 'approved')
+          .reduce((sum: number, l: any) => sum + (l.allowance || 0), 0);
+
+        if (workerJobs.length === 0) {
+          return {
+            workerId: worker._id,
+            workerName: worker.name,
+            workerPhone: worker.phone,
+            workerPhoto: worker.photo,
+            company: worker.company,
+            homeLocation: worker.homeLocation || null,
+            hasHomeConfigured: !!(worker.homeLocation?.lat && worker.homeLocation?.lng),
+            hasActivity: false,
+            totalJobsCount: 0,
+            completedJobsCount: 0,
+            totalKM: 0,
+            fuelRate,
+            fuelAllowance: 0,
+            isApproved,
+            approvedAllowance,
+            legs: []
+          };
+        }
+
+        // Sort jobs chronologically based on execution: startedAt -> beforePhotoTime -> timeSlot/createdAt
+        workerJobs.sort((a: any, b: any) => {
+          const timeA = a.startedAt
+            ? new Date(a.startedAt).getTime()
+            : a.beforePhotoTime
+            ? new Date(a.beforePhotoTime).getTime()
+            : 0;
+          const timeB = b.startedAt
+            ? new Date(b.startedAt).getTime()
+            : b.beforePhotoTime
+            ? new Date(b.beforePhotoTime).getTime()
+            : 0;
+          if (timeA && timeB) return timeA - timeB;
+          return (a.timeSlot || '').localeCompare(b.timeSlot || '');
+        });
+
+        // Determine home coordinate
+        const homeLat = worker.homeLocation?.lat;
+        const homeLng = worker.homeLocation?.lng;
+        const homeAddress = worker.homeLocation?.address || 'Worker Residence';
+        const hasHome = typeof homeLat === 'number' && typeof homeLng === 'number';
+
+        // Build array of stops: Home -> Site 1 -> Site 2 -> ... -> Return Home
+        const stops: Array<{
+          type: 'home_departure' | 'job_site' | 'home_return';
+          name: string;
+          address: string;
+          lat?: number;
+          lng?: number;
+          jobId?: string;
+          status?: string;
+          time?: string;
+        }> = [];
+
+        // 1. Home Departure Stop
+        stops.push({
+          type: 'home_departure',
+          name: 'Home Departure',
+          address: homeAddress,
+          lat: homeLat,
+          lng: homeLng
+        });
+
+        // 2. Job Site Stops in true chronological order
+        workerJobs.forEach((job: any, index: number) => {
+          const siteLat = job.location?.lat || job.beforePhotoGPS?.lat || job.afterPhotoGPS?.lat;
+          const siteLng = job.location?.lng || job.beforePhotoGPS?.lng || job.afterPhotoGPS?.lng;
+          const timeDisplay = job.startedAt
+            ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+            : job.timeSlot || `Site #${index + 1}`;
+
+          stops.push({
+            type: 'job_site',
+            name: `${job.clientName} (${job.title || 'Cleaning Service'})`,
+            address: job.address || job.locationName || 'Client Address',
+            lat: siteLat,
+            lng: siteLng,
+            jobId: job._id.toString(),
+            status: job.status,
+            time: timeDisplay
+          });
+        });
+
+        // 3. Return Home Stop
+        stops.push({
+          type: 'home_return',
+          name: 'Return to Home',
+          address: homeAddress,
+          lat: homeLat,
+          lng: homeLng
+        });
+
+        // Calculate each leg distance using Google Maps Service
+        const legs = [];
+        let totalKM = 0;
+
+        for (let i = 0; i < stops.length - 1; i++) {
+          const fromStop = stops[i];
+          const toStop = stops[i + 1];
+
+          let distanceKM = 0;
+          let durationText = '';
+          let source: 'google_maps' | 'osrm' | 'haversine_road' = 'haversine_road';
+          let googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromStop.address)}&destination=${encodeURIComponent(toStop.address)}`;
+
+          if (
+            typeof fromStop.lat === 'number' &&
+            typeof fromStop.lng === 'number' &&
+            typeof toStop.lat === 'number' &&
+            typeof toStop.lng === 'number'
+          ) {
+            const legRes = await calculateLegDistance(
+              fromStop.lat,
+              fromStop.lng,
+              toStop.lat,
+              toStop.lng,
+              apiKey,
+              fromStop.address,
+              toStop.address
+            );
+            distanceKM = legRes.distanceKM;
+            durationText = legRes.durationText || '';
+            source = legRes.source;
+            googleMapsUrl = legRes.googleMapsUrl;
+          }
+
+          totalKM += distanceKM;
+
+          legs.push({
+            legNumber: i + 1,
+            fromType: fromStop.type,
+            fromName: fromStop.name,
+            fromAddress: fromStop.address,
+            toType: toStop.type,
+            toName: toStop.name,
+            toAddress: toStop.address,
+            toJobId: toStop.jobId,
+            toStatus: toStop.status,
+            time: toStop.time || '',
+            distanceKM,
+            durationText,
+            source,
+            googleMapsUrl
+          });
+        }
+
+        totalKM = Number(totalKM.toFixed(2));
+        const fuelAllowance = Number((totalKM * fuelRate).toFixed(2));
+
+        return {
+          workerId: worker._id,
+          workerName: worker.name,
+          workerPhone: worker.phone,
+          workerPhoto: worker.photo,
+          company: worker.company,
+          homeLocation: worker.homeLocation || null,
+          hasHomeConfigured: hasHome,
+          hasActivity: true,
+          totalJobsCount: workerJobs.length,
+          completedJobsCount: workerJobs.filter((j: any) => j.status === 'completed').length,
+          totalKM,
+          fuelRate,
+          fuelAllowance,
+          isApproved,
+          approvedAllowance,
+          legs
+        };
+      })
+    );
+
+    res.status(200).json({
+      date: targetDate,
+      fuelRate,
+      hasGoogleApiKey: !!(apiKey && apiKey.trim().length > 10),
+      totalWorkersCount: workers.length,
+      activeTravelersCount: workerSummaries.filter((w) => w.hasActivity).length,
+      totalTeamKM: Number(
+        workerSummaries.reduce((sum, w) => sum + w.totalKM, 0).toFixed(2)
+      ),
+      totalTeamAllowance: Number(
+        workerSummaries.reduce((sum, w) => sum + w.fuelAllowance, 0).toFixed(2)
+      ),
+      workers: workerSummaries
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to calculate daily travel summary', error: error.message });
+  }
+};
+
+/**
+ * 1-Click Approve Daily Calculated Travel for a Worker
+ */
+export const approveDailyCalculatedTravel = async (req: AuthRequest, res: Response) => {
+  const { workerId, date, totalKM, allowance, notes } = req.body;
+
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can approve daily travel payouts' });
+  }
+
+  try {
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    // Check if an existing log exists for this worker on this date
+    let travel = await TravelLog.findOne({ workerId, date: targetDate });
+
+    if (travel) {
+      travel.kms = Number(totalKM) || travel.kms;
+      travel.allowance = Number(allowance) >= 0 ? Number(allowance) : travel.allowance;
+      travel.status = 'approved';
+      await travel.save();
+    } else {
+      travel = new TravelLog({
+        workerId,
+        date: targetDate,
+        type: 'home',
+        kms: Number(totalKM) || 0,
+        allowance: Number(allowance) || 0,
+        status: 'approved',
+        fromLocation: 'Home Route',
+        toLocation: 'Home Return'
+      });
+      await travel.save();
+    }
+
+    logAudit(req, {
+      action: 'approved',
+      entityType: 'TravelLog',
+      entityId: travel._id.toString(),
+      summary: `Approved daily travel route (${travel.kms} KM, ₹${travel.allowance}) for worker on ${targetDate}`
+    });
+
+    const io = getIO();
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'TRAVEL_LOG_UPDATED',
+        message: `Daily travel route approved.`,
+        travelId: travel._id
+      });
+      io.to(workerId.toString()).emit('notification', {
+        type: 'TRAVEL_LOG_APPROVED',
+        message: `Your daily travel allowance for ${targetDate} (₹${travel.allowance}) has been approved.`,
+        travelId: travel._id
+      });
+    }
+
+    res.status(200).json({ message: 'Daily travel route approved successfully', travel });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to approve daily travel', error: error.message });
   }
 };

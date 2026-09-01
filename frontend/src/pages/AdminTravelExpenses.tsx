@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import api from '../utils/api';
 import AdminBIDashboard from './AdminBIDashboard';
+import DailyGPSRouteTracker from '../components/DailyGPSRouteTracker';
 import {
   Sparkles,
   Compass,
@@ -1767,6 +1768,7 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 { id: 'bi-expenses', label: 'Manage Expenditures', icon: Plus },
                 { id: 'bi-payments', label: 'Invoice & Payments status', icon: CreditCard },
                 { id: 'bi-settings', label: 'Company Settings', icon: SettingsIcon },
+                { id: 'daily-gps-route', label: '🚗 GPS Route & Daily KM', icon: Map },
                 { id: 'daily-travel', label: 'Daily Travel Report', icon: MapPin },
                 { id: 'work-earnings', label: 'Work-wise Earnings', icon: DollarSign },
                 { id: 'travel-expenses', label: 'Travel Expenses', icon: Compass },
@@ -1846,6 +1848,11 @@ const AdminTravelExpenses: React.FC<AdminTravelExpensesProps> = ({ companyFilter
                 </div>
               ))}
             </div>
+
+            {/* TAB CONTENT: 0. Google Maps Daily GPS Route & KM Tracker */}
+            {activeSection === 'daily-gps-route' && (
+              <DailyGPSRouteTracker companyFilter={companyFilter} />
+            )}
 
             {/* TAB CONTENT: 1. Dashboard View */}
             {activeSection === 'dashboard' && (

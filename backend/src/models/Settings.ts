@@ -9,6 +9,7 @@ export interface ISettings extends Document {
   halfDayThresholdHours: number; // hours after which work is considered full day (otherwise half day)
   adminEmailForAlerts: string;
   qrSecurityPassword?: string;
+  googleMapsApiKey?: string;
 }
 
 const SettingsSchema = new Schema<ISettings>({
@@ -19,7 +20,8 @@ const SettingsSchema = new Schema<ISettings>({
   lateTimeGraceMins: { type: Number, default: 15 }, // 15 mins
   halfDayThresholdHours: { type: Number, default: 4 },
   adminEmailForAlerts: { type: String, default: '' },
-  qrSecurityPassword: { type: String, default: 'admin123' }
+  qrSecurityPassword: { type: String, default: 'admin123' },
+  googleMapsApiKey: { type: String, default: '' }
 }, {
   timestamps: true
 });
