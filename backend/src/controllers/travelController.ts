@@ -443,31 +443,26 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
           const fromStop = stops[i];
           const toStop = stops[i + 1];
 
-          let distanceKM = 0;
-          let durationText = '';
-          let source: 'google_maps' | 'osrm' | 'haversine_road' = 'haversine_road';
-          let googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromStop.address)}&destination=${encodeURIComponent(toStop.address)}`;
+          const legRes = await calculateLegDistance(
+            {
+              lat: fromStop.lat,
+              lng: fromStop.lng,
+              address: fromStop.address,
+              name: fromStop.name
+            },
+            {
+              lat: toStop.lat,
+              lng: toStop.lng,
+              address: toStop.address,
+              name: toStop.name
+            },
+            apiKey
+          );
 
-          if (
-            typeof fromStop.lat === 'number' &&
-            typeof fromStop.lng === 'number' &&
-            typeof toStop.lat === 'number' &&
-            typeof toStop.lng === 'number'
-          ) {
-            const legRes = await calculateLegDistance(
-              fromStop.lat,
-              fromStop.lng,
-              toStop.lat,
-              toStop.lng,
-              apiKey,
-              fromStop.address,
-              toStop.address
-            );
-            distanceKM = legRes.distanceKM;
-            durationText = legRes.durationText || '';
-            source = legRes.source;
-            googleMapsUrl = legRes.googleMapsUrl;
-          }
+          const distanceKM = legRes.distanceKM;
+          const durationText = legRes.durationText || '';
+          const source = legRes.source;
+          const googleMapsUrl = legRes.googleMapsUrl;
 
           totalKM += distanceKM;
 
