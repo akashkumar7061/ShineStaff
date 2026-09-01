@@ -261,6 +261,27 @@ const DailyGPSRouteTracker: React.FC<DailyGPSRouteTrackerProps> = ({ companyFilt
         </div>
       </div>
 
+      {/* 2.5 Google Maps API Key Status Tip */}
+      {!summaryData?.hasGoogleApiKey && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-4">
+          <div className="flex items-center space-x-2.5">
+            <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
+            <div>
+              <span className="font-bold block">100% Accurate Google Maps Driving Distance:</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Currently running in road driving fallback. To calculate 100% exact Google Maps distance (e.g. 14.6 KM), please enter your Google Maps API Key in <strong>Company Settings</strong>.
+              </span>
+            </div>
+          </div>
+          <a
+            href="/admin/settings"
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-colors"
+          >
+            Configure Key ↗
+          </a>
+        </div>
+      )}
+
       {/* 3. Search Filter */}
       <div className="flex items-center justify-between">
         <div className="relative w-full max-w-xs">
@@ -460,8 +481,12 @@ const DailyGPSRouteTracker: React.FC<DailyGPSRouteTrackerProps> = ({ companyFilt
                                         (~{leg.durationText})
                                       </span>
                                     )}
-                                    <span className="text-[9px] text-slate-400 uppercase tracking-widest">
-                                      {leg.source === 'google_maps' ? 'Verified Google Maps' : 'Road Route'}
+                                    <span className={`text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                                      leg.source === 'google_maps'
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    }`}>
+                                      {leg.source === 'google_maps' ? '🟢 Google Maps' : '🟡 Road Estimate'}
                                     </span>
                                   </div>
 

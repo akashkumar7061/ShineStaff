@@ -33,11 +33,11 @@ export interface RouteLegResult {
   googleMapsUrl: string;
 }
 
-// In-memory cache for address geocoding to avoid repetitive requests
+// In-memory cache for address geocoding
 const geocodeCache: Record<string, { lat: number; lng: number }> = {};
 
 /**
- * Free Nominatim OpenStreetMap Geocoder fallback
+ * Free Nominatim OpenStreetMap Geocoder
  */
 export const geocodeAddress = async (
   address: string
@@ -48,9 +48,19 @@ export const geocodeAddress = async (
     return geocodeCache[cleanAddr];
   }
 
+  // Append Delhi NCR if no region specified to avoid international ambiguity
+  const searchQuery = cleanAddr.toLowerCase().includes('delhi') ||
+    cleanAddr.toLowerCase().includes('noida') ||
+    cleanAddr.toLowerCase().includes('gurgaon') ||
+    cleanAddr.toLowerCase().includes('ghaziabad') ||
+    cleanAddr.toLowerCase().includes('faridabad') ||
+    cleanAddr.toLowerCase().includes('india')
+      ? cleanAddr
+      : `${cleanAddr}, Delhi NCR, India`;
+
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      cleanAddr
+      searchQuery
     )}&limit=1`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'ShineStaff-RouteEngine/1.0' },
@@ -74,23 +84,67 @@ export const geocodeAddress = async (
 };
 
 /**
+ * Validates and tests a Google Maps API Key directly with Google Distance Matrix API
+ */
+export const testGoogleMapsConnection = async (
+  apiKey: string
+): Promise<{ success: boolean; message: string; sampleDistanceKM?: number }> => {
+  if (!apiKey || apiKey.trim().length < 10) {
+    return { success: false, message: 'Google Maps API Key is empty or invalid.' };
+  }
+
+  try {
+    // Test with a standard Delhi route: Connaught Place to India Gate (~3.2 KM)
+    const testUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=28.6315,77.2167&destinations=28.6129,77.2295&mode=driving&key=${apiKey.trim()}`;
+    const res = await fetch(testUrl, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) {
+      return { success: false, message: `Google Maps HTTP error: ${res.status} ${res.statusText}` };
+    }
+    const data: any = await res.json();
+
+    if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
+      const distMeters = data.rows[0].elements[0].distance.value;
+      const km = Number((distMeters / 1000).toFixed(2));
+      return {
+        success: true,
+        message: `Google Maps Distance Matrix API is active and functioning! (Test route: ${km} KM)`,
+        sampleDistanceKM: km
+      };
+    } else if (data.status === 'REQUEST_DENIED') {
+      return {
+        success: false,
+        message: `Google Maps Error: Request Denied. ${data.error_message || 'Please ensure Distance Matrix API is enabled in your Google Cloud Console and billing is active.'}`
+      };
+    } else {
+      return {
+        success: false,
+        message: `Google Maps Error: ${data.status} - ${data.error_message || 'Check API key restrictions.'}`
+      };
+    }
+  } catch (err: any) {
+    return { success: false, message: `Connection failed: ${err.message}` };
+  }
+};
+
+/**
  * Calculates accurate driving distance using Google Distance Matrix API (with coordinates OR text addresses),
- * with intelligent fallbacks to OSRM road routing and geocoding.
+ * with intelligent multi-engine fallbacks to OSRM road routing and geocoding.
  */
 export const calculateLegDistance = async (
   origin: RoutePoint,
   destination: RoutePoint,
   apiKey?: string
 ): Promise<RouteLegResult> => {
-  const originStr =
-    typeof origin.lat === 'number' && typeof origin.lng === 'number'
-      ? `${origin.lat},${origin.lng}`
-      : origin.address || origin.name || '';
+  const originHasCoords = typeof origin.lat === 'number' && typeof origin.lng === 'number';
+  const destHasCoords = typeof destination.lat === 'number' && typeof destination.lng === 'number';
 
-  const destStr =
-    typeof destination.lat === 'number' && typeof destination.lng === 'number'
-      ? `${destination.lat},${destination.lng}`
-      : destination.address || destination.name || '';
+  const originStr = originHasCoords
+    ? `${origin.lat},${origin.lng}`
+    : origin.address || origin.name || '';
+
+  const destStr = destHasCoords
+    ? `${destination.lat},${destination.lng}`
+    : destination.address || destination.name || '';
 
   const originQuery = encodeURIComponent(origin.address || originStr);
   const destQuery = encodeURIComponent(destination.address || destStr);
@@ -128,6 +182,8 @@ export const calculateLegDistance = async (
             source: 'google_maps',
             googleMapsUrl
           };
+        } else {
+          console.warn('[GoogleMapsService] Distance Matrix non-OK response:', data.status, data.error_message);
         }
       }
     } catch (gErr) {
@@ -156,40 +212,46 @@ export const calculateLegDistance = async (
     }
   }
 
-  // 3. Fallback to free OSRM (Open Source Routing Machine) driving route
+  // 3. Fallback: Multi-server OSRM Road Driving Router
   if (
     typeof startLat === 'number' &&
     typeof startLng === 'number' &&
     typeof endLat === 'number' &&
     typeof endLng === 'number'
   ) {
-    try {
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=false`;
-      const osrmRes = await fetch(osrmUrl, { signal: AbortSignal.timeout(3000) });
-      if (osrmRes.ok) {
-        const osrmData: any = await osrmRes.json();
-        if (osrmData.code === 'Ok' && osrmData.routes?.[0]) {
-          const distanceMeters = osrmData.routes[0].distance;
-          const durationSecs = osrmData.routes[0].duration;
-          const mins = Math.round(durationSecs / 60);
-          return {
-            distanceKM: Number((distanceMeters / 1000).toFixed(2)),
-            durationText: `${mins} mins`,
-            source: 'osrm',
-            googleMapsUrl
-          };
+    const osrmServers = [
+      `https://routing.openstreetmap.de/routed-car/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=false`,
+      `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=false`
+    ];
+
+    for (const osrmUrl of osrmServers) {
+      try {
+        const osrmRes = await fetch(osrmUrl, { signal: AbortSignal.timeout(3000) });
+        if (osrmRes.ok) {
+          const osrmData: any = await osrmRes.json();
+          if (osrmData.code === 'Ok' && osrmData.routes?.[0]) {
+            const distanceMeters = osrmData.routes[0].distance;
+            const durationSecs = osrmData.routes[0].duration;
+            const mins = Math.round(durationSecs / 60);
+            return {
+              distanceKM: Number((distanceMeters / 1000).toFixed(2)),
+              durationText: `${mins} mins`,
+              source: 'osrm',
+              googleMapsUrl
+            };
+          }
         }
+      } catch (osrmErr) {
+        // Try next mirror
       }
-    } catch (osrmErr) {
-      // Proceed to haversine fallback
     }
 
-    // 4. Haversine with 1.25x road curvature multiplier
+    // 4. Urban Road Curvature Haversine (1.40x multiplier for Indian urban roads)
     const directKM = calculateHaversineKM(startLat, startLng, endLat, endLng);
-    const roadKM = Number((directKM * 1.25).toFixed(2));
+    const roadKM = Number((directKM * 1.40).toFixed(2));
     return {
       distanceKM: roadKM,
-      durationText: `${Math.round(roadKM * 2.5)} mins (est)`,
+      durationText: `${Math.round(roadKM * 2.8)} mins (est)`,
       source: 'haversine_road',
       googleMapsUrl
     };

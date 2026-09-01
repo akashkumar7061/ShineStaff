@@ -63,3 +63,19 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const testGoogleMapsKey = async (req: Request, res: Response) => {
+  const { apiKey } = req.body;
+  try {
+    let keyToTest = apiKey;
+    if (!keyToTest) {
+      const settings = await Settings.findOne({ settingsId: 'global' });
+      keyToTest = settings?.googleMapsApiKey;
+    }
+    const { testGoogleMapsConnection } = await import('../services/googleMapsService');
+    const result = await testGoogleMapsConnection(keyToTest || '');
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

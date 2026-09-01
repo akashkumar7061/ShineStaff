@@ -20,6 +20,8 @@ const AdminSettings: React.FC = () => {
   const [halfDayThresholdHours, setHalfDayThresholdHours] = useState('');
   const [adminEmailForAlerts, setAdminEmailForAlerts] = useState('');
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
+  const [testingApiKey, setTestingApiKey] = useState(false);
+  const [apiTestResult, setApiTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Logo previews
   const [sofaLogo, setSofaLogo] = useState('');
@@ -60,6 +62,26 @@ const AdminSettings: React.FC = () => {
         }
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTestGoogleMapsKey = async () => {
+    if (!googleMapsApiKey.trim()) {
+      alert('Please enter a Google Maps API Key to test.');
+      return;
+    }
+    setTestingApiKey(true);
+    setApiTestResult(null);
+    try {
+      const res = await api.post('/settings/test-google-maps', { apiKey: googleMapsApiKey.trim() });
+      setApiTestResult(res.data);
+    } catch (err: any) {
+      setApiTestResult({
+        success: false,
+        message: err.response?.data?.message || 'Failed to connect to Google Maps API'
+      });
+    } finally {
+      setTestingApiKey(false);
     }
   };
 
@@ -133,10 +155,21 @@ const AdminSettings: React.FC = () => {
 
           {/* Google Maps Distance Matrix API Configuration */}
           <div className="glass-card p-6 space-y-4">
-            <div className="flex items-center space-x-2 text-secondary mb-2">
-              <MapPin className="h-5 w-5" />
-              <h3 className="text-sm font-bold uppercase tracking-wider">Google Maps Distance Calculation</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-secondary">
+                <MapPin className="h-5 w-5" />
+                <h3 className="text-sm font-bold uppercase tracking-wider">Google Maps Distance Calculation</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleTestGoogleMapsKey}
+                disabled={testingApiKey || !googleMapsApiKey.trim()}
+                className="btn-blue-gradient text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm disabled:opacity-50 flex items-center space-x-1 cursor-pointer"
+              >
+                <span>{testingApiKey ? 'Testing API Key...' : '🔍 Test API Key'}</span>
+              </button>
             </div>
+
             <div>
               <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">
                 Google Maps API Key (Distance Matrix API)
@@ -144,14 +177,33 @@ const AdminSettings: React.FC = () => {
               <input
                 type="text"
                 value={googleMapsApiKey}
-                onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+                onChange={(e) => {
+                  setGoogleMapsApiKey(e.target.value);
+                  setApiTestResult(null);
+                }}
                 placeholder="Paste your Google Maps API Key (e.g. AIzaSy...)"
                 className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary font-mono"
               />
               <span className="block text-[10px] text-slate-400 mt-1.5">
-                Used to calculate accurate road driving distances (KM) for daily worker travel routes (Home ➔ Sites ➔ Home). If blank, the system automatically calculates distance using OpenStreetMap road routing.
+                Used to calculate 100% exact road driving distances (KM) for daily worker travel routes. Requires <strong>Distance Matrix API</strong> enabled on Google Cloud Console.
               </span>
             </div>
+
+            {apiTestResult && (
+              <div
+                className={`p-3 rounded-xl border text-xs font-semibold flex items-start space-x-2 ${
+                  apiTestResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
+                }`}
+              >
+                <span className="text-base">{apiTestResult.success ? '✅' : '❌'}</span>
+                <div>
+                  <span className="block font-bold">{apiTestResult.success ? 'Success' : 'Connection Failed'}</span>
+                  <span>{apiTestResult.message}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Time Attendance rules Card */}
