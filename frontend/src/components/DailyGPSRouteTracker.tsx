@@ -473,10 +473,14 @@ const DailyGPSRouteTracker: React.FC<DailyGPSRouteTrackerProps> = ({ companyFilt
                                 {/* Driving Leg Distance Connector */}
                                 <div className="ml-4 pl-4 border-l-2 border-dashed border-blue-400/40 dark:border-blue-500/30 py-2 flex flex-wrap items-center justify-between gap-2">
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg">
+                                    <span className={`text-xs font-black px-2.5 py-1 rounded-lg ${
+                                      leg.distanceKM > 0
+                                        ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10'
+                                        : 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20'
+                                    }`}>
                                       🚗 +{leg.distanceKM} KM
                                     </span>
-                                    {leg.durationText && (
+                                    {leg.durationText && leg.durationText !== 'N/A' && (
                                       <span className="text-[10px] text-slate-400 font-semibold">
                                         (~{leg.durationText})
                                       </span>
@@ -488,6 +492,11 @@ const DailyGPSRouteTracker: React.FC<DailyGPSRouteTrackerProps> = ({ companyFilt
                                     }`}>
                                       {leg.source === 'google_maps' ? '🟢 Google Maps' : '🟡 Road Estimate'}
                                     </span>
+                                    {leg.distanceKM === 0 && (
+                                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                                        (Add sector/area in job address)
+                                      </span>
+                                    )}
                                   </div>
 
                                   <a

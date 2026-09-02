@@ -208,18 +208,72 @@ export const resolveLocationInput = async (
 const geocodeCache: Record<string, { lat: number; lng: number }> = {};
 
 /**
- * Free Nominatim OpenStreetMap Geocoder
+ * Multi-Engine Geocoder:
+ * 1. Google Geocoding API (if apiKey is configured)
+ * 2. Photon Geocoder (high-res with Delhi coordinate bias)
+ * 3. Nominatim OpenStreetMap (with Delhi NCR suffix)
  */
 export const geocodeAddress = async (
-  address: string
+  address: string,
+  apiKey?: string
 ): Promise<{ lat: number; lng: number } | null> => {
-  if (!address || address.trim().length < 3) return null;
+  if (!address || address.trim().length < 2) return null;
   const cleanAddr = address.trim();
   if (geocodeCache[cleanAddr]) {
     return geocodeCache[cleanAddr];
   }
 
-  // Append Delhi NCR if no region specified to avoid international ambiguity
+  // 1. Google Geocoding API (Most accurate for Indian societies, apartments & landmarks)
+  if (apiKey && apiKey.trim().length > 10) {
+    try {
+      const gUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        cleanAddr.toLowerCase().includes('delhi') ? cleanAddr : `${cleanAddr}, Delhi NCR, India`
+      )}&key=${apiKey.trim()}`;
+      const res = await fetch(gUrl, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const data: any = await res.json();
+        if (data.status === 'OK' && data.results?.[0]?.geometry?.location) {
+          const loc = data.results[0].geometry.location;
+          const coords = { lat: Number(loc.lat), lng: Number(loc.lng) };
+          geocodeCache[cleanAddr] = coords;
+          return coords;
+        }
+      }
+    } catch (err) {
+      // Ignore Google Geocode error and fallback
+    }
+  }
+
+  // 2. Photon Geocoder with Delhi center bias
+  try {
+    const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(
+      cleanAddr
+    )}&lat=28.6139&lon=77.2090&limit=3`;
+    const res = await fetch(photonUrl, { signal: AbortSignal.timeout(3500) });
+    if (res.ok) {
+      const data: any = await res.json();
+      if (Array.isArray(data.features) && data.features.length > 0) {
+        // Pick the feature nearest to Delhi NCR if multiple returned
+        for (const feat of data.features) {
+          const coords = feat.geometry?.coordinates;
+          if (Array.isArray(coords) && coords.length >= 2) {
+            const lng = parseFloat(coords[0]);
+            const lat = parseFloat(coords[1]);
+            // Check if within broader North India / NCR boundary (Lat 28.0-29.2, Lng 76.5-77.8)
+            if (lat >= 27.8 && lat <= 29.5 && lng >= 76.2 && lng <= 78.2) {
+              const result = { lat, lng };
+              geocodeCache[cleanAddr] = result;
+              return result;
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore Photon error
+  }
+
+  // 3. Nominatim OpenStreetMap
   const searchQuery = cleanAddr.toLowerCase().includes('delhi') ||
     cleanAddr.toLowerCase().includes('noida') ||
     cleanAddr.toLowerCase().includes('gurgaon') ||
@@ -251,7 +305,28 @@ export const geocodeAddress = async (
   } catch (err) {
     // Ignore geocode error
   }
+
   return null;
+};
+
+/**
+ * Helper to ensure Indian addresses carry regional context for Google Distance Matrix
+ */
+const formatQueryForRegion = (text: string): string => {
+  if (!text) return '';
+  const clean = text.trim();
+  if (
+    clean.toLowerCase().includes('delhi') ||
+    clean.toLowerCase().includes('noida') ||
+    clean.toLowerCase().includes('gurgaon') ||
+    clean.toLowerCase().includes('gurugram') ||
+    clean.toLowerCase().includes('ghaziabad') ||
+    clean.toLowerCase().includes('faridabad') ||
+    clean.toLowerCase().includes('india')
+  ) {
+    return clean;
+  }
+  return `${clean}, Delhi, India`;
 };
 
 /**
@@ -332,11 +407,11 @@ export const calculateLegDistance = async (
 
   const originStr = originHasCoords
     ? `${originLat},${originLng}`
-    : origin.address || origin.name || '';
+    : formatQueryForRegion(origin.address || origin.name || '');
 
   const destStr = destHasCoords
     ? `${destLat},${destLng}`
-    : destination.address || destination.name || '';
+    : formatQueryForRegion(destination.address || destination.name || '');
 
   const originQuery = encodeURIComponent(origin.address || originStr);
   const destQuery = encodeURIComponent(destination.address || destStr);
@@ -384,20 +459,20 @@ export const calculateLegDistance = async (
   }
 
   // 2. Resolve GPS coordinates if missing for OSRM / Haversine fallback
-  let startLat = origin.lat;
-  let startLng = origin.lng;
-  if ((typeof startLat !== 'number' || typeof startLng !== 'number') && origin.address) {
-    const geo = await geocodeAddress(origin.address);
+  let startLat = originLat;
+  let startLng = originLng;
+  if ((typeof startLat !== 'number' || typeof startLng !== 'number') && (origin.address || origin.name)) {
+    const geo = await geocodeAddress(origin.address || origin.name || '', apiKey);
     if (geo) {
       startLat = geo.lat;
       startLng = geo.lng;
     }
   }
 
-  let endLat = destination.lat;
-  let endLng = destination.lng;
-  if ((typeof endLat !== 'number' || typeof endLng !== 'number') && destination.address) {
-    const geo = await geocodeAddress(destination.address);
+  let endLat = destLat;
+  let endLng = destLng;
+  if ((typeof endLat !== 'number' || typeof endLng !== 'number') && (destination.address || destination.name)) {
+    const geo = await geocodeAddress(destination.address || destination.name || '', apiKey);
     if (geo) {
       endLat = geo.lat;
       endLng = geo.lng;
