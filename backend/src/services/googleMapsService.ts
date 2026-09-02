@@ -66,7 +66,7 @@ export const parseDMSCoords = (
 };
 
 /**
- * Parses any text, DMS or Google Maps URL to extract exact (lat, lng)
+ * Parses any text, DMS, or Google Maps URL to extract exact (lat, lng)
  */
 export const parseCoordsFromText = (
   text: string
@@ -89,7 +89,29 @@ export const parseCoordsFromText = (
     }
   }
 
-  // 3. Try URL patterns: @lat,lng or q=lat,lng or query=lat,lng or place/lat,lng
+  // 3. Google Maps data pattern: !3d28.6987478!4d77.0568964
+  const dataPattern = /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/;
+  const dataMatch = trimmed.match(dataPattern);
+  if (dataMatch) {
+    const lat = parseFloat(dataMatch[1]);
+    const lng = parseFloat(dataMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    }
+  }
+
+  // 4. Google Maps dir pattern: dir/28.6302486,77.0140888
+  const dirPattern = /dir\/(-?\d+\.\d+),(-?\d+\.\d+)/;
+  const dirMatch = trimmed.match(dirPattern);
+  if (dirMatch) {
+    const lat = parseFloat(dirMatch[1]);
+    const lng = parseFloat(dirMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    }
+  }
+
+  // 5. Try URL query/at patterns: @lat,lng or q=lat,lng or query=lat,lng or destination=lat,lng
   const urlCoordRegex = /(@|q=|query=|destination=|ll=|loc:)(-?\d+\.\d+),(-?\d+\.\d+)/;
   const urlMatch = trimmed.match(urlCoordRegex);
   if (urlMatch) {
@@ -98,6 +120,85 @@ export const parseCoordsFromText = (
     if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
     }
+  }
+
+  return null;
+};
+
+/**
+ * Expands shortened Google Maps URLs (e.g. https://maps.app.goo.gl/... or goo.gl/maps/...)
+ * and extracts the destination coordinates.
+ */
+export const expandShortGoogleUrl = async (
+  shortUrl: string
+): Promise<{ lat: number; lng: number } | null> => {
+  if (!shortUrl || !shortUrl.includes('goo.gl')) return null;
+  try {
+    const response = await fetch(shortUrl.trim(), {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      signal: AbortSignal.timeout(6000)
+    });
+
+    const finalUrl = response.url;
+    if (finalUrl) {
+      const coords = parseCoordsFromText(finalUrl);
+      if (coords) return coords;
+    }
+  } catch (err) {
+    console.warn('[GoogleMapsService] Failed to expand short URL:', shortUrl, err);
+  }
+  return null;
+};
+
+/**
+ * Master Location Resolver:
+ * Accepts an address, DMS, coordinates, or Google Maps URL and returns validated GPS coordinates.
+ */
+export const resolveLocationInput = async (
+  input: string,
+  apiKey?: string
+): Promise<{ lat: number; lng: number; address: string; source: string } | null> => {
+  if (!input || input.trim().length < 2) return null;
+  const clean = input.trim();
+
+  // 1. Direct text / DMS / standard URL coordinate extraction
+  const direct = parseCoordsFromText(clean);
+  if (direct) {
+    return {
+      lat: direct.lat,
+      lng: direct.lng,
+      address: clean,
+      source: 'direct_coordinates'
+    };
+  }
+
+  // 2. Shortened Google Maps URL expansion
+  if (clean.includes('goo.gl') || clean.includes('maps.app')) {
+    const expanded = await expandShortGoogleUrl(clean);
+    if (expanded) {
+      return {
+        lat: expanded.lat,
+        lng: expanded.lng,
+        address: clean,
+        source: 'expanded_google_url'
+      };
+    }
+  }
+
+  // 3. Geocode physical text address with Delhi NCR context
+  const geo = await geocodeAddress(clean);
+  if (geo) {
+    return {
+      lat: geo.lat,
+      lng: geo.lng,
+      address: clean,
+      source: 'geocoded_address'
+    };
   }
 
   return null;

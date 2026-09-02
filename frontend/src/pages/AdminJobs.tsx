@@ -274,6 +274,23 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [resolvingGPS, setResolvingGPS] = useState(false);
+  const resolveTimerRef = useRef<any>(null);
+
+  const resolveLocationAsync = async (inputStr: string) => {
+    if (!inputStr || inputStr.trim().length < 3) return;
+    setResolvingGPS(true);
+    try {
+      const res = await api.post('/jobs/resolve-location', { input: inputStr.trim() });
+      if (res.data && res.data.success && res.data.lat && res.data.lng) {
+        setLatitude(String(res.data.lat));
+        setLongitude(String(res.data.lng));
+      }
+    } catch (err) {
+      // Ignore background resolve errors
+    } finally {
+      setResolvingGPS(false);
+    }
+  };
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isAnalyzingRecs, setIsAnalyzingRecs] = useState<boolean>(false);
@@ -2494,8 +2511,25 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <div className="flex items-center justify-between">
                   <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Geocoding & GPS Location Data</span>
                   {latitude && longitude ? (
-                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      📍 GPS Locked: {latitude}, {longitude}
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                        📍 GPS Locked: {Number(latitude).toFixed(4)}, {Number(longitude).toFixed(4)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLatitude('');
+                          setLongitude('');
+                        }}
+                        className="text-[9px] font-bold text-rose-500 hover:text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-900 cursor-pointer"
+                        title="Clear and re-detect coordinates"
+                      >
+                        ✕ Clear GPS
+                      </button>
+                    </div>
+                  ) : resolvingGPS ? (
+                    <span className="text-[10px] text-secondary font-black animate-pulse">
+                      ⏳ Auto-Detecting GPS...
                     </span>
                   ) : (
                     <span className="text-[9px] text-slate-400 font-bold">100% Accurate KM Tracker</span>
@@ -2517,6 +2551,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       if (parsed) {
                         setLatitude(String(parsed.lat));
                         setLongitude(String(parsed.lng));
+                      } else {
+                        if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+                        resolveTimerRef.current = setTimeout(() => resolveLocationAsync(val), 600);
                       }
                     }}
                     onFocus={() => setFocusedField('addresses')}
@@ -2545,6 +2582,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       if (parsed) {
                         setLatitude(String(parsed.lat));
                         setLongitude(String(parsed.lng));
+                      } else {
+                        if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+                        resolveTimerRef.current = setTimeout(() => resolveLocationAsync(val), 600);
                       }
                     }}
                     onFocus={() => setFocusedField('locations')}

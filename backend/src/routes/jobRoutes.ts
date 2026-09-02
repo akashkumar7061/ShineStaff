@@ -15,7 +15,8 @@ import {
   getCustomerDetailsByPhone,
   getFormSuggestions,
   adminCompleteJob,
-  updateClientInfo
+  updateClientInfo,
+  resolveJobLocation
 } from '../controllers/jobController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -23,6 +24,7 @@ const router = Router();
 
 router.use(authenticateJWT);
 
+router.post('/resolve-location', authorizeRoles('admin', 'worker'), resolveJobLocation);
 router.put('/update-client-info', authorizeRoles('admin'), updateClientInfo);
 router.get('/', getJobs);
 router.get('/customer/:phone', authorizeRoles('admin'), getCustomerDetailsByPhone);

@@ -13,6 +13,7 @@ import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { sendPushNotification, sendPushToAdmins } from '../utils/push';
 import { logAudit } from '../utils/auditLog';
+import { resolveLocationInput } from '../services/googleMapsService';
 
 const parseTimeToMinutes = (timeStr: string): number => {
   const cleanStr = timeStr.trim().toUpperCase();
@@ -271,6 +272,16 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Auto-resolve GPS coordinates from locationName, address, or location payload
+    let resolvedLocation = location && location.lat && location.lng ? { lat: Number(location.lat), lng: Number(location.lng) } : undefined;
+    const locInput = locationName || address;
+    if (locInput) {
+      const resolved = await resolveLocationInput(locInput, settings?.googleMapsApiKey);
+      if (resolved) {
+        resolvedLocation = { lat: resolved.lat, lng: resolved.lng };
+      }
+    }
+
     const job = new Job({
       title,
       description,
@@ -283,7 +294,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       price: Number(price) || 0,
       date,
       timeSlot,
-      location,
+      location: resolvedLocation,
       fuelKmsTravelled: kms,
       fuelAllowance: calculatedFuelAllowance,
       fromLocation: fromLocation || '',
@@ -859,12 +870,26 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     job.company = company || job.company;
     job.clientName = clientName || job.clientName;
     job.clientPhone = clientPhone || job.clientPhone;
-    job.address = address || job.address;
+    job.address = address !== undefined ? address : job.address;
     job.locationName = locationName !== undefined ? locationName : job.locationName;
     job.price = price !== undefined ? Number(price) : job.price;
     job.date = date !== undefined ? date : job.date;
     job.timeSlot = timeSlot !== undefined ? timeSlot : job.timeSlot;
-    if (location) {
+
+    // Auto-resolve GPS coordinates if locationName, address, or location is provided
+    const settings = await Settings.findOne({ settingsId: 'global' });
+    const locInput = locationName || address || job.locationName || job.address;
+    let resolvedLocation: { lat: number; lng: number } | undefined = undefined;
+    if (locInput) {
+      const resolved = await resolveLocationInput(locInput, settings?.googleMapsApiKey);
+      if (resolved) {
+        resolvedLocation = { lat: resolved.lat, lng: resolved.lng };
+      }
+    }
+
+    if (resolvedLocation) {
+      job.location = resolvedLocation;
+    } else if (location && location.lat && location.lng) {
       job.location = {
         lat: Number(location.lat),
         lng: Number(location.lng)
@@ -1291,5 +1316,34 @@ export const updateClientInfo = async (req: AuthRequest, res: Response) => {
     res.status(200).json({ message: `Successfully updated ${result.modifiedCount} job records` });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const resolveJobLocation = async (req: AuthRequest, res: Response) => {
+  const { input } = req.body;
+  if (!input || typeof input !== 'string') {
+    return res.status(400).json({ message: 'Valid input string is required' });
+  }
+
+  try {
+    const settings = await Settings.findOne({ settingsId: 'global' });
+    const resolved = await resolveLocationInput(input, settings?.googleMapsApiKey);
+
+    if (resolved) {
+      return res.status(200).json({
+        success: true,
+        lat: resolved.lat,
+        lng: resolved.lng,
+        address: resolved.address,
+        source: resolved.source
+      });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'Could not resolve exact coordinates for this input'
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Failed to resolve location', error: error.message });
   }
 };
