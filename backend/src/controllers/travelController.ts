@@ -6,7 +6,7 @@ import Settings from '../models/Settings';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { logAudit } from '../utils/auditLog';
-import { calculateLegDistance } from '../services/googleMapsService';
+import { calculateLegDistance, parseCoordsFromText } from '../services/googleMapsService';
 
 export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   const { date, type, jobId, kms } = req.body;
@@ -363,21 +363,36 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
           };
         }
 
-        // Sort jobs chronologically based on execution: startedAt -> beforePhotoTime -> timeSlot/createdAt
-        workerJobs.sort((a: any, b: any) => {
-          const timeA = a.startedAt
-            ? new Date(a.startedAt).getTime()
-            : a.beforePhotoTime
-            ? new Date(a.beforePhotoTime).getTime()
-            : 0;
-          const timeB = b.startedAt
-            ? new Date(b.startedAt).getTime()
-            : b.beforePhotoTime
-            ? new Date(b.beforePhotoTime).getTime()
-            : 0;
-          if (timeA && timeB) return timeA - timeB;
-          return (a.timeSlot || '').localeCompare(b.timeSlot || '');
-        });
+        // Helper to get sort minutes from midnight
+        const getJobSortMinutes = (j: any): number => {
+          if (j.startedAt) {
+            const d = new Date(j.startedAt);
+            return d.getHours() * 60 + d.getMinutes();
+          }
+          if (j.beforePhotoTime) {
+            const d = new Date(j.beforePhotoTime);
+            return d.getHours() * 60 + d.getMinutes();
+          }
+          if (j.timeSlot) {
+            const match = j.timeSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (match) {
+              let hours = parseInt(match[1], 10);
+              const minutes = parseInt(match[2], 10);
+              const ampm = match[3].toUpperCase();
+              if (ampm === 'PM' && hours < 12) hours += 12;
+              if (ampm === 'AM' && hours === 12) hours = 0;
+              return hours * 60 + minutes;
+            }
+          }
+          if (j.createdAt) {
+            const d = new Date(j.createdAt);
+            return d.getHours() * 60 + d.getMinutes();
+          }
+          return 9999;
+        };
+
+        // Sort jobs strictly in chronological schedule / execution order
+        workerJobs.sort((a: any, b: any) => getJobSortMinutes(a) - getJobSortMinutes(b));
 
         // Determine home coordinate
         const homeLat = worker.homeLocation?.lat;
@@ -408,8 +423,18 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
 
         // 2. Job Site Stops in true chronological order
         workerJobs.forEach((job: any, index: number) => {
-          const siteLat = job.location?.lat || job.beforePhotoGPS?.lat || job.afterPhotoGPS?.lat;
-          const siteLng = job.location?.lng || job.beforePhotoGPS?.lng || job.afterPhotoGPS?.lng;
+          let siteLat = job.location?.lat || job.beforePhotoGPS?.lat || job.afterPhotoGPS?.lat;
+          let siteLng = job.location?.lng || job.beforePhotoGPS?.lng || job.afterPhotoGPS?.lng;
+
+          // If site coordinates are still not resolved, try parsing locationName or address
+          if (typeof siteLat !== 'number' || typeof siteLng !== 'number') {
+            const parsedLoc = parseCoordsFromText(job.locationName || '') || parseCoordsFromText(job.address || '');
+            if (parsedLoc) {
+              siteLat = parsedLoc.lat;
+              siteLng = parsedLoc.lng;
+            }
+          }
+
           const timeDisplay = job.startedAt
             ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
             : job.timeSlot || `Site #${index + 1}`;

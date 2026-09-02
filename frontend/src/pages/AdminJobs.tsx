@@ -53,6 +53,58 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
+export const parseCoordsFromInput = (text: string): { lat: number; lng: number } | null => {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+
+  // 1. DMS format: 28°25'54.3"N 77°4'20.4"E
+  const dmsRegex = /([0-9.]+)[°\s]+([0-9.]+)?['\s]*([0-9.]+)?["\s]*([NSEW])\s*[,]?\s*([0-9.]+)[°\s]+([0-9.]+)?['\s]*([0-9.]+)?["\s]*([NSEW])/i;
+  const match = trimmed.match(dmsRegex);
+  if (match) {
+    const latDeg = parseFloat(match[1]) || 0;
+    const latMin = parseFloat(match[2]) || 0;
+    const latSec = parseFloat(match[3]) || 0;
+    const latDir = match[4].toUpperCase();
+
+    const lngDeg = parseFloat(match[5]) || 0;
+    const lngMin = parseFloat(match[6]) || 0;
+    const lngSec = parseFloat(match[7]) || 0;
+    const lngDir = match[8].toUpperCase();
+
+    let lat = latDeg + latMin / 60 + latSec / 3600;
+    if (latDir === 'S') lat = -lat;
+
+    let lng = lngDeg + lngMin / 60 + lngSec / 3600;
+    if (lngDir === 'W') lng = -lng;
+
+    return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+  }
+
+  // 2. Decimal format: 28.5833, 77.0521
+  const decRegex = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/;
+  const decMatch = trimmed.match(decRegex);
+  if (decMatch) {
+    const lat = parseFloat(decMatch[1]);
+    const lng = parseFloat(decMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    }
+  }
+
+  // 3. URL patterns
+  const urlCoordRegex = /(@|q=|query=|destination=|ll=|loc:)(-?\d+\.\d+),(-?\d+\.\d+)/;
+  const urlMatch = trimmed.match(urlCoordRegex);
+  if (urlMatch) {
+    const lat = parseFloat(urlMatch[2]);
+    const lng = parseFloat(urlMatch[3]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    }
+  }
+
+  return null;
+};
+
 interface AdminJobsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
 }
@@ -2439,33 +2491,65 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               </div>
 
               <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <span className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1">Geocoding & GPS Location Data</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Geocoding & GPS Location Data</span>
+                  {latitude && longitude ? (
+                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      📍 GPS Locked: {latitude}, {longitude}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 font-bold">100% Accurate KM Tracker</span>
+                  )}
+                </div>
+
                 <div className="relative">
-                  <label className="block text-[9px] uppercase tracking-wider text-slate-450 mb-1">Clean Site Address</label>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Clean Site Address (Street / Flat / Sector)</span>
+                    <span className="text-[8px] text-slate-400 font-normal">e.g. Flat D-10, Sector 6, Dwarka, Delhi</span>
+                  </label>
                   <input
                     type="text"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAddress(val);
+                      const parsed = parseCoordsFromInput(val);
+                      if (parsed) {
+                        setLatitude(String(parsed.lat));
+                        setLongitude(String(parsed.lng));
+                      }
+                    }}
                     onFocus={() => setFocusedField('addresses')}
                     onBlur={() => {
                       handleAddressBlur();
                       setTimeout(() => setFocusedField(null), 250);
                     }}
-                    placeholder="Enter full physical address"
+                    placeholder="Enter full physical address (House, Sector/Area, City)"
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   />
                   {renderSuggestions('addresses', address, setAddress)}
                 </div>
 
                 <div className="relative">
-                  <label className="block text-[9px] uppercase tracking-wider text-slate-455 mb-1">GPS Location Link / Landmark</label>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1 flex items-center justify-between">
+                    <span>GPS Location Link / Google Maps URL / Landmark</span>
+                    <span className="text-[8px] text-slate-400 font-normal">Link, DMS, or Coords</span>
+                  </label>
                   <input
                     type="text"
                     value={locationName}
-                    onChange={(e) => setLocationName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setLocationName(val);
+                      const parsed = parseCoordsFromInput(val);
+                      if (parsed) {
+                        setLatitude(String(parsed.lat));
+                        setLongitude(String(parsed.lng));
+                      }
+                    }}
                     onFocus={() => setFocusedField('locations')}
                     onBlur={() => setTimeout(() => setFocusedField(null), 250)}
-                    placeholder="Landmark or Google Map URL link"
+                    placeholder="Google Map URL link or Coordinates (e.g. 28.5833, 77.0521)"
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   />
                   {renderSuggestions('locations', locationName, setLocationName)}

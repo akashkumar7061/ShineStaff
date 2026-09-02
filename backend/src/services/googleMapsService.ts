@@ -33,6 +33,76 @@ export interface RouteLegResult {
   googleMapsUrl: string;
 }
 
+/**
+ * Parse Degree-Minute-Second (DMS) string like:
+ * 28°25'54.3"N 77°4'20.4"E or 28°36'50.0"N, 77°12'32.4"E
+ */
+export const parseDMSCoords = (
+  dmsStr: string
+): { lat: number; lng: number } | null => {
+  if (!dmsStr || typeof dmsStr !== 'string') return null;
+  const dmsRegex = /([0-9.]+)[°\s]+([0-9.]+)?['\s]*([0-9.]+)?["\s]*([NSEW])\s*[,]?\s*([0-9.]+)[°\s]+([0-9.]+)?['\s]*([0-9.]+)?["\s]*([NSEW])/i;
+  const match = dmsStr.match(dmsRegex);
+  if (match) {
+    const latDeg = parseFloat(match[1]) || 0;
+    const latMin = parseFloat(match[2]) || 0;
+    const latSec = parseFloat(match[3]) || 0;
+    const latDir = match[4].toUpperCase();
+
+    const lngDeg = parseFloat(match[5]) || 0;
+    const lngMin = parseFloat(match[6]) || 0;
+    const lngSec = parseFloat(match[7]) || 0;
+    const lngDir = match[8].toUpperCase();
+
+    let lat = latDeg + latMin / 60 + latSec / 3600;
+    if (latDir === 'S') lat = -lat;
+
+    let lng = lngDeg + lngMin / 60 + lngSec / 3600;
+    if (lngDir === 'W') lng = -lng;
+
+    return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+  }
+  return null;
+};
+
+/**
+ * Parses any text, DMS or Google Maps URL to extract exact (lat, lng)
+ */
+export const parseCoordsFromText = (
+  text: string
+): { lat: number; lng: number } | null => {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+
+  // 1. Try DMS
+  const dms = parseDMSCoords(trimmed);
+  if (dms) return dms;
+
+  // 2. Try decimal: "28.583321, 77.052145" or "28.583321,77.052145"
+  const decRegex = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/;
+  const decMatch = trimmed.match(decRegex);
+  if (decMatch) {
+    const lat = parseFloat(decMatch[1]);
+    const lng = parseFloat(decMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    }
+  }
+
+  // 3. Try URL patterns: @lat,lng or q=lat,lng or query=lat,lng or place/lat,lng
+  const urlCoordRegex = /(@|q=|query=|destination=|ll=|loc:)(-?\d+\.\d+),(-?\d+\.\d+)/;
+  const urlMatch = trimmed.match(urlCoordRegex);
+  if (urlMatch) {
+    const lat = parseFloat(urlMatch[2]);
+    const lng = parseFloat(urlMatch[3]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    }
+  }
+
+  return null;
+};
+
 // In-memory cache for address geocoding
 const geocodeCache: Record<string, { lat: number; lng: number }> = {};
 
@@ -135,15 +205,36 @@ export const calculateLegDistance = async (
   destination: RoutePoint,
   apiKey?: string
 ): Promise<RouteLegResult> => {
-  const originHasCoords = typeof origin.lat === 'number' && typeof origin.lng === 'number';
-  const destHasCoords = typeof destination.lat === 'number' && typeof destination.lng === 'number';
+  // Try extracting coordinates from text or URL if not directly passed as numbers
+  let originLat = origin.lat;
+  let originLng = origin.lng;
+  if (typeof originLat !== 'number' || typeof originLng !== 'number') {
+    const extracted = parseCoordsFromText(origin.address || '') || parseCoordsFromText(origin.name || '');
+    if (extracted) {
+      originLat = extracted.lat;
+      originLng = extracted.lng;
+    }
+  }
+
+  let destLat = destination.lat;
+  let destLng = destination.lng;
+  if (typeof destLat !== 'number' || typeof destLng !== 'number') {
+    const extracted = parseCoordsFromText(destination.address || '') || parseCoordsFromText(destination.name || '');
+    if (extracted) {
+      destLat = extracted.lat;
+      destLng = extracted.lng;
+    }
+  }
+
+  const originHasCoords = typeof originLat === 'number' && typeof originLng === 'number';
+  const destHasCoords = typeof destLat === 'number' && typeof destLng === 'number';
 
   const originStr = originHasCoords
-    ? `${origin.lat},${origin.lng}`
+    ? `${originLat},${originLng}`
     : origin.address || origin.name || '';
 
   const destStr = destHasCoords
-    ? `${destination.lat},${destination.lng}`
+    ? `${destLat},${destLng}`
     : destination.address || destination.name || '';
 
   const originQuery = encodeURIComponent(origin.address || originStr);
