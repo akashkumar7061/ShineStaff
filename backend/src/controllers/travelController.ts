@@ -6,7 +6,7 @@ import Settings from '../models/Settings';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { logAudit } from '../utils/auditLog';
-import { calculateLegDistance, parseCoordsFromText, resolveLocationInput } from '../services/googleMapsService';
+import { calculateLegDistance, parseCoordsFromText, resolveLocationInput, isValidIndiaCoord } from '../services/googleMapsService';
 
 export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   const { date, type, jobId, kms } = req.body;
@@ -394,11 +394,22 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
         // Sort jobs strictly in chronological schedule / execution order
         workerJobs.sort((a: any, b: any) => getJobSortMinutes(a) - getJobSortMinutes(b));
 
-        // Determine home coordinate
-        const homeLat = worker.homeLocation?.lat;
-        const homeLng = worker.homeLocation?.lng;
+        // Determine worker home coordinates (validate with isValidIndiaCoord)
+        let homeLat = worker.homeLocation?.lat;
+        let homeLng = worker.homeLocation?.lng;
         const homeAddress = worker.homeLocation?.address || 'Worker Residence';
-        const hasHome = typeof homeLat === 'number' && typeof homeLng === 'number';
+
+        // Auto-heal worker home coordinates if missing or invalid
+        if ((!isValidIndiaCoord(homeLat, homeLng)) && homeAddress && homeAddress !== 'Worker Residence') {
+          const resolvedHome = await resolveLocationInput(homeAddress, apiKey);
+          if (resolvedHome && isValidIndiaCoord(resolvedHome.lat, resolvedHome.lng)) {
+            homeLat = resolvedHome.lat;
+            homeLng = resolvedHome.lng;
+            User.updateOne({ _id: worker._id }, { $set: { 'homeLocation.lat': homeLat, 'homeLocation.lng': homeLng } }).exec();
+          }
+        }
+
+        const hasHome = isValidIndiaCoord(homeLat, homeLng);
 
         // Build array of stops: Home -> Site 1 -> Site 2 -> ... -> Return Home
         const stops: Array<{
@@ -417,8 +428,8 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
           type: 'home_departure',
           name: 'Home Departure',
           address: homeAddress,
-          lat: homeLat,
-          lng: homeLng
+          lat: hasHome ? homeLat : undefined,
+          lng: hasHome ? homeLng : undefined
         });
 
         // 2. Job Site Stops in true chronological order
@@ -427,12 +438,18 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
           let siteLat = job.location?.lat || job.beforePhotoGPS?.lat || job.afterPhotoGPS?.lat;
           let siteLng = job.location?.lng || job.beforePhotoGPS?.lng || job.afterPhotoGPS?.lng;
 
+          // Check if coordinates are valid inside India. If not valid (or Null Island 0,0), reset to undefined
+          if (!isValidIndiaCoord(siteLat, siteLng)) {
+            siteLat = undefined;
+            siteLng = undefined;
+          }
+
           // If site coordinates are still not resolved, resolve from locationName (Google Maps Link/Landmark) or address!
-          if (typeof siteLat !== 'number' || typeof siteLng !== 'number') {
+          if (!isValidIndiaCoord(siteLat, siteLng)) {
             const locInput = job.locationName || job.address;
             if (locInput) {
               const resolved = await resolveLocationInput(locInput, apiKey);
-              if (resolved) {
+              if (resolved && isValidIndiaCoord(resolved.lat, resolved.lng)) {
                 siteLat = resolved.lat;
                 siteLng = resolved.lng;
                 // Auto-save to MongoDB so future queries are 0ms instant
@@ -453,8 +470,8 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
             type: 'job_site',
             name: `${job.clientName} (${job.title || 'Cleaning Service'})`,
             address: displayAddress,
-            lat: siteLat,
-            lng: siteLng,
+            lat: isValidIndiaCoord(siteLat, siteLng) ? siteLat : undefined,
+            lng: isValidIndiaCoord(siteLat, siteLng) ? siteLng : undefined,
             jobId: job._id.toString(),
             status: job.status,
             time: timeDisplay
@@ -466,8 +483,8 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
           type: 'home_return',
           name: 'Return to Home',
           address: homeAddress,
-          lat: homeLat,
-          lng: homeLng
+          lat: hasHome ? homeLat : undefined,
+          lng: hasHome ? homeLng : undefined
         });
 
         // Calculate each leg distance using Google Maps Service

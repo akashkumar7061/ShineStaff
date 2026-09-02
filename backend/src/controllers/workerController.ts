@@ -10,6 +10,8 @@ import Leave from '../models/Leave';
 import { uploadToCloudinary } from '../config/cloudinary';
 import { AuthRequest } from '../middleware/auth';
 import { logAudit } from '../utils/auditLog';
+import Settings from '../models/Settings';
+import { resolveLocationInput, isValidIndiaCoord } from '../services/googleMapsService';
 
 export const getWorkers = async (req: Request, res: Response) => {
   try {
@@ -119,6 +121,17 @@ export const addWorker = async (req: Request, res: Response) => {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password || 'worker123', salt);
 
+      // Auto-resolve Worker Home Location GPS
+      const settings = await Settings.findOne({ settingsId: 'global' });
+      let finalHome = homeLocation || { address: address || '', lat: undefined, lng: undefined };
+      if (finalHome.address && !isValidIndiaCoord(finalHome.lat, finalHome.lng)) {
+        const resolved = await resolveLocationInput(finalHome.address, settings?.googleMapsApiKey);
+        if (resolved && isValidIndiaCoord(resolved.lat, resolved.lng)) {
+          finalHome.lat = resolved.lat;
+          finalHome.lng = resolved.lng;
+        }
+      }
+
       const worker = new User({
         name,
         email: targetEmail,
@@ -127,7 +140,11 @@ export const addWorker = async (req: Request, res: Response) => {
         company,
         phone,
         address,
-        homeLocation: homeLocation || { address: address || '', lat: undefined, lng: undefined },
+        homeLocation: {
+          address: finalHome.address || address || '',
+          lat: isValidIndiaCoord(finalHome.lat, finalHome.lng) ? finalHome.lat : undefined,
+          lng: isValidIndiaCoord(finalHome.lat, finalHome.lng) ? finalHome.lng : undefined
+        },
         aadhaarNumber,
         dailySalary: Number(dailySalary) || Number((Number(monthlySalary || 0) / 30).toFixed(2)),
         monthlySalary: Number(monthlySalary) || Number((Number(dailySalary || 0) * 30).toFixed(2)),
@@ -179,10 +196,23 @@ export const addWorker = async (req: Request, res: Response) => {
       worker.phone = phone || worker.phone;
       worker.address = address !== undefined ? address : worker.address;
       if (homeLocation !== undefined) {
+        const settings = await Settings.findOne({ settingsId: 'global' });
+        let homeAddr = homeLocation.address !== undefined ? homeLocation.address : (worker.homeLocation?.address || worker.address || '');
+        let homeLat = homeLocation.lat !== undefined ? Number(homeLocation.lat) : worker.homeLocation?.lat;
+        let homeLng = homeLocation.lng !== undefined ? Number(homeLocation.lng) : worker.homeLocation?.lng;
+
+        if (homeAddr && !isValidIndiaCoord(homeLat, homeLng)) {
+          const resolved = await resolveLocationInput(homeAddr, settings?.googleMapsApiKey);
+          if (resolved && isValidIndiaCoord(resolved.lat, resolved.lng)) {
+            homeLat = resolved.lat;
+            homeLng = resolved.lng;
+          }
+        }
+
         worker.homeLocation = {
-          address: homeLocation.address !== undefined ? homeLocation.address : (worker.homeLocation?.address || worker.address || ''),
-          lat: homeLocation.lat !== undefined ? (Number(homeLocation.lat) || undefined) : worker.homeLocation?.lat,
-          lng: homeLocation.lng !== undefined ? (Number(homeLocation.lng) || undefined) : worker.homeLocation?.lng
+          address: homeAddr,
+          lat: isValidIndiaCoord(homeLat, homeLng) ? homeLat : undefined,
+          lng: isValidIndiaCoord(homeLat, homeLng) ? homeLng : undefined
         };
       }
       worker.aadhaarNumber = aadhaarNumber !== undefined ? aadhaarNumber : worker.aadhaarNumber;

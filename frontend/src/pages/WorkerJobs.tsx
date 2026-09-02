@@ -217,7 +217,7 @@ const WorkerJobs: React.FC = () => {
 
     setSubmittingReport(true);
     try {
-      const submitJobCompletion = async (coords: { lat: number; lng: number }) => {
+      const submitJobCompletion = async (coords?: { lat: number; lng: number }) => {
         await api.put(`/jobs/${selectedJob._id}/complete`, {
           afterPhotoDataUrls: tempAfterPhotos,
           location: coords,
@@ -263,8 +263,8 @@ const WorkerJobs: React.FC = () => {
             await submitJobCompletion(coords);
           },
           async (error) => {
-            console.warn('Geolocation failed. Completing job with default coordinates.', error);
-            await submitJobCompletion({ lat: 0, lng: 0 });
+            console.warn('Geolocation unavailable. Completing job with site address fallback.', error);
+            await submitJobCompletion(undefined);
           }
         );
       }

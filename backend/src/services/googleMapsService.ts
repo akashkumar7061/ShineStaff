@@ -19,6 +19,20 @@ export const calculateHaversineKM = (
   return Number(d.toFixed(2));
 };
 
+/**
+ * Validates that coordinates are authentic numbers within India (Lat: 8.0 to 37.5, Lng: 68.0 to 97.5)
+ * and strictly rejects Null Island (0, 0) and NaN.
+ */
+export const isValidIndiaCoord = (lat?: any, lng?: any): boolean => {
+  if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
+  const numLat = typeof lat === 'number' ? lat : parseFloat(lat);
+  const numLng = typeof lng === 'number' ? lng : parseFloat(lng);
+  if (isNaN(numLat) || isNaN(numLng)) return false;
+  if (numLat === 0 && numLng === 0) return false;
+  // India geographic bounds roughly Lat: 8.0 - 37.5, Lng: 68.0 - 97.5
+  return numLat >= 8.0 && numLat <= 37.5 && numLng >= 68.0 && numLng <= 97.5;
+};
+
 export interface RoutePoint {
   lat?: number;
   lng?: number;

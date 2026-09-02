@@ -13,7 +13,7 @@ import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { sendPushNotification, sendPushToAdmins } from '../utils/push';
 import { logAudit } from '../utils/auditLog';
-import { resolveLocationInput } from '../services/googleMapsService';
+import { resolveLocationInput, isValidIndiaCoord } from '../services/googleMapsService';
 
 const parseTimeToMinutes = (timeStr: string): number => {
   const cleanStr = timeStr.trim().toUpperCase();
@@ -417,7 +417,7 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     job.status = 'started';
     job.beforePhoto = beforePhotoUrl;
     job.beforePhotoTime = new Date();
-    if (location) {
+    if (location && isValidIndiaCoord(location.lat, location.lng)) {
       job.beforePhotoGPS = {
         lat: Number(location.lat),
         lng: Number(location.lng)
@@ -548,7 +548,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     job.afterPhoto = afterPhotoUrl;
     job.afterPhotos = afterPhotoUrls;
     job.afterPhotoTime = new Date();
-    if (location) {
+    if (location && isValidIndiaCoord(location.lat, location.lng)) {
       job.afterPhotoGPS = {
         lat: Number(location.lat),
         lng: Number(location.lng)
