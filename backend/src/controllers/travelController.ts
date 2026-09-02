@@ -6,7 +6,7 @@ import Settings from '../models/Settings';
 import { AuthRequest } from '../middleware/auth';
 import { getIO } from '../index';
 import { logAudit } from '../utils/auditLog';
-import { calculateLegDistance, parseCoordsFromText } from '../services/googleMapsService';
+import { calculateLegDistance, parseCoordsFromText, resolveLocationInput } from '../services/googleMapsService';
 
 export const submitTravelLog = async (req: AuthRequest, res: Response) => {
   const { date, type, jobId, kms } = req.body;
@@ -422,16 +422,22 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
         });
 
         // 2. Job Site Stops in true chronological order
-        workerJobs.forEach((job: any, index: number) => {
+        for (let index = 0; index < workerJobs.length; index++) {
+          const job = workerJobs[index];
           let siteLat = job.location?.lat || job.beforePhotoGPS?.lat || job.afterPhotoGPS?.lat;
           let siteLng = job.location?.lng || job.beforePhotoGPS?.lng || job.afterPhotoGPS?.lng;
 
-          // If site coordinates are still not resolved, try parsing locationName or address
+          // If site coordinates are still not resolved, resolve from locationName (Google Maps Link/Landmark) or address!
           if (typeof siteLat !== 'number' || typeof siteLng !== 'number') {
-            const parsedLoc = parseCoordsFromText(job.locationName || '') || parseCoordsFromText(job.address || '');
-            if (parsedLoc) {
-              siteLat = parsedLoc.lat;
-              siteLng = parsedLoc.lng;
+            const locInput = job.locationName || job.address;
+            if (locInput) {
+              const resolved = await resolveLocationInput(locInput, apiKey);
+              if (resolved) {
+                siteLat = resolved.lat;
+                siteLng = resolved.lng;
+                // Auto-save to MongoDB so future queries are 0ms instant
+                Job.updateOne({ _id: job._id }, { $set: { location: { lat: siteLat, lng: siteLng } } }).exec();
+              }
             }
           }
 
@@ -439,17 +445,21 @@ export const getDailyWorkerTravelSummary = async (req: AuthRequest, res: Respons
             ? new Date(job.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
             : job.timeSlot || `Site #${index + 1}`;
 
+          const displayAddress = job.address
+            ? (job.locationName && !job.locationName.startsWith('http') ? `${job.address}, ${job.locationName}` : job.address)
+            : (job.locationName || 'Client Address');
+
           stops.push({
             type: 'job_site',
             name: `${job.clientName} (${job.title || 'Cleaning Service'})`,
-            address: job.address || job.locationName || 'Client Address',
+            address: displayAddress,
             lat: siteLat,
             lng: siteLng,
             jobId: job._id.toString(),
             status: job.status,
             time: timeDisplay
           });
-        });
+        }
 
         // 3. Return Home Stop
         stops.push({
