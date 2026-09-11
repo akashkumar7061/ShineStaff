@@ -1,44 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { io as socketIO } from 'socket.io-client';
-import { Sparkles, AlertTriangle, Volume2, Briefcase } from 'lucide-react';
+import { Sparkles, AlertTriangle, Volume2, Briefcase, RefreshCw } from 'lucide-react';
 import api from './utils/api';
 
-// Pages
-import Login from './pages/Login';
-import WorkerHome from './pages/WorkerHome';
-import WorkerJobs from './pages/WorkerJobs';
-import WorkerAttendance from './pages/WorkerAttendance';
-import WorkerLeaves from './pages/WorkerLeaves';
-import WorkerSalary from './pages/WorkerSalary';
-import WorkerProfile from './pages/WorkerProfile';
-import WorkerQR from './pages/WorkerQR';
+// Code-split Lazy Loaded Pages for Instant Reload & High Performance
+const Login = lazy(() => import('./pages/Login'));
+const WorkerHome = lazy(() => import('./pages/WorkerHome'));
+const WorkerJobs = lazy(() => import('./pages/WorkerJobs'));
+const WorkerAttendance = lazy(() => import('./pages/WorkerAttendance'));
+const WorkerLeaves = lazy(() => import('./pages/WorkerLeaves'));
+const WorkerSalary = lazy(() => import('./pages/WorkerSalary'));
+const WorkerProfile = lazy(() => import('./pages/WorkerProfile'));
+const WorkerQR = lazy(() => import('./pages/WorkerQR'));
 
 import WorkerLayout from './components/WorkerLayout';
 import AdminLayout from './components/AdminLayout';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminWorkers from './pages/AdminWorkers';
-import AdminJobs from './pages/AdminJobs';
-import AdminWhatsAppEngagement from './pages/AdminWhatsAppEngagement';
-import AdminSalary from './pages/AdminSalary';
-import AdminReports from './pages/AdminReports';
-import AdminDatabaseBackup from './pages/AdminDatabaseBackup';
-import AdminSettings from './pages/AdminSettings';
-import AdminAuditLog from './pages/AdminAuditLog';
-import AdminBIDashboard from './pages/AdminBIDashboard';
-import AdminLogDailyJobs from './pages/AdminLogDailyJobs';
 
-import AdminAttendanceLogs from './pages/AdminAttendanceLogs';
-import AdminMapTracking from './pages/AdminMapTracking';
-import AdminProfile from './pages/AdminProfile';
-import AdminOvertime from './pages/AdminOvertime';
-import AdminOperationsHUD from './pages/AdminOperationsHUD';
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminWorkers = lazy(() => import('./pages/AdminWorkers'));
+const AdminJobs = lazy(() => import('./pages/AdminJobs'));
+const AdminWhatsAppEngagement = lazy(() => import('./pages/AdminWhatsAppEngagement'));
+const AdminSalary = lazy(() => import('./pages/AdminSalary'));
+const AdminReports = lazy(() => import('./pages/AdminReports'));
+const AdminDatabaseBackup = lazy(() => import('./pages/AdminDatabaseBackup'));
+const AdminSettings = lazy(() => import('./pages/AdminSettings'));
+const AdminAuditLog = lazy(() => import('./pages/AdminAuditLog'));
+const AdminBIDashboard = lazy(() => import('./pages/AdminBIDashboard'));
+const AdminLogDailyJobs = lazy(() => import('./pages/AdminLogDailyJobs'));
+const AdminAttendanceLogs = lazy(() => import('./pages/AdminAttendanceLogs'));
+const AdminMapTracking = lazy(() => import('./pages/AdminMapTracking'));
+const AdminProfile = lazy(() => import('./pages/AdminProfile'));
+const AdminOvertime = lazy(() => import('./pages/AdminOvertime'));
+const AdminOperationsHUD = lazy(() => import('./pages/AdminOperationsHUD'));
+const AdminTravelExpenses = lazy(() => import('./pages/AdminTravelExpenses'));
+const AdminPaymentCollection = lazy(() => import('./pages/AdminPaymentCollection'));
 
-import AdminTravelExpenses from './pages/AdminTravelExpenses';
-import AdminPaymentCollection from './pages/AdminPaymentCollection';
+const PageLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="flex flex-col items-center space-y-3">
+      <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-secondary dark:border-slate-800" />
+      <span className="text-xs font-bold text-slate-400 animate-pulse">Loading ShineStaff...</span>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -434,6 +442,7 @@ const App: React.FC = () => {
         <AuthProvider>
           <SocketListener>
             <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
@@ -693,6 +702,7 @@ const App: React.FC = () => {
               {/* Default catch-all redirect */}
               <Route path="*" element={<RootRedirect />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
           </SocketListener>
         </AuthProvider>

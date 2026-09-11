@@ -205,9 +205,9 @@ const WorkerJobs: React.FC = () => {
       alert('Before photo is mandatory');
       return;
     }
-    const incompleteAfter = tempAfterPhotos.some(photo => !photo);
-    if (incompleteAfter) {
-      alert('All 5 completion photos are mandatory to complete job');
+    const validPhotos = tempAfterPhotos.filter(photo => !!photo && photo.trim().length > 50);
+    if (validPhotos.length === 0) {
+      alert('Please snap at least 1 After Cleaning Photo to complete the job.');
       return;
     }
     if (tempPaymentMode === 'not_selected') {
@@ -219,7 +219,7 @@ const WorkerJobs: React.FC = () => {
     try {
       const submitJobCompletion = async (coords?: { lat: number; lng: number }) => {
         await api.put(`/jobs/${selectedJob._id}/complete`, {
-          afterPhotoDataUrls: tempAfterPhotos,
+          afterPhotoDataUrls: validPhotos,
           location: coords,
           manualFuelKms: Number(tempKms),
           workerNotes: tempNotes,

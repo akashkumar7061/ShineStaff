@@ -510,16 +510,19 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Job cannot be completed in its current state (Must be Started)' });
     }
 
-    // Enforce exactly/minimum 5 after photos
-    if (!afterPhotoDataUrls || !Array.isArray(afterPhotoDataUrls) || afterPhotoDataUrls.length < 5) {
-      return res.status(400).json({ message: 'Live After Photos are mandatory (Minimum 5 photos required) to complete the job.' });
+    // Filter non-empty valid photo strings
+    const validPhotoDataUrls = (Array.isArray(afterPhotoDataUrls) ? afterPhotoDataUrls : [afterPhotoDataUrls])
+      .filter((url: any) => typeof url === 'string' && url.trim().length > 50);
+
+    if (validPhotoDataUrls.length === 0) {
+      return res.status(400).json({ message: 'Live After Cleaning Photos are mandatory to complete the job.' });
     }
 
     // Upload after photos concurrently
     const afterPhotoUrls = await Promise.all(
-      afterPhotoDataUrls.map((dataUrl: string) => uploadToCloudinary(dataUrl, 'job_after_photos'))
+      validPhotoDataUrls.map((dataUrl: string) => uploadToCloudinary(dataUrl, 'job_after_photos'))
     );
-    const afterPhotoUrl = afterPhotoUrls[0];
+    const afterPhotoUrl = afterPhotoUrls[0] || '';
 
     // Fetch settings for fuel allowance rate
     let settings = await Settings.findOne({ settingsId: 'global' });
