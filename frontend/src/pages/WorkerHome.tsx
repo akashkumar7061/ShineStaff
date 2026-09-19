@@ -58,9 +58,11 @@ const WorkerHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = async (isBackground = false) => {
     if (!user) return;
-    setLoading(true);
+    if (!isBackground && !attendanceToday) {
+      setLoading(true);
+    }
     try {
       const todayStr = new Date().toISOString().split('T')[0];
       const [attRes, salRes, jobsRes] = await Promise.all([
@@ -94,12 +96,12 @@ const WorkerHome: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(false);
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail?.type === 'NEW_JOB' || customEvent.detail?.type === 'TRAVEL_LOG_APPROVED') {
-        fetchData();
+        fetchData(true);
       }
     };
     window.addEventListener('socket-update', handleSocketUpdate);

@@ -10,7 +10,9 @@ export const getTodayAttendance = async (req: Request, res: Response) => {
   try {
     const queryDate = req.query.date as string;
     const targetDate = queryDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const logs = await Attendance.find({ date: targetDate }).populate('workerId', 'name email phone company photo');
+    const logs = await Attendance.find({ date: targetDate })
+      .populate('workerId', 'name email phone company photo status')
+      .lean();
     res.status(200).json(logs);
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -20,7 +22,7 @@ export const getTodayAttendance = async (req: Request, res: Response) => {
 export const getWorkerAttendance = async (req: Request, res: Response) => {
   const { workerId } = req.params;
   try {
-    const logs = await Attendance.find({ workerId }).sort({ checkInTime: -1 });
+    const logs = await Attendance.find({ workerId }).sort({ checkInTime: -1 }).lean();
     res.status(200).json(logs);
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

@@ -154,4 +154,12 @@ const JobSchema = new Schema<IJob>({
   timestamps: true
 });
 
+// High-speed compound indexes for instant dashboard and query loading
+JobSchema.index({ company: 1, date: -1, status: 1 });
+JobSchema.index({ workerId: 1, date: -1 });
+JobSchema.index({ date: -1, status: 1 });
+JobSchema.index({ status: 1, startedAt: -1 });
+JobSchema.index({ createdAt: -1 });
+JobSchema.index({ clientPhone: 1 });
+
 export default mongoose.model<IJob>('Job', JobSchema);

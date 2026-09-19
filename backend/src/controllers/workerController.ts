@@ -25,7 +25,7 @@ export const getWorkers = async (req: Request, res: Response) => {
       filter.status = status;
     }
 
-    const workers = await User.find(filter).select('-password');
+    const workers = await User.find(filter).select('-password').lean();
     res.status(200).json(workers);
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });

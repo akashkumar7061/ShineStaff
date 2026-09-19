@@ -130,7 +130,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const { status, company, workerId, date } = req.query;
+    const { status, company, workerId, date, includePhotos } = req.query;
     const filter: any = {};
 
     // Worker only gets their own jobs
@@ -151,9 +151,14 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
       filter.date = date;
     }
 
-    const jobs = await Job.find(filter)
-      .populate('workerId', 'name email phone photo')
-      .sort({ createdAt: -1 });
+    let query: any = Job.find(filter).populate('workerId', 'name email phone photo status currentLocation');
+
+    // Admin lists and dashboards don't need heavy base64 strings unless explicitly requested
+    if (req.user.role !== 'worker' && includePhotos !== 'true') {
+      query = query.select('-beforePhoto -afterPhotos -attachments -timeline');
+    }
+
+    const jobs = await query.sort({ createdAt: -1 }).lean();
 
     res.status(200).json(jobs);
   } catch (error: any) {

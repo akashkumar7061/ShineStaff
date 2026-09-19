@@ -320,10 +320,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
     fields: any;
   } | null>(null);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (isBackground = false) => {
+    if (!isBackground && !stats) {
+      setLoading(true);
+    }
     try {
-      // Parallelize heavy API requests
+      // Parallelize heavy API requests with high-speed endpoints
       const [attRes, workersRes, jobsRes, biRes, expensesRes] = await Promise.all([
         api.get('/attendance/today'),
         api.get(`/workers?company=${companyFilter}`),
@@ -379,7 +381,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(false);
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -393,7 +395,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
         type === 'JOB_ACCEPTED' ||
         type === 'JOB_REJECTED'
       ) {
-        fetchDashboardData();
+        fetchDashboardData(true);
       }
     };
     window.addEventListener('socket-update', handleSocketUpdate);

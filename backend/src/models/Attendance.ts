@@ -34,5 +34,6 @@ const AttendanceSchema = new Schema<IAttendance>({
 
 // Compound index so a worker can only have one attendance log per day
 AttendanceSchema.index({ workerId: 1, date: 1 }, { unique: true });
+AttendanceSchema.index({ date: -1, status: 1 });
 
 export default mongoose.model<IAttendance>('Attendance', AttendanceSchema);

@@ -23,21 +23,43 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
     const startStr = startDate as string;
     const endStr = endDate as string;
 
-    // 1. Fetch data in parallel
-    const [jobs, customExpenses, travelLogs, salaryPayouts, workers, attendanceLogs] = await Promise.all([
-      Job.find({ date: { $gte: startStr, $lte: endStr } }).populate('workerId', 'name photo company status'),
-      Expense.find({ date: { $gte: startStr, $lte: endStr } }),
-      TravelLog.find({ date: { $gte: startStr, $lte: endStr }, status: 'approved' }).populate('workerId', 'name'),
-      // Map startDate/endDate to months YYYY-MM
+    const currentYear = new Date().getFullYear();
+
+    // 1. Fetch data in parallel with high-performance lean projections
+    const [jobs, customExpenses, travelLogs, salaryPayouts, workers, attendanceLogs, annualJobs] = await Promise.all([
+      Job.find({ date: { $gte: startStr, $lte: endStr } })
+        .select('title price status date paymentStatus clientPhone startedAt completedAt cancelReason rating workerId company')
+        .populate('workerId', 'name photo company status')
+        .lean(),
+      Expense.find({ date: { $gte: startStr, $lte: endStr } })
+        .select('category amount date')
+        .lean(),
+      TravelLog.find({ date: { $gte: startStr, $lte: endStr }, status: 'approved' })
+        .select('workerId allowance date status')
+        .populate('workerId', 'name')
+        .lean(),
       SalaryRequest.find({ 
         month: { 
           $gte: startStr.substring(0, 7), 
           $lte: endStr.substring(0, 7) 
         }, 
         status: 'approved' 
-      }).populate('workerId', 'name'),
-      User.find({ role: 'worker' }),
+      })
+        .select('workerId amount month status')
+        .populate('workerId', 'name')
+        .lean(),
+      User.find({ role: 'worker' })
+        .select('name photo company status monthlySalary dailySalary')
+        .lean(),
       Attendance.find({ date: { $gte: startStr, $lte: endStr } })
+        .select('workerId date status')
+        .lean(),
+      Job.find({ 
+        date: { $gte: `${currentYear}-01-01`, $lte: `${currentYear}-12-31` }, 
+        status: 'completed' 
+      })
+        .select('price')
+        .lean()
     ]);
 
     // --- 2. Financial Metrics ---
@@ -218,11 +240,6 @@ export const getBIDashboardData = async (req: AuthRequest, res: Response) => {
 
     // --- 8. Annual Goal Tracker ---
     const annualGoal = 20000000; // 2 Crore target
-    const currentYear = new Date().getFullYear();
-    const annualJobs = await Job.find({ 
-      date: { $gte: `${currentYear}-01-01`, $lte: `${currentYear}-12-31` }, 
-      status: 'completed' 
-    });
     const currentAnnualRevenue = annualJobs.reduce((acc, curr) => acc + (curr.price || 0), 0);
     const remainingAnnualRevenue = Math.max(0, annualGoal - currentAnnualRevenue);
     

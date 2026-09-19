@@ -15,7 +15,7 @@ export const getExpenses = async (req: AuthRequest, res: Response) => {
       if (endDate) filter.date.$lte = endDate;
     }
 
-    const expenses = await Expense.find(filter).sort({ date: -1 });
+    const expenses = await Expense.find(filter).sort({ date: -1 }).lean();
     res.status(200).json(expenses);
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
