@@ -53,6 +53,29 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
+export const cleanPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    cleaned = '91' + cleaned;
+  } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
+    cleaned = '91' + cleaned.substring(1);
+  }
+  return cleaned;
+};
+
+export const getClientWhatsAppFeedbackUrl = (job: any): string => {
+  if (!job || !job.clientPhone) return '#';
+  const phone = cleanPhoneNumber(job.clientPhone);
+  const clientName = job.clientName ? job.clientName.trim() : 'Sir/Ma\'am';
+  const companyName = job.company === 'CleanCruisers' ? 'CleanCruisers' : 'SofaShine';
+  const serviceName = job.title || 'Cleaning Service';
+
+  const message = `Hello ${clientName} ji,\n\nThank you for choosing *${companyName}* for your *${serviceName}*! 🌟🧼\n\nAapko hamari cleaning service aur staff ka kaam kaisa laga? Kripya apna feedback share karein. Agar koi bhi sujhaav, review ya complaint ho toh hume zaroor batayein.\n\nDhanyawaad,\n*${companyName} Team*`;
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+};
+
 export const parseCoordsFromInput = (text: string): { lat: number; lng: number } | null => {
   if (!text || typeof text !== 'string') return null;
   const trimmed = text.trim();
@@ -1699,20 +1722,23 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <div className="grid grid-cols-2 gap-2 pb-1">
                   <a
                     href={`tel:${selectedJobForDrawer.clientPhone}`}
-                    className="bg-slate-100 hover:bg-slate-205 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs shadow-sm cursor-pointer border border-slate-200 dark:border-slate-750"
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 font-black py-2.5 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs shadow-sm cursor-pointer border border-slate-200 dark:border-slate-750 transition-colors"
                   >
                     <span>📞 Call Client</span>
                   </a>
-                  {selectedJobForDrawer.workerId ? (
+                  {selectedJobForDrawer.clientPhone ? (
                     <a
-                      href={`tel:${selectedJobForDrawer.workerId.phone}`}
-                      className="bg-slate-100 hover:bg-slate-205 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 font-black py-2 rounded-xl text-center flex items-center justify-center space-x-1 text-xs shadow-sm cursor-pointer border border-slate-200 dark:border-slate-750"
+                      href={getClientWhatsAppFeedbackUrl(selectedJobForDrawer)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs shadow-sm cursor-pointer border border-emerald-600 transition-all hover:shadow"
+                      title="Click to open client WhatsApp with pre-filled feedback message"
                     >
-                      <span>📞 Call Worker</span>
+                      <span>💬 WhatsApp Review</span>
                     </a>
                   ) : (
-                    <div className="bg-slate-100 dark:bg-slate-800 font-black py-2 rounded-xl text-center text-slate-400 text-xs border border-slate-200 dark:border-slate-750 opacity-50 cursor-not-allowed">
-                      No Worker
+                    <div className="bg-slate-100 dark:bg-slate-800 font-black py-2.5 rounded-xl text-center text-slate-400 text-xs border border-slate-200 dark:border-slate-750 opacity-50 cursor-not-allowed">
+                      No Phone
                     </div>
                   )}
                 </div>
