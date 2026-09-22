@@ -1964,7 +1964,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     </button>
                     <button
                       onClick={() => handleShareInvoice(selectedJobForDrawer)}
-                      className="bg-indigo-650 hover:bg-indigo-700 text-white font-extrabold py-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs shadow-md transition-all cursor-pointer"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs shadow-md transition-all cursor-pointer"
                     >
                       <Share2 className="h-4 w-4" />
                       <span>Share PDF</span>
