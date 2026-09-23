@@ -67,11 +67,8 @@ export const cleanPhoneNumber = (phone: string): string => {
 export const getClientWhatsAppFeedbackUrl = (job: any): string => {
   if (!job || !job.clientPhone) return '#';
   const phone = cleanPhoneNumber(job.clientPhone);
-  const clientName = job.clientName ? job.clientName.trim() : 'Sir/Ma\'am';
-  const companyName = job.company === 'CleanCruisers' ? 'CleanCruisers' : 'SofaShine';
-  const serviceName = job.title || 'Cleaning Service';
 
-  const message = `Hello ${clientName} ji,\n\nThank you for choosing *${companyName}* for your *${serviceName}*! 🌟🧼\n\nAapko hamari cleaning service aur staff ka kaam kaisa laga? Kripya apna feedback share karein. Agar koi bhi sujhaav, review ya complaint ho toh hume zaroor batayein.\n\nDhanyawaad,\n*${companyName} Team*`;
+  const message = `Aapko hamari cleaning service aur staff ka kaam kaisa laga? Kripya apna feedback share karein. Agar koi bhi sujhaav, review ya complaint ho toh hume zaroor batayein.`;
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 };
