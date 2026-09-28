@@ -152,6 +152,7 @@ const AdminReports: React.FC = () => {
   const [downloading, setDownloading] = useState(false);
 
   // Customer Export Specific State
+  const [customerViewMode, setCustomerViewMode] = useState<'unique' | 'all'>('unique');
   const [customerPreset, setCustomerPreset] = useState('all-time');
   const [customerStartDate, setCustomerStartDate] = useState(getPastDateString(30));
   const [customerEndDate, setCustomerEndDate] = useState(getTodayString());
@@ -191,19 +192,6 @@ const AdminReports: React.FC = () => {
   const handleExportCustomers = async (format: 'excel' | 'csv') => {
     setExportingCustomer(format);
     try {
-      // Fetch jobs / customers from backend
-      const params: any = {};
-      if (customerPreset !== 'all-time') {
-        params.startDate = customerStartDate;
-        params.endDate = customerEndDate;
-      }
-      if (customerStatus !== 'all') {
-        params.status = customerStatus;
-      }
-      if (customerCompany !== 'all') {
-        params.company = customerCompany;
-      }
-
       // Fetch all jobs
       const response = await api.get('/bi/export-all');
       let jobs: CustomerExportItem[] = response.data.jobs || [];
@@ -230,13 +218,15 @@ const AdminReports: React.FC = () => {
         return;
       }
 
+      const isUnique = customerViewMode === 'unique';
+      const modeTag = isUnique ? 'unique_clients' : 'all_entries';
       const dateTag = customerPreset === 'all-time' ? 'all_records' : `${customerStartDate}_to_${customerEndDate}`;
-      const prefix = `shinestaff_customers_${customerStatus}_${dateTag}`;
+      const prefix = `shinestaff_customers_${customerStatus}_${modeTag}_${dateTag}`;
 
       if (format === 'excel') {
-        exportCustomersToExcel(jobs, prefix);
+        exportCustomersToExcel(jobs, prefix, isUnique);
       } else {
-        exportCustomersToCSV(jobs, prefix);
+        exportCustomersToCSV(jobs, prefix, isUnique);
       }
     } catch (err: any) {
       alert('Failed to export customer data: ' + (err.response?.data?.message || err.message));
@@ -335,6 +325,35 @@ const AdminReports: React.FC = () => {
               <span>{exportingCustomer === 'csv' ? 'Generating CSV...' : 'Export CSV (.csv)'}</span>
             </button>
           </div>
+        </div>
+
+        {/* Customer Format Mode Switcher (Unique Customers vs All Bookings) */}
+        <div className="flex flex-wrap items-center gap-2 bg-white/80 dark:bg-slate-900/80 p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-2">
+            Export Format:
+          </span>
+          <button
+            type="button"
+            onClick={() => setCustomerViewMode('unique')}
+            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+              customerViewMode === 'unique'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.01]'
+                : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <span>👥 Unique Customers (No Duplicates + Repeat Count Column)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCustomerViewMode('all')}
+            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+              customerViewMode === 'all'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.01]'
+                : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <span>📋 All Individual Bookings (Raw Rows)</span>
+          </button>
         </div>
 
         {/* Customer Filters Row */}
