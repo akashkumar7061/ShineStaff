@@ -131,3 +131,49 @@ export const exportPhotoCSV = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const exportCustomerCSV = async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, status, company } = req.query;
+    const filter: any = {};
+    if (startDate && endDate) {
+      filter.date = { $gte: startDate as string, $lte: endDate as string };
+    }
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+    if (company && company !== 'all') {
+      filter.company = company;
+    }
+
+    const jobs = await Job.find(filter).populate('workerId', 'name phone email').sort({ date: -1, _id: -1 });
+
+    let csv = '\ufeffJob ID,Customer Name,Phone Number,Alternate Phone,Email,Address,Landmark,City,Pincode,GPS Latitude,GPS Longitude,Google Maps Link,Service Title,Company,Price (INR),Job Date,Time Slot,Job Status,Cancellation Reason,Work Started At,Work Completed At,Payment Status,Payment Mode,Assigned Staff,Staff Phone,Rating,Customer Notes\n';
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      let str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    jobs.forEach((j) => {
+      const worker = (j.workerId as any) || {};
+      const workerName = worker.name || 'Unassigned';
+      const workerPhone = worker.phone || '';
+      const lat = j.location?.lat ? String(j.location.lat) : '';
+      const lng = j.location?.lng ? String(j.location.lng) : '';
+      const mapsUrl = lat && lng ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : (j.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}` : '');
+      const started = j.startedAt ? new Date(j.startedAt).toLocaleString('en-IN') : '';
+      const completed = j.completedAt ? new Date(j.completedAt).toLocaleString('en-IN') : '';
+
+      csv += `${escapeCSV(j._id)},${escapeCSV(j.clientName)},${escapeCSV(j.clientPhone)},${escapeCSV(j.alternatePhone || '')},${escapeCSV(j.clientEmail || '')},${escapeCSV(j.address)},${escapeCSV(j.landmark || '')},${escapeCSV(j.city || '')},${escapeCSV(j.pincode || '')},${escapeCSV(lat)},${escapeCSV(lng)},${escapeCSV(mapsUrl)},${escapeCSV(j.title)},${escapeCSV(j.company)},${j.price || 0},${escapeCSV(j.date)},${escapeCSV(j.timeSlot)},${escapeCSV(j.status)},${escapeCSV(j.cancelReason || '')},${escapeCSV(started)},${escapeCSV(completed)},${escapeCSV(j.paymentStatus || 'pending')},${escapeCSV(j.paymentMode || 'not_selected')},${escapeCSV(workerName)},${escapeCSV(workerPhone)},${escapeCSV(j.rating || '')},${escapeCSV(j.notes || j.specialInstructions || '')}\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=customers_export_${new Date().toISOString().split('T')[0]}.csv`);
+    res.status(200).send(csv);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+

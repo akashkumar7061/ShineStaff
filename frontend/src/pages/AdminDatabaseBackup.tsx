@@ -12,9 +12,12 @@ import {
   MessageSquare,
   Clock,
   Award,
-  Sparkles
+  Sparkles,
+  FileSpreadsheet,
+  MapPin
 } from 'lucide-react';
 import api from '../utils/api';
+import { exportCustomersToExcel, exportCustomersToCSV, type CustomerExportItem } from '../utils/exportCustomerData';
 
 const getTodayString = () => new Date().toISOString().split('T')[0];
 const getPastDateString = (daysAgo: number) => {
@@ -80,9 +83,15 @@ const AdminDatabaseBackup: React.FC = () => {
   // Individual Table Exporters
   const exportJobs = (jobs: any[]) => {
     let csv = '\uFEFF';
-    csv += 'Job ID,Title,Company,Client Name,Client Phone,Address,Price (INR),Date,Time Slot,Status,Worker Name,Worker Phone,Payment Status,Payment Mode,Rating,Landmark,City,Pincode\r\n';
+    csv += 'Job ID,Customer Name,Phone Number,Alternate Phone,Email,Address,Landmark,City,Pincode,GPS Latitude,GPS Longitude,Google Maps Link,Service Clean,Company,Price (INR),Job Date,Time Slot,Status,Cancellation Reason,Work Started At,Work Completed At,Payment Status,Payment Mode,Assigned Staff,Staff Phone,Rating,Customer Notes\r\n';
     jobs.forEach((j) => {
-      csv += `${escapeCSV(j._id)},${escapeCSV(j.title)},${escapeCSV(j.company)},${escapeCSV(j.clientName)},${escapeCSV(j.clientPhone)},${escapeCSV(j.address)},${j.price || 0},${escapeCSV(j.date)},${escapeCSV(j.timeSlot)},${escapeCSV(j.status)},${escapeCSV(j.workerId?.name)},${escapeCSV(j.workerId?.phone)},${escapeCSV(j.paymentStatus)},${escapeCSV(j.paymentMode)},${j.rating || ''},${escapeCSV(j.landmark)},${escapeCSV(j.city)},${escapeCSV(j.pincode)}\r\n`;
+      const lat = j.location?.lat ? String(j.location.lat) : '';
+      const lng = j.location?.lng ? String(j.location.lng) : '';
+      const mapsUrl = lat && lng ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : (j.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}` : '');
+      const started = j.startedAt ? new Date(j.startedAt).toLocaleString('en-IN') : '';
+      const completed = j.completedAt ? new Date(j.completedAt).toLocaleString('en-IN') : '';
+
+      csv += `${escapeCSV(j._id)},${escapeCSV(j.clientName)},${escapeCSV(j.clientPhone)},${escapeCSV(j.alternatePhone)},${escapeCSV(j.clientEmail)},${escapeCSV(j.address)},${escapeCSV(j.landmark)},${escapeCSV(j.city)},${escapeCSV(j.pincode)},${escapeCSV(lat)},${escapeCSV(lng)},${escapeCSV(mapsUrl)},${escapeCSV(j.title)},${escapeCSV(j.company)},${j.price || 0},${escapeCSV(j.date)},${escapeCSV(j.timeSlot)},${escapeCSV(j.status)},${escapeCSV(j.cancelReason)},${escapeCSV(started)},${escapeCSV(completed)},${escapeCSV(j.paymentStatus)},${escapeCSV(j.paymentMode)},${escapeCSV(j.workerId?.name)},${escapeCSV(j.workerId?.phone)},${escapeCSV(j.rating || '')},${escapeCSV(j.notes || j.specialInstructions)}\r\n`;
     });
     return csv;
   };
@@ -186,24 +195,32 @@ const AdminDatabaseBackup: React.FC = () => {
     return csv;
   };
 
-  const triggerDownload = async (section: string) => {
+  const triggerDownload = async (section: string, format: 'csv' | 'excel' = 'csv') => {
     setDownloading(section);
     try {
       const response = await api.get('/bi/export-all');
       const data = response.data;
-      let csvData = '';
       const dateSuffix = preset === 'all-time' ? 'all_time' : `${startDate}_to_${endDate}`;
+
+      if (section === 'jobs' || section === 'customers') {
+        const filteredJobs = (data.jobs || []).filter((j: any) => isWithinRange(j.date));
+        if (format === 'excel') {
+          exportCustomersToExcel(filteredJobs, `shinestaff_customers_${dateSuffix}`);
+          return;
+        } else {
+          exportCustomersToCSV(filteredJobs, `shinestaff_customers_${dateSuffix}`);
+          return;
+        }
+      }
+
+      let csvData = '';
       let filename = `shinestaff_${section}_export_${dateSuffix}.csv`;
 
       switch (section) {
-        case 'jobs':
-          csvData = exportJobs((data.jobs || []).filter((j: any) => isWithinRange(j.date)));
-          break;
         case 'expenses':
           csvData = exportExpenses((data.expenses || []).filter((e: any) => isWithinRange(e.date)));
           break;
         case 'workers':
-          // Workers are global, but filter joiningDate if a filter range is set
           csvData = exportWorkers((data.workers || []).filter((w: any) => isWithinRange(w.joiningDate)));
           break;
         case 'attendance':
@@ -235,7 +252,6 @@ const AdminDatabaseBackup: React.FC = () => {
           csvData = exportAuditLogs((data.auditLogs || []).filter((al: any) => isWithinRange(al.createdAt)));
           break;
         case 'master-dump':
-          // Consolidated CSV including all tables filtered sequentially
           csvData = '\uFEFF';
           csvData += exportJobs((data.jobs || []).filter((j: any) => isWithinRange(j.date))) + '\r\n\r\n';
           csvData += exportExpenses((data.expenses || []).filter((e: any) => isWithinRange(e.date))) + '\r\n\r\n';
@@ -277,8 +293,8 @@ const AdminDatabaseBackup: React.FC = () => {
   };
 
   const sectionsList = [
-    { id: 'jobs', name: 'Clean Bookings', desc: 'Raw booking details, landmarks, pricing, and job states.', icon: Briefcase, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
-    { id: 'expenses', name: 'Custom Expenses', desc: 'Consumables, rents, material purchases, marketing, and office bills.', icon: DollarSign, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+    { id: 'customers', name: 'Customers & Bookings', desc: 'Customer names, phone numbers, addresses, GPS links, dates, and complete completion/cancellation ledger.', icon: Users, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', isSpecial: true },
+    { id: 'expenses', name: 'Custom Expenses', desc: 'Consumables, rents, material purchases, marketing, and office bills.', icon: DollarSign, color: 'bg-teal-500/10 text-teal-500 border-teal-500/20' },
     { id: 'workers', name: 'Workers Directory', desc: 'Active staff details, aadhaar data, joining logs, salary formulas.', icon: Users, color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' },
     { id: 'attendance', name: 'Attendance Sheets', desc: 'Staff clock-in times, coordinates, device signatures, late reasons.', icon: CheckCircle2, color: 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20' },
     { id: 'leaves', name: 'Leaves Registry', desc: 'Leave requests history, reasons, dates, and approvals.', icon: Calendar, color: 'bg-teal-500/10 text-teal-500 border-teal-500/20' },
@@ -301,7 +317,7 @@ const AdminDatabaseBackup: React.FC = () => {
             <Database className="h-6 w-6 text-indigo-500" />
             <span>Database Backup & Advanced Analytics</span>
           </h2>
-          <p className="text-xs text-slate-400">Download separate database collections in clean, Excel-compatible CSV spreadsheets for custom data modeling and reporting.</p>
+          <p className="text-xs text-slate-400">Download separate database collections in clean, Excel-compatible (.xlsx / .csv) spreadsheets for custom data modeling and customer reporting.</p>
         </div>
 
         <button
@@ -327,7 +343,7 @@ const AdminDatabaseBackup: React.FC = () => {
             <span>📅</span>
             <span>Filter Backup Records By Date Range</span>
           </h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">Restrict downloaded CSV files to only include entries created or scheduled within the selected period.</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Restrict downloaded files to only include entries created or scheduled within the selected period.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
           <div>
@@ -378,10 +394,12 @@ const AdminDatabaseBackup: React.FC = () => {
           const Icon = sec.icon;
           const isProcessing = downloading === sec.id;
           return (
-            <div key={sec.id} className="glass-card p-6 flex flex-col justify-between space-y-6 hover:shadow-md transition-shadow relative overflow-hidden">
+            <div key={sec.id} className={`glass-card p-6 flex flex-col justify-between space-y-6 hover:shadow-md transition-shadow relative overflow-hidden ${sec.isSpecial ? 'border-2 border-emerald-500/30 dark:border-emerald-500/30' : ''}`}>
               <div className="flex items-start justify-between space-x-4">
                 <div className="space-y-1.5 min-w-0">
-                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Collection Data</span>
+                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    {sec.isSpecial ? '⭐ Featured Master Data' : 'Collection Data'}
+                  </span>
                   <h3 className="text-sm font-bold text-slate-850 dark:text-slate-100 truncate">{sec.name}</h3>
                   <p className="text-xs text-slate-455 leading-relaxed">{sec.desc}</p>
                 </div>
@@ -390,20 +408,41 @@ const AdminDatabaseBackup: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => triggerDownload(sec.id)}
-                disabled={downloading !== null}
-                className="w-full flex items-center justify-center space-x-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200/50 dark:border-slate-800 text-slate-700 dark:text-slate-200 rounded-xl py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-              >
-                {isProcessing ? (
-                  <span className="animate-pulse">Loading CSV...</span>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 text-slate-400" />
-                    <span>Download CSV Spreadsheet</span>
-                  </>
-                )}
-              </button>
+              {sec.id === 'customers' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => triggerDownload('customers', 'excel')}
+                    disabled={downloading !== null}
+                    className="flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-xs font-black transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    <span>{isProcessing ? 'Loading...' : 'Excel (.xlsx)'}</span>
+                  </button>
+                  <button
+                    onClick={() => triggerDownload('customers', 'csv')}
+                    disabled={downloading !== null}
+                    className="flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5 text-slate-400" />
+                    <span>CSV File</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => triggerDownload(sec.id, 'csv')}
+                  disabled={downloading !== null}
+                  className="w-full flex items-center justify-center space-x-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200/50 dark:border-slate-800 text-slate-700 dark:text-slate-200 rounded-xl py-2.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isProcessing ? (
+                    <span className="animate-pulse">Loading CSV...</span>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 text-slate-400" />
+                      <span>Download CSV Spreadsheet</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           );
         })}

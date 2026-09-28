@@ -6,12 +6,28 @@ import {
   Calendar,
   DollarSign,
   Camera,
-  Database
+  Database,
+  MapPin,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import api from '../utils/api';
+import { exportCustomersToExcel, exportCustomersToCSV, type CustomerExportItem } from '../utils/exportCustomerData';
 
 const getTodayString = () => {
   const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPastDateString = (daysAgo: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -32,10 +48,16 @@ const convertToCSV = (data: any) => {
   let csvContent = '\uFEFF';
 
   // 1. Jobs Table
-  csvContent += '--- JOBS MASTER TABLE ---\r\n';
-  csvContent += 'Job ID,Title,Company,Client Name,Client Phone,Address,Price (INR),Date,Time Slot,Status,Worker Name,Worker Phone,Payment Status,Payment Mode,Rating,Landmark,City,Pincode\r\n';
+  csvContent += '--- JOBS & CUSTOMERS MASTER TABLE ---\r\n';
+  csvContent += 'Job ID,Customer Name,Phone Number,Alternate Phone,Email,Address,Landmark,City,Pincode,GPS Latitude,GPS Longitude,Google Maps Link,Service Clean,Company,Price (INR),Job Date,Time Slot,Status,Cancellation Reason,Work Started At,Work Completed At,Payment Status,Payment Mode,Assigned Staff,Staff Phone,Rating,Customer Notes\r\n';
   (data.jobs || []).forEach((j: any) => {
-    csvContent += `${escapeCSV(j._id)},${escapeCSV(j.title)},${escapeCSV(j.company)},${escapeCSV(j.clientName)},${escapeCSV(j.clientPhone)},${escapeCSV(j.address)},${j.price || 0},${escapeCSV(j.date)},${escapeCSV(j.timeSlot)},${escapeCSV(j.status)},${escapeCSV(j.workerId?.name)},${escapeCSV(j.workerId?.phone)},${escapeCSV(j.paymentStatus)},${escapeCSV(j.paymentMode)},${j.rating || ''},${escapeCSV(j.landmark)},${escapeCSV(j.city)},${escapeCSV(j.pincode)}\r\n`;
+    const lat = j.location?.lat ? String(j.location.lat) : '';
+    const lng = j.location?.lng ? String(j.location.lng) : '';
+    const mapsUrl = lat && lng ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : (j.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}` : '');
+    const started = j.startedAt ? new Date(j.startedAt).toLocaleString('en-IN') : '';
+    const completed = j.completedAt ? new Date(j.completedAt).toLocaleString('en-IN') : '';
+
+    csvContent += `${escapeCSV(j._id)},${escapeCSV(j.clientName)},${escapeCSV(j.clientPhone)},${escapeCSV(j.alternatePhone)},${escapeCSV(j.clientEmail)},${escapeCSV(j.address)},${escapeCSV(j.landmark)},${escapeCSV(j.city)},${escapeCSV(j.pincode)},${escapeCSV(lat)},${escapeCSV(lng)},${escapeCSV(mapsUrl)},${escapeCSV(j.title)},${escapeCSV(j.company)},${j.price || 0},${escapeCSV(j.date)},${escapeCSV(j.timeSlot)},${escapeCSV(j.status)},${escapeCSV(j.cancelReason)},${escapeCSV(started)},${escapeCSV(completed)},${escapeCSV(j.paymentStatus)},${escapeCSV(j.paymentMode)},${escapeCSV(j.workerId?.name)},${escapeCSV(j.workerId?.phone)},${escapeCSV(j.rating)},${escapeCSV(j.notes || j.specialInstructions)}\r\n`;
   });
   csvContent += '\r\n\r\n';
 
@@ -129,6 +151,100 @@ const AdminReports: React.FC = () => {
   const [endDate, setEndDate] = useState(getTodayString);
   const [downloading, setDownloading] = useState(false);
 
+  // Customer Export Specific State
+  const [customerPreset, setCustomerPreset] = useState('all-time');
+  const [customerStartDate, setCustomerStartDate] = useState(getPastDateString(30));
+  const [customerEndDate, setCustomerEndDate] = useState(getTodayString());
+  const [customerStatus, setCustomerStatus] = useState('all');
+  const [customerCompany, setCustomerCompany] = useState('all');
+  const [exportingCustomer, setExportingCustomer] = useState<'excel' | 'csv' | null>(null);
+
+  const handleCustomerPresetChange = (p: string) => {
+    setCustomerPreset(p);
+    const today = getTodayString();
+    
+    if (p === 'today') {
+      setCustomerStartDate(today);
+      setCustomerEndDate(today);
+    } else if (p === 'yesterday') {
+      const yesterday = getPastDateString(1);
+      setCustomerStartDate(yesterday);
+      setCustomerEndDate(yesterday);
+    } else if (p === 'last-7') {
+      setCustomerStartDate(getPastDateString(7));
+      setCustomerEndDate(today);
+    } else if (p === 'this-month') {
+      const d = new Date();
+      const firstDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      setCustomerStartDate(firstDay);
+      setCustomerEndDate(today);
+    } else if (p === 'last-month') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 1);
+      const firstDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+      setCustomerStartDate(firstDay);
+      setCustomerEndDate(lastDay);
+    }
+  };
+
+  const handleExportCustomers = async (format: 'excel' | 'csv') => {
+    setExportingCustomer(format);
+    try {
+      // Fetch jobs / customers from backend
+      const params: any = {};
+      if (customerPreset !== 'all-time') {
+        params.startDate = customerStartDate;
+        params.endDate = customerEndDate;
+      }
+      if (customerStatus !== 'all') {
+        params.status = customerStatus;
+      }
+      if (customerCompany !== 'all') {
+        params.company = customerCompany;
+      }
+
+      // Fetch all jobs
+      const response = await api.get('/bi/export-all');
+      let jobs: CustomerExportItem[] = response.data.jobs || [];
+
+      // Filter based on UI filters
+      if (customerPreset !== 'all-time') {
+        jobs = jobs.filter((j) => {
+          if (!j.date) return false;
+          const cleanDate = typeof j.date === 'string' ? j.date.split('T')[0] : new Date(j.date).toISOString().split('T')[0];
+          return cleanDate >= customerStartDate && cleanDate <= customerEndDate;
+        });
+      }
+
+      if (customerStatus !== 'all') {
+        jobs = jobs.filter((j) => (j.status || '').toLowerCase() === customerStatus.toLowerCase());
+      }
+
+      if (customerCompany !== 'all') {
+        jobs = jobs.filter((j) => j.company === customerCompany);
+      }
+
+      if (jobs.length === 0) {
+        alert('No customer records found matching the selected filters.');
+        return;
+      }
+
+      const dateTag = customerPreset === 'all-time' ? 'all_records' : `${customerStartDate}_to_${customerEndDate}`;
+      const prefix = `shinestaff_customers_${customerStatus}_${dateTag}`;
+
+      if (format === 'excel') {
+        exportCustomersToExcel(jobs, prefix);
+      } else {
+        exportCustomersToCSV(jobs, prefix);
+      }
+    } catch (err: any) {
+      alert('Failed to export customer data: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setExportingCustomer(null);
+    }
+  };
+
   const downloadMasterDataCSV = async () => {
     setDownloading(true);
     try {
@@ -170,14 +286,144 @@ const AdminReports: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Export Management Reports</h2>
-        <p className="text-xs text-slate-400 mt-0.5">Generate and download Excel-compatible CSV files of system registries</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 h-32 w-32 bg-secondary/5 rounded-full blur-2xl" />
+        <div className="space-y-1 relative z-10">
+          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
+            <FileSpreadsheet className="h-6 w-6 text-secondary" />
+            <span>Export Management & Excel Reports</span>
+          </h2>
+          <p className="text-xs text-slate-400">Download formatted Microsoft Excel (.xlsx) spreadsheets & CSV datasets with customer addresses, GPS links, dates, and status ledger.</p>
+        </div>
       </div>
 
+      {/* 🌟 FEATURED SECTION: Customer Data & Booking History Exporter (Excel & CSV) */}
+      <div className="glass-card p-6 md:p-8 rounded-3xl border-2 border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 via-slate-50/50 to-white dark:from-emerald-950/20 dark:via-slate-900/40 dark:to-slate-900 shadow-lg space-y-6 relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-emerald-500/10 dark:border-emerald-500/15">
+          <div className="space-y-1">
+            <div className="inline-flex items-center space-x-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+              <Sparkles className="h-3 w-3" />
+              <span>Customer Master Directory & Ledger</span>
+            </div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">
+              📊 Export Customer Data (Excel & CSV)
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+              Includes: <strong>Customer Name, Phone, Address, Landmark, GPS Coordinates, Clickable Google Maps Link, Service Clean, Amount (₹), Date & Time, Completed/Cancelled Status, Reason, Payment Status</strong>.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => handleExportCustomers('excel')}
+              disabled={exportingCustomer !== null}
+              className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl px-5 py-3 transition-all cursor-pointer shadow-md hover:shadow-emerald-600/25 disabled:opacity-50"
+            >
+              <FileSpreadsheet className="h-4.5 w-4.5" />
+              <span>{exportingCustomer === 'excel' ? 'Generating Excel...' : 'Export Excel (.xlsx)'}</span>
+            </button>
+
+            <button
+              onClick={() => handleExportCustomers('csv')}
+              disabled={exportingCustomer !== null}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl px-4 py-3 transition-all cursor-pointer shadow-md hover:shadow-blue-600/25 disabled:opacity-50"
+            >
+              <Download className="h-4.5 w-4.5" />
+              <span>{exportingCustomer === 'csv' ? 'Generating CSV...' : 'Export CSV (.csv)'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Customer Filters Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+          {/* Quick Date Range Preset */}
+          <div>
+            <label className="block text-[9.5px] uppercase tracking-wider text-slate-500 font-black mb-1.5">
+              📅 Date Period Filter:
+            </label>
+            <select
+              value={customerPreset}
+              onChange={(e) => handleCustomerPresetChange(e.target.value)}
+              className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-emerald-500 dark:text-white shadow-sm"
+            >
+              <option value="all-time">All Time (All Customer Records)</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last-7">Last 7 Days</option>
+              <option value="this-month">This Month</option>
+              <option value="last-month">Last Month</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+
+          {/* Job Status Filter */}
+          <div>
+            <label className="block text-[9.5px] uppercase tracking-wider text-slate-500 font-black mb-1.5">
+              🎯 Job Status:
+            </label>
+            <select
+              value={customerStatus}
+              onChange={(e) => setCustomerStatus(e.target.value)}
+              className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-emerald-500 dark:text-white shadow-sm"
+            >
+              <option value="all">All Jobs & Bookings</option>
+              <option value="completed">Completed Only (काम पूरा हुआ ✅)</option>
+              <option value="cancelled">Cancelled Only (रद्द हुआ ❌)</option>
+              <option value="started">In Progress Only (चल रहा है ⏳)</option>
+              <option value="pending">Confirmed / Pending Only (कन्फर्म्ड 📋)</option>
+            </select>
+          </div>
+
+          {/* Company Brand Filter */}
+          <div>
+            <label className="block text-[9.5px] uppercase tracking-wider text-slate-500 font-black mb-1.5">
+              🏢 Company Brand:
+            </label>
+            <select
+              value={customerCompany}
+              onChange={(e) => setCustomerCompany(e.target.value)}
+              className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-emerald-500 dark:text-white shadow-sm"
+            >
+              <option value="all">Both Brands (SofaShine & CleanCruisers)</option>
+              <option value="SofaShine">SofaShine Only</option>
+              <option value="CleanCruisers">CleanCruisers Only</option>
+            </select>
+          </div>
+
+          {/* Custom Date Inputs if custom selected */}
+          {customerPreset === 'custom' ? (
+            <div className="grid grid-cols-2 gap-2 animate-fade-in">
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">From:</label>
+                <input
+                  type="date"
+                  value={customerStartDate}
+                  onChange={(e) => setCustomerStartDate(e.target.value)}
+                  className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-emerald-500 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">To:</label>
+                <input
+                  type="date"
+                  value={customerEndDate}
+                  onChange={(e) => setCustomerEndDate(e.target.value)}
+                  className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-emerald-500 dark:text-white"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center p-3 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+              <span>Ready to Export {customerPreset.replace('-', ' ').toUpperCase()}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Grid of Other Reports */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* 1. Attendance Report Card */}
@@ -216,7 +462,7 @@ const AdminReports: React.FC = () => {
 
           <button
             onClick={() => triggerDownload('attendance')}
-            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold"
+            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold cursor-pointer"
           >
             <Download className="h-4 w-4" />
             <span>Download Attendance Report</span>
@@ -248,7 +494,7 @@ const AdminReports: React.FC = () => {
 
           <button
             onClick={() => triggerDownload('salary')}
-            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold"
+            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold cursor-pointer"
           >
             <Download className="h-4 w-4" />
             <span>Download Salary Report</span>
@@ -270,7 +516,7 @@ const AdminReports: React.FC = () => {
 
           <button
             onClick={() => triggerDownload('workers')}
-            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold"
+            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold cursor-pointer"
           >
             <Download className="h-4 w-4" />
             <span>Download Employee Directory</span>
@@ -292,7 +538,7 @@ const AdminReports: React.FC = () => {
 
           <button
             onClick={() => triggerDownload('photos')}
-            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold"
+            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold cursor-pointer"
           >
             <Download className="h-4 w-4" />
             <span>Download Photo Logs</span>
@@ -300,7 +546,7 @@ const AdminReports: React.FC = () => {
         </div>
 
         {/* 5. Master Database Analytics Dump Card */}
-        <div className="glass-card p-6 flex flex-col justify-between space-y-6">
+        <div className="glass-card p-6 flex flex-col justify-between space-y-6 md:col-span-2">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Database Backup & Analytics</span>
@@ -315,14 +561,14 @@ const AdminReports: React.FC = () => {
           <button
             onClick={() => triggerDownload('master-data')}
             disabled={downloading}
-            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold disabled:opacity-50"
+            className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-custom py-3 text-xs font-bold disabled:opacity-50 cursor-pointer"
           >
             {downloading ? (
               <span className="animate-pulse">Preparing Excel Export...</span>
             ) : (
               <>
                 <Download className="h-4 w-4" />
-                <span>Download Master Database Dump</span>
+                <span>Download Master Database Dump (CSV)</span>
               </>
             )}
           </button>

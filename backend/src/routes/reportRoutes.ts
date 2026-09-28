@@ -3,7 +3,8 @@ import {
   exportAttendanceCSV,
   exportWorkerCSV,
   exportSalaryCSV,
-  exportPhotoCSV
+  exportPhotoCSV,
+  exportCustomerCSV
 } from '../controllers/reportController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -16,5 +17,6 @@ router.get('/attendance', exportAttendanceCSV);
 router.get('/workers', exportWorkerCSV);
 router.get('/salary', exportSalaryCSV);
 router.get('/photos', exportPhotoCSV);
+router.get('/customers', exportCustomerCSV);
 
 export default router;

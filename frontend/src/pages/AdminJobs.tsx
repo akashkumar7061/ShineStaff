@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../utils/api';
 import { handleDownloadInvoice, handleShareInvoice } from '../utils/invoiceGenerator';
+import { exportCustomersToExcel } from '../utils/exportCustomerData';
 import MapView from '../components/MapView';
 import GPSAddress from '../components/GPSAddress';
 import {
@@ -29,7 +30,8 @@ import {
   MessageSquare,
   Sparkles,
   Share2,
-  Navigation
+  Navigation,
+  FileSpreadsheet
 } from 'lucide-react';
 
 const formatTimeTo12Hour = (timeStr: string) => {
@@ -1403,6 +1405,21 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           >
             <Send className="h-3.5 w-3.5 text-[#22c55e]" />
             <span>Send All Schedules ↗</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (jobs.length === 0) {
+                alert('No jobs found to export for this date.');
+                return;
+              }
+              exportCustomersToExcel(jobs, `shinestaff_customers_schedule_${selectedDate}`);
+            }}
+            className="flex items-center space-x-1.5 bg-white dark:bg-slate-900 border border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs px-3 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+            title="Export all customer jobs on this date to Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Export Excel</span>
           </button>
 
           <button
