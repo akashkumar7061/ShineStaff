@@ -864,32 +864,42 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   const handleUpdateDrawerPayment = async (jobId: string, paymentStatus: string, paymentMode: string) => {
     try {
-      const res = await api.put(`/jobs/${jobId}`, { paymentStatus, paymentMode });
+      let finalStatus = paymentStatus;
+      // Auto-set status to 'received' whenever a valid payment method (Cash or UPI) is selected
+      if (paymentMode === 'cash' || paymentMode === 'upi_online') {
+        finalStatus = 'received';
+      } else if (paymentMode === 'not_selected' && paymentStatus === 'received') {
+        finalStatus = 'pending';
+      }
+
+      const res = await api.put(`/jobs/${jobId}`, { paymentStatus: finalStatus, paymentMode });
       if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
         setSelectedJobForDrawer(res.data);
       }
-      if (paymentStatus === 'received' && selectedJobForDrawer) {
-        const j = selectedJobForDrawer;
-        let qrData: any = null;
-        if (paymentMode === 'upi_online' && j.company) {
-          const qrRes = await api.get(`/qr/company/${j.company}`).catch(() => ({ data: null }));
-          qrData = qrRes.data;
+      if (finalStatus === 'received') {
+        const j = res.data || selectedJobForDrawer;
+        if (j) {
+          let qrData: any = null;
+          if (paymentMode === 'upi_online' && j.company) {
+            const qrRes = await api.get(`/qr/company/${j.company}`).catch(() => ({ data: null }));
+            qrData = qrRes.data;
+          }
+          await api.post('/payments/record', {
+            jobId: j._id,
+            invoiceNumber: j.visitId || `INV-${j._id.slice(-6)}`,
+            workerId: j.workerId?._id || j.workerId,
+            workerName: j.workerId?.name || 'Assigned Staff',
+            clientName: j.clientName,
+            clientPhone: j.clientPhone,
+            company: j.company,
+            amount: j.price || 0,
+            paymentMethod: paymentMode === 'cash' ? 'cash' : 'upi_online',
+            qrId: qrData?._id,
+            qrName: qrData?.name,
+            upiId: qrData?.upiId,
+            collectedBy: 'Admin'
+          }).catch(e => console.error('Auto payment record error:', e));
         }
-        await api.post('/payments/record', {
-          jobId: j._id,
-          invoiceNumber: j.visitId || `INV-${j._id.slice(-6)}`,
-          workerId: j.workerId?._id || j.workerId,
-          workerName: j.workerId?.name || 'Assigned Staff',
-          clientName: j.clientName,
-          clientPhone: j.clientPhone,
-          company: j.company,
-          amount: j.price || 0,
-          paymentMethod: paymentMode === 'cash' ? 'cash' : 'upi_online',
-          qrId: qrData?._id,
-          qrName: qrData?.name,
-          upiId: qrData?.upiId,
-          collectedBy: 'Admin'
-        }).catch(e => console.error('Auto payment record error:', e));
       }
       fetchJobsAndWorkers();
     } catch (err) {
@@ -1987,7 +1997,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
                 {/* Payment Details Section (Inline Edit) */}
                 <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
-                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Details</span>
+                  <div className="flex justify-between items-center">
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Details</span>
+                    <span className="text-[8.5px] font-bold text-emerald-600 dark:text-emerald-400">⚡ Auto-Paid on Method Select</span>
+                  </div>
                   <div className="grid grid-cols-2 gap-3 bg-slate-55 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2xl">
                     <div>
                       <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Status</label>
@@ -2002,15 +2015,19 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Method</label>
+                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Method (माध्यम)</label>
                       <select
                         value={selectedJobForDrawer.paymentMode || 'not_selected'}
-                        onChange={(e) => handleUpdateDrawerPayment(selectedJobForDrawer._id, selectedJobForDrawer.paymentStatus || 'pending', e.target.value)}
+                        onChange={(e) => {
+                          const newMode = e.target.value;
+                          const autoStatus = (newMode === 'cash' || newMode === 'upi_online') ? 'received' : 'pending';
+                          handleUpdateDrawerPayment(selectedJobForDrawer._id, autoStatus, newMode);
+                        }}
                         className="w-full text-[10.5px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none focus:border-secondary text-slate-800 dark:text-white"
                       >
                         <option value="not_selected">Select Method...</option>
-                        <option value="cash">💵 Cash Payment</option>
-                        <option value="upi_online">📱 UPI / Online</option>
+                        <option value="cash">💵 Cash Payment (Auto-Paid)</option>
+                        <option value="upi_online">📱 UPI / Online (Auto-Paid)</option>
                       </select>
                     </div>
                   </div>
@@ -2497,12 +2514,18 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method</label>
                   <select
                     value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value)}
+                    onChange={(e) => {
+                      const mode = e.target.value;
+                      setPaymentMode(mode);
+                      if (mode === 'cash' || mode === 'upi_online') {
+                        setPaymentStatus('received');
+                      }
+                    }}
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   >
                     <option value="not_selected">Not Selected</option>
-                    <option value="cash">💵 Cash</option>
-                    <option value="upi_online">📱 UPI / Online</option>
+                    <option value="cash">💵 Cash (Auto-Received)</option>
+                    <option value="upi_online">📱 UPI / Online (Auto-Received)</option>
                   </select>
                 </div>
               </div>
@@ -2918,12 +2941,18 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Method</label>
                     <select
                       value={adminCompletePaymentMode}
-                      onChange={(e) => setAdminCompletePaymentMode(e.target.value)}
+                      onChange={(e) => {
+                        const mode = e.target.value;
+                        setAdminCompletePaymentMode(mode);
+                        if (mode === 'cash' || mode === 'upi_online') {
+                          setAdminCompletePaymentStatus('received');
+                        }
+                      }}
                       className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
                     >
                       <option value="not_selected">Select Payment Method...</option>
-                      <option value="cash">💵 Cash Payment</option>
-                      <option value="upi_online">📱 UPI / Online Payment</option>
+                      <option value="cash">💵 Cash Payment (Auto-Paid)</option>
+                      <option value="upi_online">📱 UPI / Online Payment (Auto-Paid)</option>
                     </select>
                   </div>
                 </div>
