@@ -2004,34 +2004,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </div>
                 </div>
 
-                {/* Payment Details Section (Merged Unified Dropdown) */}
+                {/* Payment Details Section (Payment Method Only) */}
                 <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment (भुगतान)</span>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method (माध्यम)</span>
                     {getPaymentBadge(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
                   </div>
                   <div className="bg-slate-55 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2xl">
-                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Payment Method & Status</label>
+                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Payment Method</label>
                     <select
-                      value={getUnifiedPaymentSelection(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
+                      value={selectedJobForDrawer.paymentMode || 'not_selected'}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'paid_cash') {
-                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'received', 'cash');
-                        } else if (val === 'paid_upi') {
-                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'received', 'upi_online');
-                        } else if (val === 'outstanding') {
-                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'outstanding', 'not_selected');
-                        } else {
-                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'pending', 'not_selected');
-                        }
+                        const mode = e.target.value;
+                        const status = (mode === 'cash' || mode === 'upi_online') ? 'received' : 'pending';
+                        handleUpdateDrawerPayment(selectedJobForDrawer._id, status, mode);
                       }}
                       className="w-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none focus:border-secondary text-slate-800 dark:text-white shadow-sm cursor-pointer"
                     >
-                      <option value="pending">⏳ Pending / Unpaid</option>
-                      <option value="paid_cash">💵 Received via Cash Payment (Paid)</option>
-                      <option value="paid_upi">📱 Received via UPI / Online (Paid)</option>
-                      <option value="outstanding">⚠️ Outstanding / Due</option>
+                      <option value="not_selected">Select Method / Not Selected...</option>
+                      <option value="cash">💵 Cash Payment</option>
+                      <option value="upi_online">📱 UPI / Online Payment</option>
                     </select>
                   </div>
                 </div>
