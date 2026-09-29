@@ -217,9 +217,9 @@ const getPaymentBadge = (paymentStatus: string, paymentMode?: string) => {
   
   let modeSuffix = '';
   if (paymentMode === 'cash') {
-    modeSuffix = ' 💵';
+    modeSuffix = ' 💵 Cash';
   } else if (paymentMode === 'upi_online') {
-    modeSuffix = ' 📱';
+    modeSuffix = ' 📱 UPI';
   }
   
   return (
@@ -227,6 +227,18 @@ const getPaymentBadge = (paymentStatus: string, paymentMode?: string) => {
       {text}{modeSuffix}
     </span>
   );
+};
+
+const getUnifiedPaymentSelection = (status?: string, mode?: string): string => {
+  const st = status || 'pending';
+  const md = mode || 'not_selected';
+  if (st === 'received') {
+    if (md === 'cash') return 'paid_cash';
+    if (md === 'upi_online') return 'paid_upi';
+    return 'paid_cash';
+  }
+  if (st === 'outstanding') return 'outstanding';
+  return 'pending';
 };
 
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
@@ -864,46 +876,43 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   const handleUpdateDrawerPayment = async (jobId: string, paymentStatus: string, paymentMode: string) => {
     try {
-      let finalStatus = paymentStatus;
-      // Auto-set status to 'received' whenever a valid payment method (Cash or UPI) is selected
-      if (paymentMode === 'cash' || paymentMode === 'upi_online') {
-        finalStatus = 'received';
-      } else if (paymentMode === 'not_selected' && paymentStatus === 'received') {
-        finalStatus = 'pending';
-      }
-
-      const res = await api.put(`/jobs/${jobId}`, { paymentStatus: finalStatus, paymentMode });
+      const res = await api.put(`/jobs/${jobId}`, { paymentStatus, paymentMode });
       if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
         setSelectedJobForDrawer(res.data);
       }
-      if (finalStatus === 'received') {
+      if (paymentStatus === 'received') {
         const j = res.data || selectedJobForDrawer;
         if (j) {
-          let qrData: any = null;
-          if (paymentMode === 'upi_online' && j.company) {
-            const qrRes = await api.get(`/qr/company/${j.company}`).catch(() => ({ data: null }));
-            qrData = qrRes.data;
+          try {
+            let qrData: any = null;
+            if (paymentMode === 'upi_online' && j.company) {
+              const qrRes = await api.get(`/qr/company/${j.company}`).catch(() => ({ data: null }));
+              qrData = qrRes?.data;
+            }
+            await api.post('/payments/record', {
+              jobId: j._id,
+              invoiceNumber: j.visitId || `INV-${String(j._id).slice(-6)}`,
+              workerId: j.workerId?._id || (typeof j.workerId === 'string' && j.workerId !== 'unassigned' ? j.workerId : undefined),
+              workerName: j.workerId?.name || (typeof j.workerId === 'string' && j.workerId !== 'unassigned' ? j.workerId : 'Assigned Staff'),
+              clientName: j.clientName || 'Client',
+              clientPhone: j.clientPhone || '',
+              company: j.company || 'SofaShine',
+              amount: j.price || 0,
+              paymentMethod: paymentMode === 'cash' ? 'cash' : 'upi_online',
+              qrId: qrData?._id,
+              qrName: qrData?.name,
+              upiId: qrData?.upiId,
+              collectedBy: 'Admin'
+            }).catch(e => console.log('Auto payment record note:', e?.message));
+          } catch (e) {
+            // Secondary payment ledger failure should not block job status update
           }
-          await api.post('/payments/record', {
-            jobId: j._id,
-            invoiceNumber: j.visitId || `INV-${j._id.slice(-6)}`,
-            workerId: j.workerId?._id || j.workerId,
-            workerName: j.workerId?.name || 'Assigned Staff',
-            clientName: j.clientName,
-            clientPhone: j.clientPhone,
-            company: j.company,
-            amount: j.price || 0,
-            paymentMethod: paymentMode === 'cash' ? 'cash' : 'upi_online',
-            qrId: qrData?._id,
-            qrName: qrData?.name,
-            upiId: qrData?.upiId,
-            collectedBy: 'Admin'
-          }).catch(e => console.error('Auto payment record error:', e));
         }
       }
       fetchJobsAndWorkers();
-    } catch (err) {
-      alert('Failed to update payment details');
+    } catch (err: any) {
+      console.error('Payment update error:', err);
+      alert(err?.response?.data?.message || 'Failed to update payment details');
     }
   };
 
@@ -1995,41 +2004,35 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </div>
                 </div>
 
-                {/* Payment Details Section (Inline Edit) */}
-                <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                {/* Payment Details Section (Merged Unified Dropdown) */}
+                <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Details</span>
-                    <span className="text-[8.5px] font-bold text-emerald-600 dark:text-emerald-400">⚡ Auto-Paid on Method Select</span>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment (भुगतान)</span>
+                    {getPaymentBadge(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
                   </div>
-                  <div className="grid grid-cols-2 gap-3 bg-slate-55 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2xl">
-                    <div>
-                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Status</label>
-                      <select
-                        value={selectedJobForDrawer.paymentStatus || 'pending'}
-                        onChange={(e) => handleUpdateDrawerPayment(selectedJobForDrawer._id, e.target.value, selectedJobForDrawer.paymentMode || 'not_selected')}
-                        className="w-full text-[10.5px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none focus:border-secondary text-slate-800 dark:text-white"
-                      >
-                        <option value="pending">⏳ Pending</option>
-                        <option value="received">✅ Received / Paid</option>
-                        <option value="outstanding">⚠️ Outstanding</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Method (माध्यम)</label>
-                      <select
-                        value={selectedJobForDrawer.paymentMode || 'not_selected'}
-                        onChange={(e) => {
-                          const newMode = e.target.value;
-                          const autoStatus = (newMode === 'cash' || newMode === 'upi_online') ? 'received' : 'pending';
-                          handleUpdateDrawerPayment(selectedJobForDrawer._id, autoStatus, newMode);
-                        }}
-                        className="w-full text-[10.5px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 outline-none focus:border-secondary text-slate-800 dark:text-white"
-                      >
-                        <option value="not_selected">Select Method...</option>
-                        <option value="cash">💵 Cash Payment (Auto-Paid)</option>
-                        <option value="upi_online">📱 UPI / Online (Auto-Paid)</option>
-                      </select>
-                    </div>
+                  <div className="bg-slate-55 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2xl">
+                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Payment Method & Status</label>
+                    <select
+                      value={getUnifiedPaymentSelection(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'paid_cash') {
+                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'received', 'cash');
+                        } else if (val === 'paid_upi') {
+                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'received', 'upi_online');
+                        } else if (val === 'outstanding') {
+                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'outstanding', 'not_selected');
+                        } else {
+                          handleUpdateDrawerPayment(selectedJobForDrawer._id, 'pending', 'not_selected');
+                        }
+                      }}
+                      className="w-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none focus:border-secondary text-slate-800 dark:text-white shadow-sm cursor-pointer"
+                    >
+                      <option value="pending">⏳ Pending / Unpaid</option>
+                      <option value="paid_cash">💵 Received via Cash Payment (Paid)</option>
+                      <option value="paid_upi">📱 Received via UPI / Online (Paid)</option>
+                      <option value="outstanding">⚠️ Outstanding / Due</option>
+                    </select>
                   </div>
                 </div>
 
@@ -2497,35 +2500,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Status</label>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method & Status (भुगतान)</label>
                   <select
-                    value={paymentStatus}
-                    onChange={(e) => setPaymentStatus(e.target.value as any)}
-                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="received">Received / Paid</option>
-                    <option value="outstanding">Outstanding</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method</label>
-                  <select
-                    value={paymentMode}
+                    value={getUnifiedPaymentSelection(paymentStatus, paymentMode)}
                     onChange={(e) => {
-                      const mode = e.target.value;
-                      setPaymentMode(mode);
-                      if (mode === 'cash' || mode === 'upi_online') {
+                      const val = e.target.value;
+                      if (val === 'paid_cash') {
                         setPaymentStatus('received');
+                        setPaymentMode('cash');
+                      } else if (val === 'paid_upi') {
+                        setPaymentStatus('received');
+                        setPaymentMode('upi_online');
+                      } else if (val === 'outstanding') {
+                        setPaymentStatus('outstanding');
+                        setPaymentMode('not_selected');
+                      } else {
+                        setPaymentStatus('pending');
+                        setPaymentMode('not_selected');
                       }
                     }}
                     className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2.5 outline-none focus:border-secondary"
                   >
-                    <option value="not_selected">Not Selected</option>
-                    <option value="cash">💵 Cash (Auto-Received)</option>
-                    <option value="upi_online">📱 UPI / Online (Auto-Received)</option>
+                    <option value="pending">⏳ Pending / Unpaid</option>
+                    <option value="paid_cash">💵 Received via Cash Payment (Paid)</option>
+                    <option value="paid_upi">📱 Received via UPI / Online (Paid)</option>
+                    <option value="outstanding">⚠️ Outstanding / Due</option>
                   </select>
                 </div>
               </div>
@@ -2924,37 +2925,33 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Status</label>
-                    <select
-                      value={adminCompletePaymentStatus}
-                      onChange={(e) => setAdminCompletePaymentStatus(e.target.value as any)}
-                      className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="received">Received / Paid</option>
-                      <option value="outstanding">Outstanding</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Method</label>
-                    <select
-                      value={adminCompletePaymentMode}
-                      onChange={(e) => {
-                        const mode = e.target.value;
-                        setAdminCompletePaymentMode(mode);
-                        if (mode === 'cash' || mode === 'upi_online') {
-                          setAdminCompletePaymentStatus('received');
-                        }
-                      }}
-                      className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
-                    >
-                      <option value="not_selected">Select Payment Method...</option>
-                      <option value="cash">💵 Cash Payment (Auto-Paid)</option>
-                      <option value="upi_online">📱 UPI / Online Payment (Auto-Paid)</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Method & Status (भुगतान)</label>
+                  <select
+                    value={getUnifiedPaymentSelection(adminCompletePaymentStatus, adminCompletePaymentMode)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'paid_cash') {
+                        setAdminCompletePaymentStatus('received');
+                        setAdminCompletePaymentMode('cash');
+                      } else if (val === 'paid_upi') {
+                        setAdminCompletePaymentStatus('received');
+                        setAdminCompletePaymentMode('upi_online');
+                      } else if (val === 'outstanding') {
+                        setAdminCompletePaymentStatus('outstanding');
+                        setAdminCompletePaymentMode('not_selected');
+                      } else {
+                        setAdminCompletePaymentStatus('pending');
+                        setAdminCompletePaymentMode('not_selected');
+                      }
+                    }}
+                    className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 font-bold mt-1 outline-none focus:border-secondary"
+                  >
+                    <option value="pending">⏳ Pending / Unpaid</option>
+                    <option value="paid_cash">💵 Received via Cash Payment (Paid)</option>
+                    <option value="paid_upi">📱 Received via UPI / Online (Paid)</option>
+                    <option value="outstanding">⚠️ Outstanding / Due</option>
+                  </select>
                 </div>
 
                 <div>
