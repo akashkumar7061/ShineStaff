@@ -41,6 +41,33 @@ const getTomorrowString = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getPaymentBadge = (paymentStatus?: string, paymentMode?: string) => {
+  const status = paymentStatus || 'pending';
+  let bgClass = 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+  let text = 'Pending';
+  
+  if (status === 'received') {
+    bgClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+    text = 'Paid';
+  } else if (status === 'outstanding') {
+    bgClass = 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+    text = 'Outstanding';
+  }
+  
+  let modeSuffix = '';
+  if (paymentMode === 'cash') {
+    modeSuffix = ' 💵 Cash';
+  } else if (paymentMode === 'upi_online') {
+    modeSuffix = ' 📱 UPI';
+  }
+  
+  return (
+    <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ml-1 ${bgClass}`}>
+      {text}{modeSuffix}
+    </span>
+  );
+};
+
 const WorkerJobs: React.FC = () => {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
@@ -532,9 +559,14 @@ const WorkerJobs: React.FC = () => {
                             </div>
                           </td>
 
-                          {/* Amount */}
-                          <td className="px-6 py-5 font-extrabold whitespace-nowrap text-emerald-500 dark:text-emerald-450 text-sm">
-                            {job.price !== undefined ? `₹${job.price}` : '—'}
+                          {/* Amount & Payment Status */}
+                          <td className="px-6 py-5 whitespace-nowrap text-left">
+                            <div className="font-extrabold text-emerald-500 dark:text-emerald-450 text-sm">
+                              {job.price !== undefined ? `₹${job.price}` : '—'}
+                            </div>
+                            <div className="mt-1">
+                              {getPaymentBadge(job.paymentStatus, job.paymentMode)}
+                            </div>
                           </td>
 
                           {/* Address / Location */}
@@ -632,12 +664,25 @@ const WorkerJobs: React.FC = () => {
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
               <div>
-                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Job Work Sheet</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Job Work Sheet</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
+                    selectedJob.status === 'completed' ? 'bg-success/15 text-success' :
+                    selectedJob.status === 'started' ? 'bg-secondary/15 text-secondary' :
+                    'bg-warning/15 text-warning'
+                  }`}>
+                    {selectedJob.status}
+                  </span>
+                  {getPaymentBadge(
+                    (tempPaymentMode === 'cash' || tempPaymentMode === 'upi_online' || selectedJob.paymentStatus === 'received') ? 'received' : (selectedJob.paymentStatus || 'pending'),
+                    tempPaymentMode !== 'not_selected' ? tempPaymentMode : selectedJob.paymentMode
+                  )}
+                </div>
                 <h3 className="font-bold text-sm text-slate-800 dark:text-white mt-0.5">{selectedJob.title}</h3>
               </div>
               <button
                 onClick={() => setSelectedJob(null)}
-                className="text-slate-400 hover:text-slate-650 rounded-full p-1.5 hover:bg-slate-105 dark:hover:bg-slate-800"
+                className="text-slate-400 hover:text-slate-650 rounded-full p-1.5 hover:bg-slate-105 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -817,19 +862,28 @@ const WorkerJobs: React.FC = () => {
                 <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                   
 
-                  {/* Payment Mode Selector */}
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Payment Method *</label>
-                    <select
-                      value={tempPaymentMode}
-                      onChange={(e) => setTempPaymentMode(e.target.value as any)}
-                      disabled={!tempBeforePhoto}
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955 p-3 outline-none focus:border-secondary font-bold disabled:opacity-40"
-                    >
-                      <option value="not_selected">Select Payment Method...</option>
-                      <option value="cash">💵 Cash Payment</option>
-                      <option value="upi_online">📱 UPI / Online Payment (Scan QR)</option>
-                    </select>
+                  {/* Payment Details Section (Same as Admin) */}
+                  <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                    <div className="flex justify-between items-center">
+                      <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method (माध्यम) *</span>
+                      {getPaymentBadge(
+                        (tempPaymentMode === 'cash' || tempPaymentMode === 'upi_online') ? 'received' : 'pending',
+                        tempPaymentMode
+                      )}
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-955/40 border border-slate-200 dark:border-slate-800/80 p-3 rounded-2xl">
+                      <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Select Payment Method</label>
+                      <select
+                        value={tempPaymentMode}
+                        onChange={(e) => setTempPaymentMode(e.target.value as any)}
+                        disabled={!tempBeforePhoto}
+                        className="w-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none focus:border-secondary text-slate-800 dark:text-white shadow-sm cursor-pointer disabled:opacity-40"
+                      >
+                        <option value="not_selected">Select Payment Method / Not Selected...</option>
+                        <option value="cash">💵 Cash Payment</option>
+                        <option value="upi_online">📱 UPI / Online Payment (Scan QR)</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* AUTOMATIC DISPLAY OF MAPPED QR CODE WHEN UPI / ONLINE IS SELECTED */}
@@ -925,11 +979,14 @@ const WorkerJobs: React.FC = () => {
                     <span className="font-bold text-slate-700 dark:text-slate-200 max-w-[250px] text-right">{selectedJob.workerNotes || 'No notes logged'}</span>
                   </div>
 
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-450">Payment Method:</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase">
-                      {selectedJob.paymentMode === 'cash' ? '💵 Cash' : selectedJob.paymentMode === 'upi_online' ? '📱 UPI / Online' : 'Not Selected'}
-                    </span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-450 font-bold">Payment Method:</span>
+                    <div>
+                      {getPaymentBadge(
+                        selectedJob.paymentStatus || (selectedJob.paymentMode !== 'not_selected' ? 'received' : 'pending'),
+                        selectedJob.paymentMode
+                      )}
+                    </div>
                   </div>
 
 

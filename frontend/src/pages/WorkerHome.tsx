@@ -43,6 +43,33 @@ const ActiveJobTimer: React.FC<{ startedAt?: string | Date }> = ({ startedAt }) 
   );
 };
 
+const getPaymentBadge = (paymentStatus?: string, paymentMode?: string) => {
+  const status = paymentStatus || 'pending';
+  let bgClass = 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+  let text = 'Pending';
+  
+  if (status === 'received') {
+    bgClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+    text = 'Paid';
+  } else if (status === 'outstanding') {
+    bgClass = 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+    text = 'Outstanding';
+  }
+  
+  let modeSuffix = '';
+  if (paymentMode === 'cash') {
+    modeSuffix = ' 💵 Cash';
+  } else if (paymentMode === 'upi_online') {
+    modeSuffix = ' 📱 UPI';
+  }
+  
+  return (
+    <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ml-1 ${bgClass}`}>
+      {text}{modeSuffix}
+    </span>
+  );
+};
+
 const WorkerHome: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -245,7 +272,10 @@ const WorkerHome: React.FC = () => {
                   {jobsSummary.active.price !== undefined && (
                       <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center text-xs">
                         <span className="text-slate-450 font-bold uppercase tracking-wider text-[9px]">Collect from Client:</span>
-                        <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm">₹{jobsSummary.active.price}</span>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm">₹{jobsSummary.active.price}</span>
+                          {getPaymentBadge(jobsSummary.active.paymentStatus, jobsSummary.active.paymentMode)}
+                        </div>
                       </div>
                   )}
 
@@ -294,7 +324,7 @@ const WorkerHome: React.FC = () => {
                     </a>
 
                     <button
-                      onClick={() => triggerAfterJobCamera(jobsSummary.active._id)}
+                      onClick={() => navigate(`/worker/jobs?startJobId=${jobsSummary.active._id}`)}
                       className="flex-1 btn-blue-gradient flex items-center justify-center space-x-1.5 rounded-custom py-3.5 text-xs font-bold shadow-sm"
                     >
                       <Camera className="h-3.5 w-3.5" />
