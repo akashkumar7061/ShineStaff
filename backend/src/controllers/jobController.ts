@@ -442,17 +442,12 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     // Send detailed push notification to admins matching specification layout
     sendPushToAdmins(
       '🟢 Job Started',
-      `Worker: ${workerName}
-Company: ${job.company} Services
-Customer: ${job.clientName}
-Service: ${job.title}
-Started: ${startedTime}`,
+      `Worker: ${workerName}\nCompany: ${job.company} Services\nCustomer: ${job.clientName}\nService: ${job.title}\nStarted: ${startedTime}`,
       '/admin'
     );
 
-    // Send real-time notifications
-    try {
-      const populatedJob = await Job.findById(job._id).populate('workerId');
+    // Send real-time notifications (async)
+    Job.findById(job._id).populate('workerId').then(populatedJob => {
       const io = getIO();
       if (io) {
         // Notify admin
@@ -470,11 +465,9 @@ Started: ${startedTime}`,
           job: populatedJob
         });
       }
-    } catch (err) {
-      console.error('Failed to send job started socket notification:', err);
-    }
+    }).catch(err => console.error('Failed to send job started socket notification:', err));
 
-    res.status(200).json({ message: 'Job started successfully', job });
+    return res.status(200).json({ message: 'Job started successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -577,56 +570,51 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
 
     await job.save();
 
-    // Sync customer and schedule service reminder
-    await syncCustomerAndScheduleReminder(job);
+    // Perform side effects in background asynchronously so worker gets an immediate response
+    // 1. Sync customer and schedule service reminder (async)
+    syncCustomerAndScheduleReminder(job).catch(err => console.error('Customer sync reminder error:', err));
 
-    // Create travel log for this completed cleanup job
-    try {
-      const todayStart = new Date();
-      todayStart.setHours(0,0,0,0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23,59,59,999);
+    // 2. Create travel log for this completed cleanup job (async)
+    (async () => {
+      try {
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23,59,59,999);
 
-      const prevJob = await Job.findOne({
-        workerId: job.workerId,
-        status: 'completed',
-        _id: { $ne: job._id },
-        completedAt: { $gte: todayStart, $lt: job.completedAt || new Date() }
-      }).sort({ completedAt: -1 });
+        const prevJob = await Job.findOne({
+          workerId: job.workerId,
+          status: 'completed',
+          _id: { $ne: job._id },
+          completedAt: { $gte: todayStart, $lt: job.completedAt || new Date() }
+        }).sort({ completedAt: -1 });
 
-      const fromLoc = prevJob ? prevJob.address : 'Home';
-      const toLoc = job.address;
+        const fromLoc = prevJob ? prevJob.address : 'Home';
+        const toLoc = job.address;
 
-      const travelLog = new TravelLog({
-        workerId: job.workerId,
-        date: new Date(job.completedAt).toISOString().split('T')[0],
-        type: 'job',
-        jobId: job._id,
-        kms: finalKms,
-        allowance: fuelAllowance,
-        status: 'pending',
-        fromLocation: fromLoc,
-        toLocation: toLoc
-      });
-      await travelLog.save();
-    } catch (err) {
-      console.error('Failed to auto-create travel log:', err);
-    }
+        const travelLog = new TravelLog({
+          workerId: job.workerId,
+          date: new Date(job.completedAt || new Date()).toISOString().split('T')[0],
+          type: 'job',
+          jobId: job._id,
+          kms: finalKms,
+          allowance: fuelAllowance,
+          status: 'pending',
+          fromLocation: fromLoc,
+          toLocation: toLoc
+        });
+        await travelLog.save();
+      } catch (err) {
+        console.error('Failed to auto-create travel log:', err);
+      }
+    })();
 
-    // WhatsApp notification to admin when job is completed
+    // 3. WhatsApp notification to admin (async, non-blocking)
     const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER || '+919876543210';
-    const alertMsg = `*ShineStaff Job Alert* ✅
-Job Title: *${job.title}*
-Company: *${job.company}*
-Worker: *${workerName}*
-Client: *${job.clientName}*
-Fuel Travelled: *${finalKms} KM* (Allowance: *₹${fuelAllowance}*)
-Completed At: ${job.completedAt.toLocaleTimeString()}
-Before/After photos uploaded successfully.`;
+    const alertMsg = `*ShineStaff Job Alert* ✅\nJob Title: *${job.title}*\nCompany: *${job.company}*\nWorker: *${workerName}*\nClient: *${job.clientName}*\nFuel Travelled: *${finalKms} KM* (Allowance: *₹${fuelAllowance}*)\nCompleted At: ${job.completedAt.toLocaleTimeString()}\nBefore/After photos uploaded successfully.`;
+    sendWhatsAppAlert(adminPhone, alertMsg).catch(err => console.error('Admin WhatsApp alert error:', err));
 
-    await sendWhatsAppAlert(adminPhone, alertMsg);
-
-    // Calculate total duration and send detailed completed push notification to admins matching specification layout
+    // 4. Calculate total duration and send push notification to admins
     const diffMs = new Date().getTime() - new Date(job.startedAt || new Date()).getTime();
     const mins = Math.floor(diffMs / 60000);
     const hrs = Math.floor(mins / 60);
@@ -636,17 +624,12 @@ Before/After photos uploaded successfully.`;
 
     sendPushToAdmins(
       '✅ Job Completed',
-      `Worker: ${workerName}
-Customer: ${job.clientName}
-Service: ${job.title}
-Completed: ${endTimeStr}
-Duration: ${durationStr}`,
+      `Worker: ${workerName}\nCustomer: ${job.clientName}\nService: ${job.title}\nCompleted: ${endTimeStr}\nDuration: ${durationStr}`,
       '/admin'
     );
 
-    // Socket alert to admins and worker
-    try {
-      const populatedJob = await Job.findById(job._id).populate('workerId');
+    // 5. Socket alert to admins and worker (async)
+    Job.findById(job._id).populate('workerId').then(populatedJob => {
       const io = getIO();
       if (io) {
         io.emit('adminNotification', {
@@ -662,11 +645,9 @@ Duration: ${durationStr}`,
           job: populatedJob
         });
       }
-    } catch (err) {
-      console.error('Failed to send job completed socket notification:', err);
-    }
+    }).catch(err => console.error('Failed to send job completed socket notification:', err));
 
-    res.status(200).json({ message: 'Job completed successfully and admin notified', job });
+    return res.status(200).json({ message: 'Job completed successfully and admin notified', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

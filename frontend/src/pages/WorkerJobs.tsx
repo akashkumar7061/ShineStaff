@@ -216,44 +216,55 @@ const WorkerJobs: React.FC = () => {
     }
 
     setSubmittingReport(true);
+    const targetJob = selectedJob;
+    const targetJobId = targetJob._id;
+
     try {
       const submitJobCompletion = async (coords?: { lat: number; lng: number }) => {
-        await api.put(`/jobs/${selectedJob._id}/complete`, {
-          afterPhotoDataUrls: validPhotos,
-          location: coords,
-          manualFuelKms: Number(tempKms),
-          workerNotes: tempNotes,
-          paymentMode: tempPaymentMode
-        });
+        const reqs: Promise<any>[] = [
+          api.put(`/jobs/${targetJobId}/complete`, {
+            afterPhotoDataUrls: validPhotos,
+            location: coords,
+            manualFuelKms: Number(tempKms),
+            workerNotes: tempNotes,
+            paymentMode: tempPaymentMode
+          })
+        ];
 
         if ((tempPaymentMode as string) !== 'not_selected') {
-          await api.post('/payments/record', {
-            jobId: selectedJob._id,
-            invoiceNumber: selectedJob.visitId || `INV-${selectedJob._id.slice(-6)}`,
-            workerId: selectedJob.workerId?._id || selectedJob.workerId,
-            workerName: user?.name || 'Worker',
-            clientName: selectedJob.clientName,
-            clientPhone: selectedJob.clientPhone,
-            company: selectedJob.company,
-            amount: selectedJob.price || 0,
-            paymentMethod: tempPaymentMode === 'cash' ? 'cash' : 'upi_online',
-            qrId: mappedQR?._id,
-            qrName: mappedQR?.name,
-            upiId: mappedQR?.upiId,
-            collectedBy: 'Worker'
-          }).catch(e => console.error('Worker payment record error:', e));
+          reqs.push(
+            api.post('/payments/record', {
+              jobId: targetJobId,
+              invoiceNumber: targetJob.visitId || `INV-${targetJobId.slice(-6)}`,
+              workerId: targetJob.workerId?._id || targetJob.workerId,
+              workerName: user?.name || 'Worker',
+              clientName: targetJob.clientName,
+              clientPhone: targetJob.clientPhone,
+              company: targetJob.company,
+              amount: targetJob.price || 0,
+              paymentMethod: tempPaymentMode === 'cash' ? 'cash' : 'upi_online',
+              qrId: mappedQR?._id,
+              qrName: mappedQR?.name,
+              upiId: mappedQR?.upiId,
+              collectedBy: 'Worker'
+            }).catch(e => console.error('Worker payment record error:', e))
+          );
         }
 
-        alert('Cleanup sheet submitted successfully! Job marked as completed.');
+        await Promise.all(reqs);
+
+        // Instant UI update
+        setJobs(prevJobs => prevJobs.map(j => j._id === targetJobId ? { ...j, status: 'completed' } : j));
         setSelectedJob(null);
+        alert('Cleanup sheet submitted successfully! Job marked as completed.');
         fetchJobs();
       };
 
       const firstValidGPS = tempAfterPhotosGPS.find(g => g !== null);
       if (firstValidGPS) {
         await submitJobCompletion(firstValidGPS);
-      } else {
-        // Fallback to fetch current location if they didn't snap clean photo just now
+      } else if ('geolocation' in navigator) {
+        // Fast 2s geolocation with immediate fallback
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const coords = {
@@ -265,8 +276,11 @@ const WorkerJobs: React.FC = () => {
           async (error) => {
             console.warn('Geolocation unavailable. Completing job with site address fallback.', error);
             await submitJobCompletion(undefined);
-          }
+          },
+          { timeout: 2000, maximumAge: 60000 }
         );
+      } else {
+        await submitJobCompletion(undefined);
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Verification complete update failed');

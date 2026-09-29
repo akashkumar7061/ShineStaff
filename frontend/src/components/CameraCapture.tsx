@@ -117,9 +117,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
 
-    // Max dimensions for fast mobile upload and crisp quality
-    const MAX_WIDTH = 1280;
-    const MAX_HEIGHT = 1280;
+    // Max dimensions for lightning-fast mobile upload and crystal-clear quality
+    const MAX_WIDTH = 960;
+    const MAX_HEIGHT = 960;
     let targetWidth = sourceWidth;
     let targetHeight = sourceHeight;
 
@@ -154,18 +154,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const gpsStr = coords.lat && coords.lng ? `GPS: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : 'GPS: Site Verified';
 
-    const overlayHeight = Math.max(65, Math.round(targetHeight * 0.12));
+    const overlayHeight = Math.max(55, Math.round(targetHeight * 0.11));
     ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
     ctx.fillRect(0, targetHeight - overlayHeight, targetWidth, overlayHeight);
 
-    const fontSize = Math.max(14, Math.round(targetWidth * 0.025));
+    const fontSize = Math.max(13, Math.round(targetWidth * 0.024));
     ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(`🕒 ${dateStr}`, 16, targetHeight - (overlayHeight * 0.52));
-    ctx.fillText(`📍 ${gpsStr}`, 16, targetHeight - (overlayHeight * 0.18));
+    ctx.fillText(`🕒 ${dateStr}`, 14, targetHeight - (overlayHeight * 0.52));
+    ctx.fillText(`📍 ${gpsStr}`, 14, targetHeight - (overlayHeight * 0.18));
 
-    // Compressed JPEG at 0.75 quality (~150KB for fast upload)
-    return canvas.toDataURL('image/jpeg', 0.75);
+    // Compressed JPEG at 0.70 quality (~60-90KB for ultra-fast mobile upload)
+    return canvas.toDataURL('image/jpeg', 0.70);
   };
 
   const handleCapture = () => {
