@@ -152,7 +152,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
     }
 
     const jobs = await Job.find(filter)
-      .select('-attachments -timeline')
+      .select('-attachments')
       .populate('workerId', 'name email phone photo status currentLocation')
       .sort({ createdAt: -1 })
       .lean();

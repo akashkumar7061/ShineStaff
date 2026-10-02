@@ -241,6 +241,66 @@ const getUnifiedPaymentSelection = (status?: string, mode?: string): string => {
   return 'pending';
 };
 
+const getJobTimeline = (job: any): Array<{ status: string; timestamp: string | Date; remarks?: string; updatedBy?: string }> => {
+  if (!job) return [];
+  if (job.timeline && Array.isArray(job.timeline) && job.timeline.length > 0) {
+    return job.timeline;
+  }
+  
+  // Synthesize timeline if timeline array is empty (for legacy/older jobs)
+  const events: Array<{ status: string; timestamp: string | Date; remarks?: string; updatedBy?: string }> = [];
+  const workerName = job.workerId?.name || (typeof job.workerId === 'string' && job.workerId !== 'unassigned' ? 'Assigned Staff' : 'Unassigned');
+
+  if (job.createdAt || job.date) {
+    events.push({
+      status: 'pending',
+      timestamp: job.createdAt || new Date(job.date || Date.now()),
+      remarks: job.workerId ? `Job created and assigned to ${workerName}` : 'Job created',
+      updatedBy: 'Admin'
+    });
+  }
+
+  if (job.acceptedAt) {
+    events.push({
+      status: 'accepted',
+      timestamp: job.acceptedAt,
+      remarks: `${workerName} accepted the job assignment`,
+      updatedBy: workerName
+    });
+  }
+
+  if (job.startedAt || job.beforePhotoTime) {
+    events.push({
+      status: 'started',
+      timestamp: job.startedAt || job.beforePhotoTime,
+      remarks: 'Before photo uploaded & cleaning started',
+      updatedBy: workerName
+    });
+  }
+
+  if (job.completedAt || job.afterPhotoTime || job.status === 'completed') {
+    events.push({
+      status: 'completed',
+      timestamp: job.completedAt || job.afterPhotoTime || job.updatedAt || new Date(),
+      remarks: job.adminCompleted
+        ? (job.adminCompletionRemarks || 'Job marked completed by Admin')
+        : 'Job completed with After cleaning photos',
+      updatedBy: job.adminCompleted ? (job.adminCompletedByName || 'Admin') : workerName
+    });
+  }
+
+  if (job.status === 'cancelled') {
+    events.push({
+      status: 'cancelled',
+      timestamp: job.updatedAt || new Date(),
+      remarks: `Job cancelled. Reason: ${job.cancelReason || 'No reason specified'}`,
+      updatedBy: 'Admin'
+    });
+  }
+
+  return events;
+};
+
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
@@ -1982,25 +2042,52 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
                 {/* Job Timeline History */}
                 <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
-                  <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Job Timeline</span>
+                  <div className="flex justify-between items-center">
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Job Timeline</span>
+                    <span className="text-[9px] font-bold text-slate-400">
+                      {getJobTimeline(selectedJobForDrawer).length} events
+                    </span>
+                  </div>
                   <div className="space-y-3 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-850 pl-4 mt-2">
-                    {selectedJobForDrawer.timeline && selectedJobForDrawer.timeline.length > 0 ? (
-                      selectedJobForDrawer.timeline.map((event: any, eIdx: number) => (
-                        <div key={eIdx} className="relative text-xs">
-                          <div className="absolute -left-[20px] top-1.5 h-2 w-2 rounded-full border border-white dark:border-slate-900 bg-indigo-650"></div>
-                          <div className="flex justify-between items-center font-bold">
-                            <span className="text-slate-800 dark:text-white capitalize">{event.status === 'pending' ? 'assigned' : event.status === 'started' ? 'in progress' : event.status}</span>
-                            <span className="text-[8.5px] text-slate-400 font-semibold">
-                              {new Date(event.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                    {(() => {
+                      const timelineEvents = getJobTimeline(selectedJobForDrawer);
+                      if (timelineEvents.length === 0) {
+                        return <div className="text-[10px] text-slate-400 italic">No timeline entries yet.</div>;
+                      }
+                      return timelineEvents.map((event: any, eIdx: number) => {
+                        let dotBg = 'bg-indigo-500';
+                        let labelText = event.status === 'pending' ? 'assigned' : event.status === 'started' ? 'in progress' : event.status;
+                        let labelColor = 'text-slate-850 dark:text-white';
+
+                        if (event.status === 'completed') {
+                          dotBg = 'bg-emerald-500';
+                          labelColor = 'text-emerald-600 dark:text-emerald-400';
+                        } else if (event.status === 'started') {
+                          dotBg = 'bg-amber-500';
+                          labelColor = 'text-amber-600 dark:text-amber-400';
+                        } else if (event.status === 'cancelled') {
+                          dotBg = 'bg-rose-500';
+                          labelColor = 'text-rose-600 dark:text-rose-400';
+                        } else if (event.status === 'accepted') {
+                          dotBg = 'bg-cyan-500';
+                          labelColor = 'text-cyan-600 dark:text-cyan-400';
+                        }
+
+                        return (
+                          <div key={eIdx} className="relative text-xs">
+                            <div className={`absolute -left-[20px] top-1.5 h-2 w-2 rounded-full border border-white dark:border-slate-900 ${dotBg}`}></div>
+                            <div className="flex justify-between items-center font-bold">
+                              <span className={`capitalize ${labelColor}`}>{labelText}</span>
+                              <span className="text-[8.5px] text-slate-400 font-semibold">
+                                {event.timestamp ? `${new Date(event.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                              </span>
+                            </div>
+                            {event.remarks && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">{event.remarks}</p>}
+                            {event.updatedBy && <span className="text-[8.5px] text-indigo-500 font-bold block mt-0.5">{event.updatedBy}</span>}
                           </div>
-                          {event.remarks && <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">{event.remarks}</p>}
-                          {event.updatedBy && <span className="text-[8.5px] text-indigo-500 font-bold block mt-0.5">{event.updatedBy}</span>}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-[10px] text-slate-400 italic">No timeline entries yet.</div>
-                    )}
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 
