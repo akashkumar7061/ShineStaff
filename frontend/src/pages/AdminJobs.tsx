@@ -249,46 +249,49 @@ const getJobTimeline = (job: any): Array<{ status: string; timestamp: string | D
   
   // Synthesize timeline if timeline array is empty (for legacy/older jobs)
   const events: Array<{ status: string; timestamp: string | Date; remarks?: string; updatedBy?: string }> = [];
-  const workerName = job.workerId?.name || (typeof job.workerId === 'string' && job.workerId !== 'unassigned' ? 'Assigned Staff' : 'Unassigned');
+  const workerName = job.workerId?.name || (typeof job.workerId === 'string' && job.workerId !== 'unassigned' ? job.workerId : 'Assigned Staff');
 
-  if (job.createdAt || job.date) {
-    events.push({
-      status: 'pending',
-      timestamp: job.createdAt || new Date(job.date || Date.now()),
-      remarks: job.workerId ? `Job created and assigned to ${workerName}` : 'Job created',
-      updatedBy: 'Admin'
-    });
-  }
+  // 1. Scheduled / Created Stage
+  events.push({
+    status: 'pending',
+    timestamp: job.createdAt || job.date || new Date(),
+    remarks: job.workerId ? `Job scheduled & assigned to ${workerName}` : 'Job scheduled (unassigned)',
+    updatedBy: 'Admin'
+  });
 
-  if (job.acceptedAt) {
+  // 2. Acceptance Stage
+  if (job.acceptedAt || ['accepted', 'started', 'completed'].includes(job.status)) {
     events.push({
       status: 'accepted',
-      timestamp: job.acceptedAt,
+      timestamp: job.acceptedAt || job.startedAt || job.createdAt || new Date(),
       remarks: `${workerName} accepted the job assignment`,
       updatedBy: workerName
     });
   }
 
-  if (job.startedAt || job.beforePhotoTime) {
+  // 3. Started / Before Photo Stage
+  if (job.startedAt || job.beforePhotoTime || ['started', 'completed'].includes(job.status)) {
     events.push({
       status: 'started',
-      timestamp: job.startedAt || job.beforePhotoTime,
-      remarks: 'Before photo uploaded & cleaning started',
+      timestamp: job.startedAt || job.beforePhotoTime || job.acceptedAt || job.createdAt || new Date(),
+      remarks: job.beforePhoto ? 'Arrival before photo uploaded & cleaning in progress' : 'Cleaning work started by staff',
       updatedBy: workerName
     });
   }
 
+  // 4. Completed Stage
   if (job.completedAt || job.afterPhotoTime || job.status === 'completed') {
     events.push({
       status: 'completed',
       timestamp: job.completedAt || job.afterPhotoTime || job.updatedAt || new Date(),
       remarks: job.adminCompleted
         ? (job.adminCompletionRemarks || 'Job marked completed by Admin')
-        : 'Job completed with After cleaning photos',
+        : 'Cleaning completed with After photos & payment verified',
       updatedBy: job.adminCompleted ? (job.adminCompletedByName || 'Admin') : workerName
     });
   }
 
+  // 5. Cancelled Stage
   if (job.status === 'cancelled') {
     events.push({
       status: 'cancelled',
@@ -917,6 +920,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setCommuteKms(job.fuelKmsTravelled ? String(job.fuelKmsTravelled) : '');
     setFuelAllowance(job.fuelAllowance ? String(job.fuelAllowance) : '');
     setCreateModalOpen(true);
+  };
+
+  const handleOpenJobDrawer = async (job: any) => {
+    setSelectedJobForDrawer(job);
+    if (job?._id) {
+      try {
+        const res = await api.get(`/jobs/${job._id}`);
+        if (res.data) {
+          setSelectedJobForDrawer(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load fresh job details for drawer:', err);
+      }
+    }
   };
 
   const handleUpdateStatus = async (jobId: string, status: string) => {
@@ -1602,7 +1619,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                             {cellJobs.map((j) => (
                               <div
                                 key={j._id}
-                                onClick={() => setSelectedJobForDrawer(j)}
+                                onClick={() => handleOpenJobDrawer(j)}
                                 className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
                               >
                                 {getJobBadge(j.status)}
@@ -1685,7 +1702,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                         {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).map((j) => (
                           <div
                             key={j._id}
-                            onClick={() => setSelectedJobForDrawer(j)}
+                            onClick={() => handleOpenJobDrawer(j)}
                             className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
                           >
                             {getJobBadge(j.status)}
@@ -2041,53 +2058,77 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
 
                 {/* Job Timeline History */}
-                <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
+                <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Job Timeline</span>
-                    <span className="text-[9px] font-bold text-slate-400">
-                      {getJobTimeline(selectedJobForDrawer).length} events
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Clock className="h-3 w-3 text-indigo-500 inline" />
+                      <span>Job Timeline & Activity History</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[8.5px] font-black bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 uppercase">
+                      {getJobTimeline(selectedJobForDrawer).length} Stage{getJobTimeline(selectedJobForDrawer).length === 1 ? '' : 's'}
                     </span>
                   </div>
-                  <div className="space-y-3 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-850 pl-4 mt-2">
-                    {(() => {
-                      const timelineEvents = getJobTimeline(selectedJobForDrawer);
-                      if (timelineEvents.length === 0) {
-                        return <div className="text-[10px] text-slate-400 italic">No timeline entries yet.</div>;
-                      }
-                      return timelineEvents.map((event: any, eIdx: number) => {
-                        let dotBg = 'bg-indigo-500';
-                        let labelText = event.status === 'pending' ? 'assigned' : event.status === 'started' ? 'in progress' : event.status;
-                        let labelColor = 'text-slate-850 dark:text-white';
+
+                  <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                    <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
+                      {getJobTimeline(selectedJobForDrawer).map((event: any, eIdx: number) => {
+                        let dotColor = 'bg-blue-500 ring-blue-100 dark:ring-blue-950';
+                        let badgeBg = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+                        let label = event.status === 'pending' ? 'Scheduled & Assigned' : event.status === 'started' ? 'In Progress' : event.status;
 
                         if (event.status === 'completed') {
-                          dotBg = 'bg-emerald-500';
-                          labelColor = 'text-emerald-600 dark:text-emerald-400';
+                          dotColor = 'bg-emerald-500 ring-emerald-100 dark:ring-emerald-950';
+                          badgeBg = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+                          label = 'Completed';
                         } else if (event.status === 'started') {
-                          dotBg = 'bg-amber-500';
-                          labelColor = 'text-amber-600 dark:text-amber-400';
-                        } else if (event.status === 'cancelled') {
-                          dotBg = 'bg-rose-500';
-                          labelColor = 'text-rose-600 dark:text-rose-400';
+                          dotColor = 'bg-amber-500 ring-amber-100 dark:ring-amber-950';
+                          badgeBg = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+                          label = 'Started / In Progress';
                         } else if (event.status === 'accepted') {
-                          dotBg = 'bg-cyan-500';
-                          labelColor = 'text-cyan-600 dark:text-cyan-400';
+                          dotColor = 'bg-cyan-500 ring-cyan-100 dark:ring-cyan-950';
+                          badgeBg = 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20';
+                          label = 'Worker Accepted';
+                        } else if (event.status === 'cancelled') {
+                          dotColor = 'bg-rose-500 ring-rose-100 dark:ring-rose-950';
+                          badgeBg = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+                          label = 'Cancelled';
                         }
 
+                        const dateObj = event.timestamp ? new Date(event.timestamp) : null;
+                        const dateFormatted = dateObj && !isNaN(dateObj.getTime())
+                          ? `${dateObj.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} • ${dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+                          : (selectedJobForDrawer.date || 'Scheduled');
+
                         return (
-                          <div key={eIdx} className="relative text-xs">
-                            <div className={`absolute -left-[20px] top-1.5 h-2 w-2 rounded-full border border-white dark:border-slate-900 ${dotBg}`}></div>
-                            <div className="flex justify-between items-center font-bold">
-                              <span className={`capitalize ${labelColor}`}>{labelText}</span>
-                              <span className="text-[8.5px] text-slate-400 font-semibold">
-                                {event.timestamp ? `${new Date(event.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
-                              </span>
+                          <div key={eIdx} className="relative group">
+                            {/* Dot */}
+                            <div className={`absolute -left-[21px] top-1 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-slate-900 ${dotColor} ring-4 transition-transform group-hover:scale-110 shadow-sm`}></div>
+                            
+                            {/* Card Details */}
+                            <div className="bg-white dark:bg-slate-900/90 border border-slate-150 dark:border-slate-800 rounded-xl p-2.5 shadow-xs">
+                              <div className="flex flex-wrap items-center justify-between gap-1">
+                                <span className={`inline-block px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border ${badgeBg}`}>
+                                  {label}
+                                </span>
+                                <span className="text-[9px] font-bold text-slate-400">
+                                  🕒 {dateFormatted}
+                                </span>
+                              </div>
+                              {event.remarks && (
+                                <p className="text-[10.5px] text-slate-700 dark:text-slate-300 font-semibold mt-1.5 leading-snug">
+                                  {event.remarks}
+                                </p>
+                              )}
+                              {event.updatedBy && (
+                                <div className="mt-1 text-[8.5px] font-black text-indigo-500 flex items-center space-x-1">
+                                  <span>👤 {event.updatedBy}</span>
+                                </div>
+                              )}
                             </div>
-                            {event.remarks && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">{event.remarks}</p>}
-                            {event.updatedBy && <span className="text-[8.5px] text-indigo-500 font-bold block mt-0.5">{event.updatedBy}</span>}
                           </div>
                         );
-                      });
-                    })()}
+                      })}
+                    </div>
                   </div>
                 </div>
 
