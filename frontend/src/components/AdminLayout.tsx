@@ -80,7 +80,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </div>
 
       {/* 1. Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 glass-panel border-r border-slate-205/60 dark:border-slate-800/65 p-6 space-y-6 select-none shrink-0 z-10 fixed inset-y-0 left-0">
+      <aside className="hidden lg:flex flex-col w-64 glass-panel border-r border-slate-205/60 dark:border-slate-800/65 p-6 space-y-6 shrink-0 z-10 fixed inset-y-0 left-0">
         
         {/* Sidebar Header branding */}
         <div className="flex items-center space-x-2.5 px-2">

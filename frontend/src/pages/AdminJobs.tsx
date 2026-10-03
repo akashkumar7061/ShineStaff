@@ -31,7 +31,9 @@ import {
   Sparkles,
   Share2,
   Navigation,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Copy,
+  Check
 } from 'lucide-react';
 
 const formatTimeTo12Hour = (timeStr: string) => {
@@ -314,6 +316,41 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   
   // Drawer state for job details (right-hand sidebar drawer)
   const [selectedJobForDrawer, setSelectedJobForDrawer] = useState<any>(null);
+  const [copiedField, setCopiedField] = useState<string>('');
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    if (!text) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    } catch {
+      fallbackCopyText(text);
+    }
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(''), 2500);
+  };
+
+  const fallbackCopyText = (text: string) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
+  };
 
   // Send schedules modal popup
   const [sendSchedulesOpen, setSendSchedulesOpen] = useState(false);
@@ -1829,22 +1866,83 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
 
                 {/* Client Info */}
-                <div className="space-y-2.5 font-bold text-slate-700 dark:text-slate-200 text-left">
-                  <div>
-                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Client Name</span>
-                    <span className="text-[11px] font-extrabold text-slate-850 dark:text-white mt-1 block">{selectedJobForDrawer.clientName}</span>
+                <div className="space-y-3 font-bold text-slate-700 dark:text-slate-200 text-left bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Customer Details</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const allInfo = `Client: ${selectedJobForDrawer.clientName || 'N/A'}\nPhone: ${selectedJobForDrawer.clientPhone || 'N/A'}\nAddress: ${selectedJobForDrawer.address || 'N/A'}\nService: ${selectedJobForDrawer.title || 'N/A'}\nSlot: ${selectedJobForDrawer.timeSlot || 'N/A'}\nPrice: ₹${selectedJobForDrawer.price || '0'}`;
+                        copyToClipboard(allInfo, 'all');
+                      }}
+                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-700 font-extrabold flex items-center space-x-1 cursor-pointer bg-white dark:bg-slate-700 px-2 py-0.5 rounded-lg border border-blue-100 dark:border-slate-600 shadow-xs"
+                      title="Copy all job details"
+                    >
+                      {copiedField === 'all' ? <Check className="h-2.5 w-2.5 text-emerald-500" /> : <Copy className="h-2.5 w-2.5" />}
+                      <span>{copiedField === 'all' ? 'Copied All!' : 'Copy All'}</span>
+                    </button>
                   </div>
-                  <div>
-                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Phone Number</span>
-                    <span className="text-[11px] font-extrabold text-slate-850 dark:text-white mt-1 block">{selectedJobForDrawer.clientPhone}</span>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Client Name</span>
+                      <span className="text-[11.5px] font-extrabold text-slate-850 dark:text-white mt-1 block select-text cursor-text">{selectedJobForDrawer.clientName || 'N/A'}</span>
+                    </div>
+                    {selectedJobForDrawer.clientName && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(selectedJobForDrawer.clientName, 'name');
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
+                        title="Copy Name"
+                      >
+                        {copiedField === 'name' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    )}
                   </div>
-                  <div>
-                    <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Location Address</span>
-                    <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-250 mt-1 block leading-normal">{selectedJobForDrawer.address}</span>
+
+                  <div className="flex items-center justify-between border-t border-slate-200/50 dark:border-slate-700/50 pt-2">
+                    <div>
+                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Phone Number</span>
+                      <span className="text-[11.5px] font-extrabold text-slate-850 dark:text-white mt-1 block select-text cursor-text">{selectedJobForDrawer.clientPhone || 'N/A'}</span>
+                    </div>
+                    {selectedJobForDrawer.clientPhone && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(selectedJobForDrawer.clientPhone, 'phone');
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
+                        title="Copy Phone Number"
+                      >
+                        {copiedField === 'phone' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    )}
                   </div>
-                  <div>
+
+                  <div className="flex items-start justify-between border-t border-slate-200/50 dark:border-slate-700/50 pt-2">
+                    <div className="flex-1 pr-2">
+                      <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">Location Address</span>
+                      <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-250 mt-1 block leading-normal select-text cursor-text">{selectedJobForDrawer.address || 'N/A'}</span>
+                    </div>
+                    {selectedJobForDrawer.address && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(selectedJobForDrawer.address, 'address');
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors shrink-0 mt-1"
+                        title="Copy Address"
+                      >
+                        {copiedField === 'address' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="border-t border-slate-200/50 dark:border-slate-700/50 pt-2">
                     <span className="block text-[8px] text-slate-400 uppercase tracking-widest leading-none">GPS Coordinates</span>
-                    <span className="text-[10px] font-extrabold text-slate-800 dark:text-white mt-1 block">
+                    <span className="text-[10px] font-extrabold text-slate-800 dark:text-white mt-1 block select-text cursor-text">
                       {selectedJobForDrawer.location?.lat 
                         ? `${selectedJobForDrawer.location.lat}, ${selectedJobForDrawer.location.lng}` 
                         : 'Auto-derived from Address'}
