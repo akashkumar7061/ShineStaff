@@ -1778,7 +1778,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         {/* Centered Modal: Interactive Details/Status Dialog with backdrop blur */}
         {selectedJobForDrawer && (
           <div onClick={() => setSelectedJobForDrawer(null)} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-850 shadow-2xl p-6 space-y-4 flex flex-col justify-between text-xs animate-fade-in select-none max-h-[90vh] overflow-y-auto">
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-850 shadow-2xl p-6 space-y-4 flex flex-col justify-between text-xs animate-fade-in max-h-[90vh] overflow-y-auto">
               
               <button 
                 onClick={() => setSelectedJobForDrawer(null)} 

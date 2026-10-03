@@ -8,10 +8,22 @@
   body {
     font-family: 'Outfit', sans-serif;
     @apply bg-background-light text-primary antialiased transition-colors duration-300;
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
   
   body.dark {
     @apply bg-background-dark text-slate-100;
+  }
+
+  ::selection {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+  }
+
+  ::-moz-selection {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
   }
 }
 

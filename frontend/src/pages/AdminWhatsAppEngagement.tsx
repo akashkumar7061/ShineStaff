@@ -616,7 +616,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
               setFilterInactiveDays('');
               setFilterHasReminder('false');
             }}
-            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-all duration-200"
           >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Total Customers</span>
             <div className="flex items-baseline space-x-2 mt-2">
@@ -631,7 +631,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
               setActiveTab('history');
               setFilterMessageType('reminder');
             }}
-            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-all duration-200"
           >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Reminders Sent</span>
             <div className="flex items-baseline space-x-2 mt-2">
@@ -646,7 +646,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
               setActiveTab('history');
               setFilterMessageType('marketing');
             }}
-            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-all duration-200"
           >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Marketing Blasts</span>
             <div className="flex items-baseline space-x-2 mt-2">
@@ -668,7 +668,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
               setFilterInactiveDays('');
               setFilterHasReminder('false');
             }}
-            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-all duration-200"
           >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Repeat Bookings</span>
             <div className="flex items-baseline space-x-2 mt-2">
@@ -690,7 +690,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
               setFilterInactiveDays('');
               setFilterHasReminder('false');
             }}
-            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-all duration-200"
           >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Repeat Revenue</span>
             <div className="flex items-baseline space-x-2 mt-2">
@@ -701,7 +701,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
             onClick={() => {
               setActiveTab('reminders');
             }}
-            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 select-none transition-all duration-200"
+            className="glass-card p-4 flex flex-col justify-between shadow-sm cursor-pointer hover:border-secondary hover:shadow hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-all duration-200"
           >
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Retention & Conv.</span>
             <div className="flex flex-col mt-2">
