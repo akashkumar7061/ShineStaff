@@ -130,7 +130,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const { status, company, workerId, date } = req.query;
+    const { status, company, workerId, date, search, limit } = req.query;
     const filter: any = {};
 
     // Worker only gets their own jobs
@@ -151,11 +151,31 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
       filter.date = date;
     }
 
-    const jobs = await Job.find(filter)
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const q = search.trim();
+      const searchRegex = new RegExp(q, 'i');
+      filter.$or = [
+        { clientName: searchRegex },
+        { clientPhone: searchRegex },
+        { address: searchRegex },
+        { title: searchRegex },
+        { locationName: searchRegex }
+      ];
+    }
+
+    let query = Job.find(filter)
       .select('-attachments')
       .populate('workerId', 'name email phone photo status currentLocation')
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ date: -1, createdAt: -1 });
+
+    if (limit) {
+      const limitNum = parseInt(String(limit), 10);
+      if (!isNaN(limitNum) && limitNum > 0) {
+        query = query.limit(limitNum);
+      }
+    }
+
+    const jobs = await query.lean();
 
     res.status(200).json(jobs);
   } catch (error: any) {

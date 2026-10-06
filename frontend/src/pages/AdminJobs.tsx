@@ -352,6 +352,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     document.body.removeChild(textArea);
   };
 
+  // Global Customer / Job Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
   // Send schedules modal popup
   const [sendSchedulesOpen, setSendSchedulesOpen] = useState(false);
 
@@ -552,6 +559,48 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     };
     fetchSuggestions();
   }, []);
+
+  // Handle click outside to close search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced search for customers & bookings across all dates
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/jobs', {
+          params: {
+            company: companyFilter,
+            search: query,
+            limit: 25
+          }
+        });
+        setSearchResults(res.data || []);
+        setSearchOpen(true);
+      } catch (err) {
+        console.error('Failed to search customer/jobs:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, companyFilter]);
 
   // Fetch drafts list when New Booking form modal opens
   useEffect(() => {
@@ -1510,6 +1559,162 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           <button onClick={handleNextDay} className="h-8 w-8 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 transition-colors shadow-sm cursor-pointer text-slate-600">
             <ChevronRight className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Customer Search Bar */}
+        <div ref={searchContainerRef} className="relative flex-1 min-w-[280px] max-w-md">
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search customer name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => { if (searchResults.length > 0) setSearchOpen(true); }}
+              className="w-full pl-9 pr-8 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            />
+            {isSearching ? (
+              <RefreshCw className="absolute right-2.5 h-3.5 w-3.5 text-blue-500 animate-spin" />
+            ) : searchQuery ? (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setSearchOpen(false);
+                }}
+                className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+
+          {/* Search Results Dropdown Overlay */}
+          {searchOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-3 max-h-[440px] overflow-y-auto space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  {isSearching ? 'Searching database...' : `${searchResults.length} Bookings Found`}
+                </span>
+                <button
+                  onClick={() => setSearchOpen(false)}
+                  className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  Close ✕
+                </button>
+              </div>
+
+              {isSearching && searchResults.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400 font-bold flex items-center justify-center space-x-2">
+                  <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                  <span>Searching customer records...</span>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400 font-bold">
+                  No customer or booking found matching "{searchQuery}"
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {searchResults.map((job) => (
+                    <div
+                      key={job._id}
+                      className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-800 bg-slate-50/70 dark:bg-slate-850/70 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-all text-left space-y-2 group shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                              {job.clientName || 'Unnamed Customer'}
+                            </span>
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                              {job.company}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-[11px] text-slate-600 dark:text-slate-300 font-bold">
+                            <span>📞 {job.clientPhone || 'No phone'}</span>
+                            {job.clientPhone && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(job.clientPhone, `search-${job._id}`);
+                                }}
+                                className="p-0.5 text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                                title="Copy Phone Number"
+                              >
+                                {copiedField === `search-${job._id}` ? (
+                                  <Check className="h-3 w-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-black text-blue-600 dark:text-blue-400">
+                            ₹{job.price}
+                          </span>
+                          <span className={`block text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-md mt-0.5 ${
+                            job.status === 'completed'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400'
+                              : job.status === 'started'
+                              ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'
+                              : 'bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                          }`}>
+                            {job.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
+                        <span className="font-bold text-slate-850 dark:text-white">{job.title}</span>
+                        {job.address && (
+                          <span className="block text-[10px] text-slate-400 truncate mt-0.5" title={job.address}>
+                            📍 {job.address}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-200/50 dark:border-slate-800 text-[10px] gap-2">
+                        <div className="text-slate-500 dark:text-slate-400 font-semibold flex items-center space-x-2">
+                          <span>🗓️ {job.date || 'No date'} ({job.timeSlot || 'Slot not set'})</span>
+                          {job.workerId?.name && (
+                            <span className="text-blue-600 dark:text-blue-400 font-bold">• 👤 {job.workerId.name}</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-1.5">
+                          {job.date && job.date !== selectedDate && (
+                            <button
+                              onClick={() => {
+                                setSelectedDate(job.date);
+                                setSelectedJobForDrawer(job);
+                                setSearchOpen(false);
+                              }}
+                              className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 cursor-pointer transition-colors"
+                            >
+                              Go to Date ↗
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedJobForDrawer(job);
+                              setSearchOpen(false);
+                            }}
+                            className="px-3 py-1 text-[10px] font-extrabold rounded-lg bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors shadow-sm flex items-center space-x-1"
+                          >
+                            <span>View Details</span>
+                            <span>→</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Date Controls */}
