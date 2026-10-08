@@ -1893,12 +1893,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   Export Schedule by Date Range
                 </span>
                 <span className="text-[9.5px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Worker Tabs (.xlsx)
+                  Excel (.xlsx)
                 </span>
               </div>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Worker wise separate sheets (Rohit, Manish, Arun, Rahul...) • 15 Pure English Columns
-              </span>
             </div>
           </div>
 
@@ -2857,15 +2854,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 rounded-2xl text-[11px] text-emerald-800 dark:text-emerald-300 space-y-1">
-              <p className="font-bold flex items-center space-x-1">
-                <span>✓ Har worker ka alag sheet tab generate hoga</span>
-              </p>
-              <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400">
-                Date, Job No, Customer Name, Mobile, Service, Location, Assigned Time, Scheduled End, Start/End Time, Status, Rating, Feedback, Payment aur Remarks.
-              </p>
             </div>
 
             <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
