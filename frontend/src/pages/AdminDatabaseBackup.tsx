@@ -17,7 +17,7 @@ import {
   MapPin
 } from 'lucide-react';
 import api from '../utils/api';
-import { exportCustomersToExcel, exportCustomersToCSV, type CustomerExportItem } from '../utils/exportCustomerData';
+import { exportCustomersToExcel, exportCustomersToCSV, exportJobScheduleToExcel, type CustomerExportItem } from '../utils/exportCustomerData';
 
 const getTodayString = () => new Date().toISOString().split('T')[0];
 const getPastDateString = (daysAgo: number) => {
@@ -205,7 +205,7 @@ const AdminDatabaseBackup: React.FC = () => {
       if (section === 'jobs' || section === 'customers') {
         const filteredJobs = (data.jobs || []).filter((j: any) => isWithinRange(j.date));
         if (format === 'excel') {
-          exportCustomersToExcel(filteredJobs, `shinestaff_customers_${dateSuffix}`);
+          exportJobScheduleToExcel(filteredJobs, data.workers || [], `shinestaff_schedule_${dateSuffix}`);
           return;
         } else {
           exportCustomersToCSV(filteredJobs, `shinestaff_customers_${dateSuffix}`);

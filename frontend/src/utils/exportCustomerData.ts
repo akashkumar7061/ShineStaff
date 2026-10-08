@@ -21,6 +21,8 @@ export interface CustomerExportItem {
   price?: number;
   date?: string;
   timeSlot?: string;
+  startTime?: string;
+  endTime?: string;
   status?: string;
   cancelReason?: string;
   startedAt?: string | Date;
@@ -28,6 +30,8 @@ export interface CustomerExportItem {
   paymentStatus?: string;
   paymentMode?: string;
   workerId?: {
+    _id?: string;
+    id?: string;
     name?: string;
     phone?: string;
     email?: string;
@@ -36,55 +40,58 @@ export interface CustomerExportItem {
   notes?: string;
   specialInstructions?: string;
   workerNotes?: string;
+  customerFeedback?: string;
+  feedback?: string;
+  adminCompletionRemarks?: string;
 }
 
-const formatStatus = (status?: string): string => {
-  if (!status) return 'Confirmed 📋';
+export const formatStatus = (status?: string): string => {
+  if (!status) return 'Confirmed';
   switch (status.toLowerCase()) {
     case 'completed':
-      return 'Completed ✅';
+      return 'Completed';
     case 'cancelled':
-      return 'Cancelled ❌';
+      return 'Cancelled';
     case 'started':
-      return 'In Progress ⏳';
+      return 'In Progress';
     case 'pending':
     case 'accepted':
-      return 'Confirmed 📋';
+      return 'Confirmed';
     case 'rejected':
-      return 'Rejected ⚠️';
+      return 'Rejected';
     default:
-      return status;
+      return status.charAt(0).toUpperCase() + status.slice(1);
   }
 };
 
-const formatPaymentStatus = (pStatus?: string): string => {
-  if (!pStatus) return 'Pending ⏳';
+export const formatPaymentStatus = (pStatus?: string): string => {
+  if (!pStatus) return 'Pending';
   switch (pStatus.toLowerCase()) {
     case 'received':
     case 'paid':
-      return 'Received / Paid ✅';
+      return 'Received / Paid';
     case 'outstanding':
-      return 'Outstanding ⚠️';
+      return 'Outstanding';
     case 'pending':
-      return 'Pending ⏳';
+      return 'Pending';
     default:
       return pStatus;
   }
 };
 
-const formatPaymentMode = (pMode?: string): string => {
+export const formatPaymentMode = (pMode?: string): string => {
   if (!pMode || pMode === 'not_selected') return 'Not Selected';
   switch (pMode.toLowerCase()) {
     case 'cash':
-      return '💵 Cash';
+      return 'Cash';
     case 'upi_online':
-      return '📱 UPI / Online';
+      return 'UPI / Online';
     default:
       return pMode;
   }
 };
 
-const getGoogleMapsUrl = (lat?: number, lng?: number, address?: string): string => {
+export const getGoogleMapsUrl = (lat?: number, lng?: number, address?: string): string => {
   if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
     return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   }
@@ -94,13 +101,161 @@ const getGoogleMapsUrl = (lat?: number, lng?: number, address?: string): string 
   return '';
 };
 
-const normalizePhone = (phone?: string): string => {
+export const normalizePhone = (phone?: string): string => {
   if (!phone) return '';
-  const digits = phone.replace(/\D/g, '');
+  const digits = String(phone).replace(/\D/g, '');
   if (digits.length > 10) {
     return digits.slice(-10);
   }
   return digits;
+};
+
+/**
+ * Format Date to DD-MM-YYYY (e.g. 03-10-2026)
+ */
+export const formatJobDate = (dateStr?: string | Date): string => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string') {
+    const ymdMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (ymdMatch) {
+      return `${ymdMatch[3]}-${ymdMatch[2]}-${ymdMatch[1]}`;
+    }
+    const dmyMatch = dateStr.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[1]}-${dmyMatch[2]}-${dmyMatch[3]}`;
+    }
+  }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch {
+    return String(dateStr || '');
+  }
+};
+
+/**
+ * Normalize time string to 24-hour HH:mm or clean time (e.g. 10:00, 14:00)
+ */
+export const normalizeTimeToHHMM = (timeStr?: string): string => {
+  if (!timeStr) return '';
+  const trimmed = timeStr.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let h = parseInt(match12[1], 10);
+    const m = match12[2];
+    const meridiem = match12[3].toUpperCase();
+    if (meridiem === 'PM' && h < 12) h += 12;
+    if (meridiem === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${m}`;
+  }
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    return `${match24[1].padStart(2, '0')}:${match24[2]}`;
+  }
+  return trimmed;
+};
+
+/**
+ * Extract Assigned Time from job (e.g. 10:00, 14:00, 08:00)
+ */
+export const getAssignedTime = (job: any): string => {
+  if (job.startTime) {
+    return normalizeTimeToHHMM(job.startTime);
+  }
+  if (job.timeSlot) {
+    const slotStr = String(job.timeSlot);
+    if (slotStr.includes(' - ')) {
+      return normalizeTimeToHHMM(slotStr.split(' - ')[0]);
+    }
+    if (slotStr.includes('-')) {
+      return normalizeTimeToHHMM(slotStr.split('-')[0]);
+    }
+    return normalizeTimeToHHMM(slotStr);
+  }
+  return '';
+};
+
+/**
+ * Extract Scheduled End Time from job (e.g. 11:00)
+ */
+export const getScheduledEndTime = (job: any): string => {
+  if (job.endTime) {
+    return normalizeTimeToHHMM(job.endTime);
+  }
+  if (job.timeSlot) {
+    const slotStr = String(job.timeSlot);
+    if (slotStr.includes(' - ')) {
+      const endPart = slotStr.split(' - ')[1];
+      if (endPart) return normalizeTimeToHHMM(endPart);
+    }
+    if (slotStr.includes('-')) {
+      const endPart = slotStr.split('-')[1];
+      if (endPart) return normalizeTimeToHHMM(endPart);
+    }
+  }
+  return job.estimatedDuration || '';
+};
+
+/**
+ * Format timestamp (startedAt, completedAt) to HH:mm (e.g. 14:44)
+ */
+export const formatTimeHHMM = (dateVal?: string | Date): string => {
+  if (!dateVal) return '';
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * Clean status string (e.g. Completed, In Progress, Assigned, Cancelled, Rejected)
+ */
+export const formatScheduleStatus = (status?: string): string => {
+  if (!status) return 'Assigned';
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return 'Completed';
+    case 'started':
+      return 'In Progress';
+    case 'pending':
+      return 'Assigned';
+    case 'accepted':
+      return 'Accepted';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'rejected':
+      return 'Rejected';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+};
+
+/**
+ * Excel sheet names can be max 31 chars and cannot contain \ / ? * : [ ]
+ */
+export const sanitizeSheetName = (name: string, existingNames: Set<string>): string => {
+  let clean = (name || 'Worker').replace(/[\\/?*[\]:]/g, '_').trim();
+  if (!clean) clean = 'Worker';
+  clean = clean.slice(0, 31);
+
+  let uniqueName = clean;
+  let counter = 1;
+  while (existingNames.has(uniqueName.toLowerCase())) {
+    const suffix = ` (${counter})`;
+    uniqueName = clean.slice(0, Math.max(1, 31 - suffix.length)) + suffix;
+    counter++;
+  }
+  existingNames.add(uniqueName.toLowerCase());
+  return uniqueName;
 };
 
 /**
@@ -109,7 +264,6 @@ const normalizePhone = (phone?: string): string => {
 export const prepareUniqueCustomerRows = (items: CustomerExportItem[]) => {
   const customerMap = new Map<string, CustomerExportItem[]>();
 
-  // Group by normalized phone or name
   items.forEach((item) => {
     const rawPhone = item.clientPhone?.trim() || '';
     const cleanPhone = normalizePhone(rawPhone);
@@ -125,7 +279,6 @@ export const prepareUniqueCustomerRows = (items: CustomerExportItem[]) => {
   const uniqueRows: any[] = [];
 
   customerMap.forEach((jobList) => {
-    // Sort jobs by date (most recent first)
     jobList.sort((a, b) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
@@ -140,7 +293,6 @@ export const prepareUniqueCustomerRows = (items: CustomerExportItem[]) => {
     const cancelledJobs = jobList.filter((j) => (j.status || '').toLowerCase() === 'cancelled');
     const totalSpent = jobList.reduce((acc, j) => acc + (j.price || 0), 0);
 
-    // Pick best available address & GPS from latest job or any job in list
     const jobWithAddress = jobList.find((j) => j.address && j.address.trim().length > 0) || latestJob;
     const jobWithGPS = jobList.find((j) => j.location?.lat && j.location?.lng) || latestJob;
 
@@ -148,7 +300,6 @@ export const prepareUniqueCustomerRows = (items: CustomerExportItem[]) => {
     const lng = jobWithGPS.location?.lng;
     const mapsUrl = getGoogleMapsUrl(lat, lng, jobWithAddress.address);
 
-    // Collect all unique workers
     const workers = Array.from(
       new Set(
         jobList
@@ -157,55 +308,50 @@ export const prepareUniqueCustomerRows = (items: CustomerExportItem[]) => {
       )
     ).join(', ');
 
-    // Collect all companies
     const companies = Array.from(new Set(jobList.map((j) => j.company).filter(Boolean))).join(', ');
-
-    // Collect all cancel reasons if any
     const cancelReasons = Array.from(new Set(cancelledJobs.map((j) => j.cancelReason).filter(Boolean))).join('; ');
 
-    // Format repeat label
     const repeatLabel = repeatCount > 1 
-      ? `${repeatCount} बार (${completedJobs.length} Completed, ${cancelledJobs.length} Cancelled)` 
-      : '1 बार (First Time)';
+      ? `${repeatCount} Times (${completedJobs.length} Completed, ${cancelledJobs.length} Cancelled)` 
+      : '1 Time (First Time)';
 
-    // Service History Summary
     const historySummary = jobList
       .map((j, idx) => {
         const d = j.date || 'No Date';
         const s = j.title || 'Service';
         const st = j.status || 'confirmed';
-        const p = j.price ? `₹${j.price}` : '';
+        const p = j.price ? `Rs. ${j.price}` : '';
         return `${idx + 1}. [${d}] ${s} (${p} - ${st})`;
       })
       .join(' | ');
 
     uniqueRows.push({
-      'Customer Name (ग्राहक नाम)': latestJob.clientName || 'N/A',
-      'Phone Number (फ़ोन नंबर)': latestJob.clientPhone || '',
-      'Repeat Count (कितनी बार काम कराया)': repeatLabel,
-      'Total Bookings (कुल बुकिंग)': repeatCount,
-      'Completed Jobs (सफल काम)': completedJobs.length,
-      'Cancelled Jobs (रद्द काम)': cancelledJobs.length,
-      'Total Spent INR (कुल बिज़नेस ₹)': totalSpent,
-      'First Work Date (पहला काम तारीख)': oldestJob.date || '',
-      'Latest Work Date (हालिया काम तारीख)': latestJob.date || '',
-      'Latest Service (हालिया काम / सर्विस)': latestJob.title || latestJob.serviceCategory || '',
-      'Latest Job Status (हालिया काम स्थिति)': formatStatus(latestJob.status),
-      'Cancellation Reason (रद्द होने का कारण)': cancelReasons || (cancelledJobs.length > 0 ? 'Cancelled' : 'N/A'),
-      'Complete Address (पूरा पता)': jobWithAddress.address || '',
-      'Landmark (लैंडमार्क)': jobWithAddress.landmark || latestJob.landmark || '',
-      'City (शहर)': jobWithAddress.city || latestJob.city || '',
-      'Pincode (पिनकोड)': jobWithAddress.pincode || latestJob.pincode || '',
-      'GPS Latitude (अक्षांश)': lat !== undefined && lat !== null ? String(lat) : '',
-      'GPS Longitude (देशांतर)': lng !== undefined && lng !== null ? String(lng) : '',
-      'Google Maps Link (GPS मैप्स लिंक)': mapsUrl,
-      'All Bookings History (पूरा काम इतिहास)': historySummary,
-      'Assigned Staff (स्टाफ)': workers || 'Unassigned',
-      'Company (कंपनी)': companies || '',
-      'Latest Rating (रेटिंग)': latestJob.rating ? `${latestJob.rating} / 5 ⭐` : '',
-      'Alternate Phone (वैकल्पिक फ़ोन)': latestJob.alternatePhone || '',
-      'Email (ईमेल)': latestJob.clientEmail || '',
-      'Customer Notes (निर्देश)': latestJob.notes || latestJob.specialInstructions || latestJob.workerNotes || ''
+      'Customer Name': latestJob.clientName || 'N/A',
+      'Phone Number': latestJob.clientPhone || '',
+      'Repeat Count': repeatLabel,
+      'Total Bookings': repeatCount,
+      'Completed Jobs': completedJobs.length,
+      'Cancelled Jobs': cancelledJobs.length,
+      'Total Spent (INR)': totalSpent,
+      'First Work Date': oldestJob.date || '',
+      'Latest Work Date': latestJob.date || '',
+      'Latest Service': latestJob.title || latestJob.serviceCategory || '',
+      'Latest Job Status': formatStatus(latestJob.status),
+      'Cancellation Reason': cancelReasons || (cancelledJobs.length > 0 ? 'Cancelled' : 'N/A'),
+      'Complete Address': jobWithAddress.address || '',
+      'Landmark': jobWithAddress.landmark || latestJob.landmark || '',
+      'City': jobWithAddress.city || latestJob.city || '',
+      'Pincode': jobWithAddress.pincode || latestJob.pincode || '',
+      'GPS Latitude': lat !== undefined && lat !== null ? String(lat) : '',
+      'GPS Longitude': lng !== undefined && lng !== null ? String(lng) : '',
+      'Google Maps Link': mapsUrl,
+      'All Bookings History': historySummary,
+      'Assigned Staff': workers || 'Unassigned',
+      'Company': companies || '',
+      'Latest Rating': latestJob.rating ? `${latestJob.rating} / 5` : '',
+      'Alternate Phone': latestJob.alternatePhone || '',
+      'Email': latestJob.clientEmail || '',
+      'Customer Notes': latestJob.notes || latestJob.specialInstructions || latestJob.workerNotes || ''
     });
   });
 
@@ -213,7 +359,7 @@ export const prepareUniqueCustomerRows = (items: CustomerExportItem[]) => {
 };
 
 /**
- * Raw detailed rows without grouping (if needed for line-by-line inspection)
+ * Raw detailed rows without grouping (pure English)
  */
 export const prepareRawCustomerRows = (items: CustomerExportItem[]) => {
   return items.map((item) => {
@@ -228,33 +374,33 @@ export const prepareRawCustomerRows = (items: CustomerExportItem[]) => {
     const completedTime = item.completedAt ? new Date(item.completedAt).toLocaleString('en-IN') : '';
 
     return {
-      'Customer Name (ग्राहक नाम)': item.clientName || 'N/A',
-      'Phone Number (फ़ोन नंबर)': item.clientPhone || '',
-      'Complete Address (पूरा पता)': item.address || '',
-      'Landmark (लैंडमार्क)': item.landmark || '',
-      'City (शहर)': item.city || '',
-      'Pincode (पिनकोड)': item.pincode || '',
-      'GPS Latitude (अक्षांश)': lat !== undefined && lat !== null ? String(lat) : '',
-      'GPS Longitude (देशांतर)': lng !== undefined && lng !== null ? String(lng) : '',
-      'Google Maps Link (GPS लोकेशन लिंक)': mapsUrl,
-      'Service Clean (काम / सर्विस)': item.title || item.serviceCategory || '',
-      'Company (कंपनी)': item.company || '',
-      'Price INR (राशि ₹)': item.price || 0,
-      'Work Date (काम की तारीख)': item.date || '',
-      'Time Slot (समय)': item.timeSlot || '',
-      'Status (काम की स्थिति)': formatStatus(item.status),
-      'Cancellation Reason (रद्द होने का कारण)': item.cancelReason || (item.status === 'cancelled' ? 'Cancelled' : ''),
-      'Work Started At (शुरू समय)': startedTime,
-      'Work Completed At (खत्म समय)': completedTime,
-      'Payment Status (भुगतान)': formatPaymentStatus(item.paymentStatus),
-      'Payment Mode (माध्यम)': formatPaymentMode(item.paymentMode),
-      'Assigned Worker (स्टाफ)': workerName,
-      'Worker Phone (स्टाफ फ़ोन)': workerPhone,
-      'Customer Rating (रेटिंग)': item.rating ? `${item.rating} / 5 ⭐` : '',
-      'Alternate Phone (वैकल्पिक फ़ोन)': item.alternatePhone || '',
-      'Email (ईमेल)': item.clientEmail || '',
-      'Customer Notes / Instructions (निर्देश)': item.notes || item.specialInstructions || item.workerNotes || '',
-      'Booking ID (बुकिंग आईडी)': item._id || ''
+      'Customer Name': item.clientName || 'N/A',
+      'Phone Number': item.clientPhone || '',
+      'Complete Address': item.address || '',
+      'Landmark': item.landmark || '',
+      'City': item.city || '',
+      'Pincode': item.pincode || '',
+      'GPS Latitude': lat !== undefined && lat !== null ? String(lat) : '',
+      'GPS Longitude': lng !== undefined && lng !== null ? String(lng) : '',
+      'Google Maps Link': mapsUrl,
+      'Service Clean': item.title || item.serviceCategory || '',
+      'Company': item.company || '',
+      'Price (INR)': item.price || 0,
+      'Work Date': item.date || '',
+      'Time Slot': item.timeSlot || '',
+      'Status': formatStatus(item.status),
+      'Cancellation Reason': item.cancelReason || (item.status === 'cancelled' ? 'Cancelled' : ''),
+      'Work Started At': startedTime,
+      'Work Completed At': completedTime,
+      'Payment Status': formatPaymentStatus(item.paymentStatus),
+      'Payment Mode': formatPaymentMode(item.paymentMode),
+      'Assigned Worker': workerName,
+      'Worker Phone': workerPhone,
+      'Customer Rating': item.rating ? `${item.rating} / 5` : '',
+      'Alternate Phone': item.alternatePhone || '',
+      'Email': item.clientEmail || '',
+      'Customer Notes / Instructions': item.notes || item.specialInstructions || item.workerNotes || '',
+      'Booking ID': item._id || ''
     };
   });
 };
@@ -270,7 +416,6 @@ export const exportCustomersToExcel = (
   const rows = uniqueOnly ? prepareUniqueCustomerRows(items) : prepareRawCustomerRows(items);
   const worksheet = XLSX.utils.json_to_sheet(rows);
 
-  // Set professional column widths
   worksheet['!cols'] = [
     { wch: 24 }, // Customer Name
     { wch: 16 }, // Phone
@@ -324,7 +469,6 @@ export const exportCustomersToCSV = (
   const todayStr = new Date().toISOString().split('T')[0];
   const finalFilename = `${filenamePrefix}_${todayStr}.csv`;
 
-  // UTF-8 BOM so Excel opens with proper character encoding
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -334,4 +478,233 @@ export const exportCustomersToCSV = (
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+};
+
+/**
+ * Export Job Scheduling sheet grouped by Worker into separate Excel Sheet tabs
+ * Matching exact columns from screenshot:
+ * Date | Job No. | Customer Name | Mobile | Service | Location | Assigned Time | Scheduled end | Start Time | End Time | Status | Rating | Customer Feedback | Payment | Remarks
+ */
+export const exportJobScheduleToExcel = (
+  jobs: any[],
+  workers: any[] = [],
+  filenamePrefix = 'shinestaff_schedule'
+) => {
+  const workbook = XLSX.utils.book_new();
+  const existingSheetNames = new Set<string>();
+
+  // Map: workerKey -> { workerName: string, jobs: any[] }
+  const workerJobsMap = new Map<string, { workerName: string; jobs: any[] }>();
+
+  // Register all workers from worker list first (ensuring clean order)
+  if (workers && Array.isArray(workers) && workers.length > 0) {
+    workers.forEach((w) => {
+      const wName = (w.name || w.fullName || 'Worker').trim();
+      const wId = String(w._id || w.id || wName);
+      if (!workerJobsMap.has(wId)) {
+        workerJobsMap.set(wId, {
+          workerName: wName,
+          jobs: []
+        });
+      }
+    });
+  }
+
+  const unassignedJobs: any[] = [];
+
+  // Categorize jobs to workers
+  jobs.forEach((job) => {
+    let matchedWorkerId: string | null = null;
+    let matchedWorkerName: string | null = null;
+
+    if (job.workerId) {
+      if (typeof job.workerId === 'object') {
+        matchedWorkerId = String(job.workerId._id || job.workerId.id || '');
+        matchedWorkerName = job.workerId.name || job.workerId.fullName || null;
+      } else if (typeof job.workerId === 'string') {
+        matchedWorkerId = job.workerId;
+      }
+    }
+
+    // Match by ID
+    if (matchedWorkerId && workerJobsMap.has(matchedWorkerId)) {
+      workerJobsMap.get(matchedWorkerId)!.jobs.push(job);
+      return;
+    }
+
+    // Match by Name
+    if (matchedWorkerName) {
+      let found = false;
+      for (const [, entry] of workerJobsMap.entries()) {
+        if (entry.workerName.toLowerCase() === matchedWorkerName.toLowerCase()) {
+          entry.jobs.push(job);
+          found = true;
+          break;
+        }
+      }
+      if (found) return;
+
+      const customKey = `name_${matchedWorkerName}`;
+      if (!workerJobsMap.has(customKey)) {
+        workerJobsMap.set(customKey, {
+          workerName: matchedWorkerName,
+          jobs: []
+        });
+      }
+      workerJobsMap.get(customKey)!.jobs.push(job);
+      return;
+    }
+
+    // If string ID/Name
+    if (matchedWorkerId) {
+      const customKey = `id_${matchedWorkerId}`;
+      if (!workerJobsMap.has(customKey)) {
+        workerJobsMap.set(customKey, {
+          workerName: matchedWorkerId,
+          jobs: []
+        });
+      }
+      workerJobsMap.get(customKey)!.jobs.push(job);
+      return;
+    }
+
+    unassignedJobs.push(job);
+  });
+
+  const generateRows = (jobList: any[]) => {
+    const sorted = [...jobList].sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      const timeA = a.timeSlot || a.startTime || '';
+      const timeB = b.timeSlot || b.startTime || '';
+      return timeA.localeCompare(timeB);
+    });
+
+    return sorted.map((job, idx) => {
+      const dateFormatted = formatJobDate(job.date);
+      const customerName = job.clientName || 'N/A';
+      const mobile = job.clientPhone ? String(job.clientPhone).replace(/\D/g, '').slice(-10) : '';
+      const service = job.title || job.serviceCategory || job.description || '';
+
+      let location = '';
+      if (job.address && job.address.trim().length > 0) {
+        location = job.address.trim();
+      } else if (job.location?.lat && job.location?.lng) {
+        location = `${job.location.lat}, ${job.location.lng}`;
+      } else if (job.locationName) {
+        location = job.locationName;
+      } else if (job.landmark || job.city) {
+        location = [job.landmark, job.city, job.pincode].filter(Boolean).join(', ');
+      }
+
+      const assignedTime = getAssignedTime(job);
+      const scheduledEnd = getScheduledEndTime(job);
+      const startTime = formatTimeHHMM(job.startedAt);
+      const endTime = formatTimeHHMM(job.completedAt);
+      const status = formatScheduleStatus(job.status);
+      const rating = job.rating ? job.rating : '';
+      const customerFeedback = job.customerFeedback || job.feedback || job.workerNotes || job.notes || '';
+      const payment = job.price !== undefined && job.price !== null ? job.price : 0;
+      const remarks = job.adminCompletionRemarks || job.cancelReason || job.specialInstructions || (job.notes && job.notes !== job.workerNotes ? job.notes : '') || '';
+
+      return {
+        'Date': dateFormatted,
+        'Job No.': idx + 1,
+        'Customer Name': customerName,
+        'Mobile': mobile,
+        'Service': service,
+        'Location': location,
+        'Assigned Time': assignedTime,
+        'Scheduled end': scheduledEnd,
+        'Start Time': startTime,
+        'End Time': endTime,
+        'Status': status,
+        'Rating': rating,
+        'Customer Feedback': customerFeedback,
+        'Payment': payment,
+        'Remarks': remarks
+      };
+    });
+  };
+
+  const colWidths = [
+    { wch: 14 }, // Date
+    { wch: 10 }, // Job No.
+    { wch: 26 }, // Customer Name
+    { wch: 16 }, // Mobile
+    { wch: 45 }, // Service
+    { wch: 48 }, // Location
+    { wch: 16 }, // Assigned Time
+    { wch: 16 }, // Scheduled end
+    { wch: 14 }, // Start Time
+    { wch: 14 }, // End Time
+    { wch: 16 }, // Status
+    { wch: 10 }, // Rating
+    { wch: 25 }, // Customer Feedback
+    { wch: 12 }, // Payment
+    { wch: 30 }  // Remarks
+  ];
+
+  const emptyHeaders = [
+    {
+      'Date': '',
+      'Job No.': '',
+      'Customer Name': '',
+      'Mobile': '',
+      'Service': '',
+      'Location': '',
+      'Assigned Time': '',
+      'Scheduled end': '',
+      'Start Time': '',
+      'End Time': '',
+      'Status': '',
+      'Rating': '',
+      'Customer Feedback': '',
+      'Payment': '',
+      'Remarks': ''
+    }
+  ];
+
+  let sheetAddedCount = 0;
+
+  // Append sheets for each worker
+  workerJobsMap.forEach((entry) => {
+    const rows = entry.jobs.length > 0 ? generateRows(entry.jobs) : [];
+    const worksheet = rows.length > 0 ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.json_to_sheet(emptyHeaders);
+    if (rows.length === 0) {
+      XLSX.utils.sheet_add_json(worksheet, [], {
+        header: [
+          'Date', 'Job No.', 'Customer Name', 'Mobile', 'Service', 'Location',
+          'Assigned Time', 'Scheduled end', 'Start Time', 'End Time', 'Status',
+          'Rating', 'Customer Feedback', 'Payment', 'Remarks'
+        ]
+      });
+    }
+    worksheet['!cols'] = colWidths;
+    const sheetName = sanitizeSheetName(entry.workerName, existingSheetNames);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    sheetAddedCount++;
+  });
+
+  // Append unassigned jobs sheet if any
+  if (unassignedJobs.length > 0) {
+    const unassignedRows = generateRows(unassignedJobs);
+    const worksheet = XLSX.utils.json_to_sheet(unassignedRows);
+    worksheet['!cols'] = colWidths;
+    const sheetName = sanitizeSheetName('Unassigned', existingSheetNames);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    sheetAddedCount++;
+  }
+
+  // Fallback if empty
+  if (sheetAddedCount === 0) {
+    const worksheet = XLSX.utils.json_to_sheet(emptyHeaders);
+    worksheet['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedule');
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const finalFilename = `${filenamePrefix}_${todayStr}.xlsx`;
+  XLSX.writeFile(workbook, finalFilename);
 };

@@ -15,7 +15,7 @@ import {
   FileText
 } from 'lucide-react';
 import api from '../utils/api';
-import { exportCustomersToExcel, exportCustomersToCSV, type CustomerExportItem } from '../utils/exportCustomerData';
+import { exportCustomersToExcel, exportCustomersToCSV, exportJobScheduleToExcel, type CustomerExportItem } from '../utils/exportCustomerData';
 
 const getTodayString = () => {
   const d = new Date();
@@ -152,7 +152,7 @@ const AdminReports: React.FC = () => {
   const [downloading, setDownloading] = useState(false);
 
   // Customer Export Specific State
-  const [customerViewMode, setCustomerViewMode] = useState<'unique' | 'all'>('unique');
+  const [customerViewMode, setCustomerViewMode] = useState<'unique' | 'all' | 'worker_sheets'>('unique');
   const [customerPreset, setCustomerPreset] = useState('all-time');
   const [customerStartDate, setCustomerStartDate] = useState(getPastDateString(30));
   const [customerEndDate, setCustomerEndDate] = useState(getTodayString());
@@ -218,12 +218,15 @@ const AdminReports: React.FC = () => {
         return;
       }
 
+      const isWorkerSheets = customerViewMode === 'worker_sheets';
       const isUnique = customerViewMode === 'unique';
-      const modeTag = isUnique ? 'unique_clients' : 'all_entries';
+      const modeTag = isWorkerSheets ? 'worker_schedule_sheets' : isUnique ? 'unique_clients' : 'all_entries';
       const dateTag = customerPreset === 'all-time' ? 'all_records' : `${customerStartDate}_to_${customerEndDate}`;
       const prefix = `shinestaff_customers_${customerStatus}_${modeTag}_${dateTag}`;
 
-      if (format === 'excel') {
+      if (isWorkerSheets) {
+        exportJobScheduleToExcel(jobs, [], prefix);
+      } else if (format === 'excel') {
         exportCustomersToExcel(jobs, prefix, isUnique);
       } else {
         exportCustomersToCSV(jobs, prefix, isUnique);
@@ -327,7 +330,7 @@ const AdminReports: React.FC = () => {
           </div>
         </div>
 
-        {/* Customer Format Mode Switcher (Unique Customers vs All Bookings) */}
+        {/* Customer Format Mode Switcher (Unique Customers vs All Bookings vs Worker Sheets) */}
         <div className="flex flex-wrap items-center gap-2 bg-white/80 dark:bg-slate-900/80 p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800">
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-2">
             Export Format:
@@ -353,6 +356,17 @@ const AdminReports: React.FC = () => {
             }`}
           >
             <span>📋 All Individual Bookings (Raw Rows)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCustomerViewMode('worker_sheets')}
+            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+              customerViewMode === 'worker_sheets'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.01]'
+                : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <span>📑 Worker Sheets (Separate Sheet per Worker)</span>
           </button>
         </div>
 
@@ -389,10 +403,10 @@ const AdminReports: React.FC = () => {
               className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-emerald-500 dark:text-white shadow-sm"
             >
               <option value="all">All Jobs & Bookings</option>
-              <option value="completed">Completed Only (काम पूरा हुआ ✅)</option>
-              <option value="cancelled">Cancelled Only (रद्द हुआ ❌)</option>
-              <option value="started">In Progress Only (चल रहा है ⏳)</option>
-              <option value="pending">Confirmed / Pending Only (कन्फर्म्ड 📋)</option>
+              <option value="completed">Completed Only</option>
+              <option value="cancelled">Cancelled Only</option>
+              <option value="started">In Progress Only</option>
+              <option value="pending">Confirmed / Pending Only</option>
             </select>
           </div>
 

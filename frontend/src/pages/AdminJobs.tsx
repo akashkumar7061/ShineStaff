@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../utils/api';
 import { handleDownloadInvoice, handleShareInvoice } from '../utils/invoiceGenerator';
-import { exportCustomersToExcel } from '../utils/exportCustomerData';
+import { exportJobScheduleToExcel, exportCustomersToExcel } from '../utils/exportCustomerData';
 import MapView from '../components/MapView';
 import GPSAddress from '../components/GPSAddress';
 import {
@@ -50,6 +50,15 @@ const formatTimeTo12Hour = (timeStr: string) => {
 
 const getTodayString = () => {
   const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPastDateString = (daysAgo: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -362,6 +371,13 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   // Send schedules modal popup
   const [sendSchedulesOpen, setSendSchedulesOpen] = useState(false);
 
+  // Export Schedule Modal State (Single Date / Date Range)
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportDateMode, setExportDateMode] = useState<'selected_date' | 'today' | 'yesterday' | 'last_7' | 'this_month' | 'custom'>('selected_date');
+  const [exportStartDate, setExportStartDate] = useState(getPastDateString(7));
+  const [exportEndDate, setExportEndDate] = useState(getTodayString());
+  const [isExportingSchedule, setIsExportingSchedule] = useState(false);
+
   // Form modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
@@ -500,6 +516,74 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       console.error('Failed to load jobs/workers:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportSchedule = async (startDateOverride?: string, endDateOverride?: string, labelOverride?: string) => {
+    setIsExportingSchedule(true);
+    try {
+      let exportJobs: any[] = [];
+      let fileDateLabel = labelOverride || '';
+      let sDate = startDateOverride || exportStartDate;
+      let eDate = endDateOverride || exportEndDate;
+
+      if (!startDateOverride && !endDateOverride) {
+        if (exportDateMode === 'selected_date') {
+          sDate = selectedDate;
+          eDate = selectedDate;
+          fileDateLabel = selectedDate;
+        } else if (exportDateMode === 'today') {
+          const today = getTodayString();
+          sDate = today;
+          eDate = today;
+          fileDateLabel = today;
+        } else if (exportDateMode === 'yesterday') {
+          const yesterday = getPastDateString(1);
+          sDate = yesterday;
+          eDate = yesterday;
+          fileDateLabel = yesterday;
+        } else if (exportDateMode === 'last_7') {
+          sDate = getPastDateString(7);
+          eDate = getTodayString();
+          fileDateLabel = `${sDate}_to_${eDate}`;
+        } else if (exportDateMode === 'this_month') {
+          const d = new Date();
+          sDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+          eDate = getTodayString();
+          fileDateLabel = `${sDate}_to_${eDate}`;
+        } else {
+          fileDateLabel = sDate === eDate ? sDate : `${sDate}_to_${eDate}`;
+        }
+      } else if (!fileDateLabel) {
+        fileDateLabel = sDate === eDate ? sDate : `${sDate}_to_${eDate}`;
+      }
+
+      // Fetch jobs and ensure all workers are loaded
+      const [res, workersRes] = await Promise.all([
+        api.get('/jobs', {
+          params: {
+            company: companyFilter,
+            startDate: sDate,
+            endDate: eDate
+          }
+        }),
+        workers.length > 0 ? Promise.resolve({ data: workers }) : api.get(`/workers?company=${companyFilter}`)
+      ]);
+
+      exportJobs = res.data || [];
+      const currentWorkers = workersRes.data || workers || [];
+
+      if (exportJobs.length === 0) {
+        alert(`No jobs found for date range (${sDate} to ${eDate}).`);
+        return;
+      }
+
+      exportJobScheduleToExcel(exportJobs, currentWorkers, `shinestaff_schedule_${fileDateLabel}`);
+      setExportModalOpen(false);
+    } catch (err: any) {
+      alert('Failed to export schedule: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsExportingSchedule(false);
     }
   };
 
@@ -1746,18 +1830,25 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </button>
 
           <button
-            onClick={() => {
-              if (jobs.length === 0) {
-                alert('No jobs found to export for this date.');
-                return;
-              }
-              exportCustomersToExcel(jobs, `shinestaff_customers_schedule_${selectedDate}`);
-            }}
-            className="flex items-center space-x-1.5 bg-white dark:bg-slate-900 border border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs px-3 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
-            title="Export all customer jobs on this date to Excel (.xlsx)"
+            onClick={() => handleExportSchedule(selectedDate, selectedDate, selectedDate)}
+            disabled={isExportingSchedule}
+            className="flex items-center space-x-1.5 bg-white dark:bg-slate-900 border border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs px-3 py-2 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            title={`Export selected date (${selectedDate}) schedule to Excel`}
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
             <span>Export Excel</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setExportDateMode('custom');
+              setExportModalOpen(true);
+            }}
+            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-lg shadow-sm transition-all cursor-pointer"
+            title="Select custom date range and export worker-wise sheets (.xlsx)"
+          >
+            <Calendar className="h-3.5 w-3.5 text-white" />
+            <span>Date Range 📅</span>
           </button>
 
           <button
@@ -1786,6 +1877,130 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           <span className="bg-[#dbeafe] text-[#1e40af] dark:bg-blue-900/40 dark:text-blue-300 px-3.5 py-1 rounded-full">
             {confirmedBookings} confirmed
           </span>
+        </div>
+      </div>
+
+      {/* 2.5 Dedicated Date Range Excel Export Bar (Worker-Wise Separate Sheets) */}
+      <div className="bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/70 dark:from-emerald-950/30 dark:via-slate-900 dark:to-teal-950/20 border border-emerald-300/80 dark:border-emerald-800/80 rounded-2xl p-3 sm:p-3.5 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs shrink-0">
+              <FileSpreadsheet className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2 flex-wrap">
+                <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                  Export Schedule by Date Range
+                </span>
+                <span className="text-[9.5px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Worker Tabs (.xlsx)
+                </span>
+              </div>
+              <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Worker wise separate sheets (Rohit, Manish, Arun, Rahul...) • 15 Pure English Columns
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Presets */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-[10.5px] font-bold text-slate-600 dark:text-slate-300">
+              <button
+                type="button"
+                onClick={() => {
+                  const today = getTodayString();
+                  setExportStartDate(today);
+                  setExportEndDate(today);
+                }}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  exportStartDate === getTodayString() && exportEndDate === getTodayString()
+                    ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs font-black'
+                    : 'hover:bg-white/60 dark:hover:bg-slate-700/60'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const y = getPastDateString(1);
+                  setExportStartDate(y);
+                  setExportEndDate(y);
+                }}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  exportStartDate === getPastDateString(1) && exportEndDate === getPastDateString(1)
+                    ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs font-black'
+                    : 'hover:bg-white/60 dark:hover:bg-slate-700/60'
+                }`}
+              >
+                Yesterday
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setExportStartDate(getPastDateString(7));
+                  setExportEndDate(getTodayString());
+                }}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  exportStartDate === getPastDateString(7) && exportEndDate === getTodayString()
+                    ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs font-black'
+                    : 'hover:bg-white/60 dark:hover:bg-slate-700/60'
+                }`}
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date();
+                  setExportStartDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+                  setExportEndDate(getTodayString());
+                }}
+                className="px-2.5 py-1 rounded-lg hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer"
+              >
+                This Month
+              </button>
+            </div>
+
+            {/* Date Range Selectors */}
+            <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
+              <span className="text-[10px] font-black uppercase text-slate-400">From</span>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+                className="bg-transparent text-xs font-extrabold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+              />
+              <span className="text-[10px] font-black uppercase text-slate-400">To</span>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+                className="bg-transparent text-xs font-extrabold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+              />
+            </div>
+
+            {/* Direct Export Button */}
+            <button
+              type="button"
+              onClick={() => handleExportSchedule(exportStartDate, exportEndDate, `${exportStartDate}_to_${exportEndDate}`)}
+              disabled={isExportingSchedule}
+              className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+              title="Download Excel spreadsheet with worker-wise tabs"
+            >
+              {isExportingSchedule ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Generating Excel...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Download Excel (.xlsx)</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2438,7 +2653,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 {/* Payment Details Section (Payment Method Only) */}
                 <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method (माध्यम)</span>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method</span>
                     {getPaymentBadge(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
                   </div>
                   <div className="bg-slate-55 dark:bg-slate-955/30 border border-slate-150 dark:border-slate-800/80 p-3 rounded-2xl">
@@ -2549,6 +2764,129 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
             <span className="block text-[9px] text-slate-400 text-center font-normal font-sans border-t border-slate-100 dark:border-slate-800 pt-3">
               Each button opens WhatsApp with that worker's schedule pre-filled — just tap Send.
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Export Schedule by Date Range Modal (Worker-Wise Separate Sheets) */}
+      {exportModalOpen && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setExportModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-[100000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
+        >
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 text-xs text-left animate-scale-up space-y-4 cursor-default">
+            
+            <div className="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-2xl">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white leading-none">
+                    Export Job Schedule
+                  </h3>
+                  <span className="block text-[10.5px] text-slate-400 mt-1">
+                    Worker-wise separate sheets (.xlsx)
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setExportModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-black p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Choose Date / Date Range:
+              </label>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'selected_date', label: `Selected (${selectedDate})` },
+                  { id: 'today', label: 'Today' },
+                  { id: 'yesterday', label: 'Yesterday' },
+                  { id: 'last_7', label: 'Last 7 Days' },
+                  { id: 'this_month', label: 'This Month' },
+                  { id: 'custom', label: 'Custom Range 📅' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setExportDateMode(item.id as any)}
+                    className={`px-3 py-2.5 rounded-xl text-center text-xs font-bold transition-all border cursor-pointer ${
+                      exportDateMode === item.id
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]'
+                        : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {exportDateMode === 'custom' && (
+                <div className="grid grid-cols-2 gap-2 pt-2 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div>
+                    <label className="block text-[9.5px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+                      From Date:
+                    </label>
+                    <input
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                      className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-white outline-none focus:border-emerald-500 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9.5px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+                      To Date:
+                    </label>
+                    <input
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                      className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-white outline-none focus:border-emerald-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 rounded-2xl text-[11px] text-emerald-800 dark:text-emerald-300 space-y-1">
+              <p className="font-bold flex items-center space-x-1">
+                <span>✓ Har worker ka alag sheet tab generate hoga</span>
+              </p>
+              <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400">
+                Date, Job No, Customer Name, Mobile, Service, Location, Assigned Time, Scheduled End, Start/End Time, Status, Rating, Feedback, Payment aur Remarks.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setExportModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportSchedule()}
+                disabled={isExportingSchedule}
+                className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>{isExportingSchedule ? 'Generating Excel...' : 'Download Excel (.xlsx)'}</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}
@@ -2925,7 +3263,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method & Status (भुगतान)</label>
+                  <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method & Status</label>
                   <select
                     value={getUnifiedPaymentSelection(paymentStatus, paymentMode)}
                     onChange={(e) => {
@@ -3349,7 +3687,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
 
                 <div>
-                  <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Method & Status (भुगतान)</label>
+                  <label className="block text-[8px] text-slate-400 font-bold uppercase tracking-wider">Payment Method & Status</label>
                   <select
                     value={getUnifiedPaymentSelection(adminCompletePaymentStatus, adminCompletePaymentMode)}
                     onChange={(e) => {

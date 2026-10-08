@@ -130,7 +130,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const { status, company, workerId, date, search, limit } = req.query;
+    const { status, company, workerId, date, startDate, endDate, search, limit } = req.query;
     const filter: any = {};
 
     // Worker only gets their own jobs
@@ -149,6 +149,12 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
     }
     if (date) {
       filter.date = date;
+    } else if (startDate && endDate) {
+      filter.date = { $gte: String(startDate), $lte: String(endDate) };
+    } else if (startDate) {
+      filter.date = { $gte: String(startDate) };
+    } else if (endDate) {
+      filter.date = { $lte: String(endDate) };
     }
 
     if (search && typeof search === 'string' && search.trim() !== '') {
