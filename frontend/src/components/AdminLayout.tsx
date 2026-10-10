@@ -49,14 +49,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isItemActive = (path: string) => {
-    if (path === '/admin/security-hub') {
-      return location.pathname === '/admin/security-hub' || location.pathname === '/admin/profile';
-    }
     return location.pathname === path;
   };
 
   const menuItems = [
-    { name: 'Admin Settings & Security Hub', path: '/admin/security-hub', icon: ShieldCheck, color: 'text-amber-500' },
     { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
     { name: 'Operations HUD', path: '/admin/operations-hud', icon: Activity, color: 'text-rose-500' },
     { name: "Attendance", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
@@ -184,6 +180,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           <button
             onClick={() => {
               setSidebarOpen(false);
+              navigate('/admin/profile');
+            }}
+            className="flex w-full items-center space-x-3 rounded-custom bg-amber-500/10 text-amber-600 dark:text-amber-400 px-4 py-3 text-xs font-bold mt-2"
+          >
+            <ShieldCheck className="h-4 w-4 text-amber-500" />
+            <span>🔒 Admin Profile & Security Hub</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setSidebarOpen(false);
               handleLogout();
             }}
             className="flex w-full items-center space-x-3 rounded-custom bg-danger/10 text-danger px-4 py-3 text-xs font-bold mt-2"
@@ -251,17 +258,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </button>
 
             <div
-              onClick={() => navigate('/admin/security-hub?tab=profile')}
-              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition-opacity"
+              onClick={() => navigate('/admin/profile')}
+              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-90 transition-all px-2 py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200 dark:hover:border-slate-800"
+              title="Admin Profile (Dashboard & Security Hub 🔒)"
             >
               <img
                 src={user?.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name || 'Admin'}`}
                 alt={user?.name}
-                className="h-8 w-8 rounded-full object-cover border border-slate-205 dark:border-slate-800"
+                className="h-8 w-8 rounded-full object-cover border-2 border-amber-500/50 shadow-xs"
               />
-              <span className="hidden md:inline-block text-xs font-bold text-slate-700 dark:text-slate-250">
-                {user?.name || 'Admin'}
-              </span>
+              <div className="hidden md:flex flex-col text-left">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                  {user?.name || 'Admin'}
+                </span>
+                <span className="text-[9px] font-extrabold text-amber-500 flex items-center space-x-0.5">
+                  <span>🔒 Security Hub</span>
+                </span>
+              </div>
             </div>
           </div>
         </header>

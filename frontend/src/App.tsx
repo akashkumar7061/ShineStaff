@@ -526,17 +526,11 @@ const App: React.FC = () => {
               />
               <Route
                 path="/admin/security-hub"
-                element={
-                  <ProtectedRoute allowedRole="admin">
-                    <AdminRouteWrapper>
-                      <AdminDashboard companyFilter="All" />
-                    </AdminRouteWrapper>
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/admin/profile" replace />}
               />
               <Route
                 path="/admin/dashboard"
-                element={<Navigate to="/admin/security-hub" replace />}
+                element={<Navigate to="/admin/profile" replace />}
               />
               <Route
                 path="/admin/operations-hud"
@@ -698,7 +692,13 @@ const App: React.FC = () => {
               />
               <Route
                 path="/admin/profile"
-                element={<Navigate to="/admin/security-hub?tab=profile" replace />}
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminRouteWrapper>
+                      <AdminDashboard companyFilter="All" />
+                    </AdminRouteWrapper>
+                  </ProtectedRoute>
+                }
               />
 
               {/* Default catch-all redirect */}
