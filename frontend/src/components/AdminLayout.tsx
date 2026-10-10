@@ -26,7 +26,8 @@ import {
   Wallet,
   CreditCard,
   MessageSquare,
-  Database
+  Database,
+  ShieldCheck
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -48,22 +49,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isItemActive = (path: string) => {
-    if (path.includes('?')) {
-      return (location.pathname + location.search) === path;
+    if (path === '/admin/security-hub') {
+      return location.pathname === '/admin/security-hub' || location.pathname === '/admin/profile';
     }
-    return location.pathname === path && (!location.search || !location.search.includes('tab=qr-management'));
+    return location.pathname === path;
   };
 
   const menuItems = [
-    { name: 'Dashboard 🔒', path: '/admin', icon: LayoutDashboard, color: 'text-blue-500' },
+    { name: 'Admin Settings & Security Hub', path: '/admin/security-hub', icon: ShieldCheck, color: 'text-amber-500' },
+    { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
     { name: 'Operations HUD', path: '/admin/operations-hud', icon: Activity, color: 'text-rose-500' },
     { name: "Attendance", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
     { name: 'Worker Management', path: '/admin/workers', icon: Users, color: 'text-indigo-500' },
-    { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
     { name: '📱 WhatsApp & Engagement', path: '/admin/whatsapp-engagement', icon: MessageSquare, color: 'text-emerald-600' },
     { name: 'Payment Collection', path: '/admin/payments', icon: Wallet, color: 'text-emerald-500' },
-    { name: '💳 QR Payment Management', path: '/admin?tab=qr-management', icon: CreditCard, color: 'text-emerald-600' },
     { name: 'Payroll & Salary', path: '/admin/salary', icon: DollarSign, color: 'text-teal-500' },
     { name: 'Overtime Charges', path: '/admin/overtime', icon: Clock, color: 'text-amber-500' },
     { name: 'Worker Travel & Expenses', path: '/admin/travel-expenses', icon: Compass, color: 'text-orange-600' },
@@ -251,7 +251,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </button>
 
             <div
-              onClick={() => navigate('/admin/profile')}
+              onClick={() => navigate('/admin/security-hub?tab=profile')}
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition-opacity"
             >
               <img

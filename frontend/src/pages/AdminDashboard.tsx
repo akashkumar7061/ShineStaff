@@ -33,11 +33,14 @@ import {
   Key,
   ShieldCheck,
   CreditCard,
-  LayoutDashboard
+  LayoutDashboard,
+  User as UserIcon
 } from 'lucide-react';
+import AdminProfilePanel from '../components/AdminProfilePanel';
 
 interface AdminDashboardProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
+  initialTab?: 'dashboard' | 'qr-management' | 'profile';
 }
 
 const LiveActiveJobBanner: React.FC<{ job: any }> = ({ job }) => {
@@ -302,18 +305,26 @@ const getPastDateString = (daysAgo: number) => {
 
 const CHART_COLORS = ['#6366f1', '#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'];
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter, initialTab }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'qr-management'>(
-    tabParam === 'qr-management' ? 'qr-management' : 'dashboard'
-  );
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'qr-management' | 'profile'>(() => {
+    if (tabParam === 'qr-management') return 'qr-management';
+    if (tabParam === 'profile') return 'profile';
+    return initialTab || 'dashboard';
+  });
 
   useEffect(() => {
     if (tabParam === 'qr-management') {
       setActiveTab('qr-management');
+    } else if (tabParam === 'profile') {
+      setActiveTab('profile');
+    } else if (tabParam === 'dashboard') {
+      setActiveTab('dashboard');
+    } else if (!tabParam && initialTab) {
+      setActiveTab(initialTab);
     }
-  }, [tabParam]);
+  }, [tabParam, initialTab]);
 
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem('shinestaff_dashboard_unlocked') === 'true';
@@ -465,10 +476,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
 
           <div>
             <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">
-              🔒 Secure Dashboard Hub
+              🔒 Admin Settings & Security Hub
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold leading-relaxed">
-              Main Dashboard, Financial Analytics aur 💳 QR Payment Management password se protected hain. Check karne ke liye Security Password enter karein.
+              Main Dashboard, Financial Analytics, 💳 QR Payments aur Admin Credentials password se protected hain. Check karne ke liye Security Password enter karein.
             </p>
           </div>
 
@@ -504,7 +515,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
               className="w-full py-3 text-xs font-extrabold text-white bg-amber-500 hover:bg-amber-600 active:scale-98 rounded-xl shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center space-x-2"
             >
               <ShieldCheck className="h-4 w-4" />
-              <span>{verifyingSecurity ? 'Verifying Password...' : 'Unlock Dashboard'}</span>
+              <span>{verifyingSecurity ? 'Verifying Password...' : 'Unlock Security Hub'}</span>
             </button>
           </form>
 
@@ -741,56 +752,84 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
-      {/* 🔒 Top Secure Hub Header: Switch between Main Dashboard and QR Payment Management */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('dashboard');
-              setSearchParams({});
-            }}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-2 ${
-              activeTab === 'dashboard'
-                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            <span>📊 Main Dashboard</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('qr-management');
-              setSearchParams({ tab: 'qr-management' });
-            }}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-2 ${
-              activeTab === 'qr-management'
-                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <CreditCard className="h-4 w-4" />
-            <span>💳 QR Payment Management</span>
-          </button>
+      {/* 🔒 Top Secure Hub Header: Switch between Main Dashboard, QR Payment Management, and Profile & Credentials */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center space-x-2.5">
+            <ShieldCheck className="h-6 w-6 text-amber-500" />
+            <span>Admin Settings & Security Hub</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">Secure management for Financial Dashboard, Corporate QR Payments, and Admin Credentials.</p>
         </div>
 
-        {/* Lock Dashboard Button */}
-        <button
-          type="button"
-          onClick={handleLockDashboard}
-          className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-extrabold rounded-xl border border-amber-300 dark:border-amber-800 transition-all cursor-pointer inline-flex items-center space-x-2 self-start sm:self-auto shadow-xs"
-          title="Lock Dashboard and QR Management"
-        >
-          <Lock className="h-3.5 w-3.5 text-amber-600" />
-          <span>Lock Dashboard 🔒</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('dashboard');
+                setSearchParams({});
+              }}
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 ${
+                activeTab === 'dashboard'
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm font-extrabold'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>📊 Main Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('qr-management');
+                setSearchParams({ tab: 'qr-management' });
+              }}
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 ${
+                activeTab === 'qr-management'
+                  ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-extrabold'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <CreditCard className="h-4 w-4" />
+              <span>💳 QR Payment Management</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('profile');
+                setSearchParams({ tab: 'profile' });
+              }}
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 ${
+                activeTab === 'profile'
+                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm font-extrabold'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <UserIcon className="h-4 w-4" />
+              <span>👤 Profile & Credentials</span>
+            </button>
+          </div>
+
+          {/* Lock Hub Button */}
+          <button
+            type="button"
+            onClick={handleLockDashboard}
+            className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-extrabold rounded-xl border border-amber-300 dark:border-amber-800 transition-all cursor-pointer inline-flex items-center space-x-1.5 shadow-xs"
+            title="Lock Admin Settings & Security Hub"
+          >
+            <Lock className="h-3.5 w-3.5 text-amber-600" />
+            <span>Lock Hub 🔒</span>
+          </button>
+        </div>
       </div>
 
       {activeTab === 'qr-management' ? (
         <QRManagementPanel onLock={handleLockDashboard} />
+      ) : activeTab === 'profile' ? (
+        <AdminProfilePanel />
       ) : loading ? (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

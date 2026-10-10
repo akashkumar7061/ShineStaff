@@ -49,7 +49,7 @@ const Login: React.FC = () => {
       login(token, refreshToken, user);
       
       if (user.role === 'admin') {
-        navigate('/admin');
+        navigate('/admin/jobs');
       } else {
         navigate('/worker');
       }
@@ -79,7 +79,7 @@ const Login: React.FC = () => {
       login(token, refreshToken, user);
 
       if (user.role === 'admin') {
-        navigate('/admin');
+        navigate('/admin/jobs');
       } else {
         navigate('/worker');
       }

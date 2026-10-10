@@ -73,7 +73,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRole: 'admin'
   }
 
   if (user.role !== allowedRole) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/worker'} replace />;
+    return <Navigate to={user.role === 'admin' ? '/admin/jobs' : '/worker'} replace />;
   }
 
   return <>{children}</>;
@@ -98,7 +98,7 @@ const RootRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Navigate to={user.role === 'admin' ? '/admin' : '/worker'} replace />;
+  return <Navigate to={user.role === 'admin' ? '/admin/jobs' : '/worker'} replace />;
 };
 
 // Wrapper to attach the Admin Layout with company filter state
@@ -522,6 +522,10 @@ const App: React.FC = () => {
               {/* Admin Routes (Desktop Management Panel) */}
               <Route
                 path="/admin"
+                element={<Navigate to="/admin/jobs" replace />}
+              />
+              <Route
+                path="/admin/security-hub"
                 element={
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
@@ -529,6 +533,10 @@ const App: React.FC = () => {
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }
+              />
+              <Route
+                path="/admin/dashboard"
+                element={<Navigate to="/admin/security-hub" replace />}
               />
               <Route
                 path="/admin/operations-hud"
@@ -690,13 +698,7 @@ const App: React.FC = () => {
               />
               <Route
                 path="/admin/profile"
-                element={
-                  <ProtectedRoute allowedRole="admin">
-                    <AdminLayout selectedCompany="All" setSelectedCompany={() => {}}>
-                      <AdminProfile />
-                    </AdminLayout>
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/admin/security-hub?tab=profile" replace />}
               />
 
               {/* Default catch-all redirect */}
