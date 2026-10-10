@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Compass,
   Wallet,
+  CreditCard,
   MessageSquare,
   Database
 } from 'lucide-react';
@@ -46,8 +47,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isItemActive = (path: string) => {
+    if (path.includes('?')) {
+      return (location.pathname + location.search) === path;
+    }
+    return location.pathname === path && (!location.search || !location.search.includes('tab=qr-management'));
+  };
+
   const menuItems = [
-    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, color: 'text-blue-500' },
+    { name: 'Dashboard 🔒', path: '/admin', icon: LayoutDashboard, color: 'text-blue-500' },
     { name: 'Operations HUD', path: '/admin/operations-hud', icon: Activity, color: 'text-rose-500' },
     { name: "Attendance", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
@@ -55,6 +63,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: 'Job Scheduling', path: '/admin/jobs', icon: Briefcase, color: 'text-orange-500' },
     { name: '📱 WhatsApp & Engagement', path: '/admin/whatsapp-engagement', icon: MessageSquare, color: 'text-emerald-600' },
     { name: 'Payment Collection', path: '/admin/payments', icon: Wallet, color: 'text-emerald-500' },
+    { name: '💳 QR Payment Management', path: '/admin?tab=qr-management', icon: CreditCard, color: 'text-emerald-600' },
     { name: 'Payroll & Salary', path: '/admin/salary', icon: DollarSign, color: 'text-teal-500' },
     { name: 'Overtime Charges', path: '/admin/overtime', icon: Clock, color: 'text-amber-500' },
     { name: 'Worker Travel & Expenses', path: '/admin/travel-expenses', icon: Compass, color: 'text-orange-600' },
@@ -97,7 +106,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <nav className="space-y-1.5 pt-4 overflow-y-auto flex-1 pr-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const active = location.pathname === item.path;
+            const active = isItemActive(item.path);
             return (
               <Link
                 key={item.name}
@@ -151,7 +160,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <nav className="space-y-1.5 pt-4 overflow-y-auto flex-1 pr-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const active = location.pathname === item.path;
+            const active = isItemActive(item.path);
             return (
               <Link
                 key={item.name}

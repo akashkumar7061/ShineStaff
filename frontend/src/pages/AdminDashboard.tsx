@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
+import QRManagementPanel from '../components/QRManagementPanel';
 import {
   BarChart,
   Bar,
@@ -26,7 +28,12 @@ import {
   ClipboardList,
   X,
   Edit,
-  Trash2
+  Trash2,
+  Lock,
+  Key,
+  ShieldCheck,
+  CreditCard,
+  LayoutDashboard
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -296,6 +303,25 @@ const getPastDateString = (daysAgo: number) => {
 const CHART_COLORS = ['#6366f1', '#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'qr-management'>(
+    tabParam === 'qr-management' ? 'qr-management' : 'dashboard'
+  );
+
+  useEffect(() => {
+    if (tabParam === 'qr-management') {
+      setActiveTab('qr-management');
+    }
+  }, [tabParam]);
+
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('shinestaff_dashboard_unlocked') === 'true';
+  });
+  const [securityPassInput, setSecurityPassInput] = useState('');
+  const [securityPassError, setSecurityPassError] = useState('');
+  const [verifyingSecurity, setVerifyingSecurity] = useState(false);
+
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [jobsList, setJobsList] = useState<any[]>([]);
@@ -319,6 +345,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
     id: string;
     fields: any;
   } | null>(null);
+
+  const handleVerifySecurityPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifyingSecurity(true);
+    setSecurityPassError('');
+    try {
+      const res = await api.post('/qr/verify-password', { password: securityPassInput });
+      if (res.data.verified) {
+        setIsUnlocked(true);
+        sessionStorage.setItem('shinestaff_dashboard_unlocked', 'true');
+        setSecurityPassInput('');
+      }
+    } catch (err: any) {
+      setSecurityPassError(err.response?.data?.message || 'Incorrect security password. Access denied.');
+    } finally {
+      setVerifyingSecurity(false);
+    }
+  };
+
+  const handleLockDashboard = () => {
+    setIsUnlocked(false);
+    sessionStorage.removeItem('shinestaff_dashboard_unlocked');
+  };
 
   const fetchDashboardData = async (isBackground = false) => {
     if (!isBackground && !stats) {
@@ -381,9 +430,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData(false);
+    if (isUnlocked) {
+      fetchDashboardData(false);
+    }
 
     const handleSocketUpdate = (e: Event) => {
+      if (!isUnlocked) return;
       const customEvent = e as CustomEvent;
       const type = customEvent.detail?.type;
       if (
@@ -400,17 +452,66 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
     };
     window.addEventListener('socket-update', handleSocketUpdate);
     return () => window.removeEventListener('socket-update', handleSocketUpdate);
-  }, [companyFilter, startDate, endDate]);
+  }, [companyFilter, startDate, endDate, isUnlocked]);
 
-  if (loading) {
+  // 🔒 Render Security Password Lock Screen if not unlocked
+  if (!isUnlocked) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="animate-shimmer h-28 rounded-custom" />
-          ))}
+      <div className="min-h-[75vh] flex items-center justify-center p-4">
+        <div className="max-w-md w-full glass-card p-8 shadow-2xl border-t-4 border-t-amber-500 rounded-3xl text-center space-y-6">
+          <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="h-8 w-8" />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">
+              🔒 Secure Dashboard Hub
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold leading-relaxed">
+              Main Dashboard, Financial Analytics aur 💳 QR Payment Management password se protected hain. Check karne ke liye Security Password enter karein.
+            </p>
+          </div>
+
+          {securityPassError && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-bold flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{securityPassError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleVerifySecurityPassword} className="space-y-4 text-left">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-1.5">
+                Enter Security Password
+              </label>
+              <div className="relative">
+                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  value={securityPassInput}
+                  onChange={(e) => setSecurityPassInput(e.target.value)}
+                  placeholder="Enter password (default: admin123)"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={verifyingSecurity}
+              className="w-full py-3 text-xs font-extrabold text-white bg-amber-500 hover:bg-amber-600 active:scale-98 rounded-xl shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center space-x-2"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>{verifyingSecurity ? 'Verifying Password...' : 'Unlock Dashboard'}</span>
+            </button>
+          </form>
+
+          <div className="text-[11px] text-slate-400 font-semibold pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <span>Default password: <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono text-slate-700 dark:text-slate-300">admin123</code></span>
+          </div>
         </div>
-        <div className="animate-shimmer h-80 w-full rounded-custom" />
       </div>
     );
   }
@@ -639,7 +740,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
   const COLORS = ['#F59E0B', '#10B981'];
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in text-left">
+      {/* 🔒 Top Secure Hub Header: Switch between Main Dashboard and QR Payment Management */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3">
+        <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('dashboard');
+              setSearchParams({});
+            }}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-2 ${
+              activeTab === 'dashboard'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            <span>📊 Main Dashboard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('qr-management');
+              setSearchParams({ tab: 'qr-management' });
+            }}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-2 ${
+              activeTab === 'qr-management'
+                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <CreditCard className="h-4 w-4" />
+            <span>💳 QR Payment Management</span>
+          </button>
+        </div>
+
+        {/* Lock Dashboard Button */}
+        <button
+          type="button"
+          onClick={handleLockDashboard}
+          className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-extrabold rounded-xl border border-amber-300 dark:border-amber-800 transition-all cursor-pointer inline-flex items-center space-x-2 self-start sm:self-auto shadow-xs"
+          title="Lock Dashboard and QR Management"
+        >
+          <Lock className="h-3.5 w-3.5 text-amber-600" />
+          <span>Lock Dashboard 🔒</span>
+        </button>
+      </div>
+
+      {activeTab === 'qr-management' ? (
+        <QRManagementPanel onLock={handleLockDashboard} />
+      ) : loading ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="animate-shimmer h-28 rounded-custom" />
+            ))}
+          </div>
+          <div className="animate-shimmer h-80 w-full rounded-custom" />
+        </div>
+      ) : (
+        <div className="space-y-8 animate-fade-in">
       
       {/* Date Filters Selectors Header */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -1506,6 +1668,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter }) => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
         </div>
       )}
 
