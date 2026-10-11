@@ -105,7 +105,7 @@ const WorkerJobs: React.FC = () => {
 
   const handleConfirmWorkerCancel = async () => {
     if (!cancelRemarks.trim()) {
-      setCancelError('Kaam cancel / reject karne ka karan (Remarks) likhna anivaryah hai.');
+      setCancelError('Cancellation remarks / reason is mandatory. Please enter a reason.');
       return;
     }
     if (!cancelTargetJob?._id) return;
@@ -829,7 +829,7 @@ const WorkerJobs: React.FC = () => {
                         }}
                         className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95 cursor-pointer"
                       >
-                        ✕ Reject (अस्वीकार करें)
+                        ✕ Reject
                       </button>
                     </div>
                   </div>
@@ -1023,7 +1023,7 @@ const WorkerJobs: React.FC = () => {
                     className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
                   >
                     <span>✕</span>
-                    <span>Cancel Clean Booking (काम रद्द करें)</span>
+                    <span>Cancel Clean Booking</span>
                   </button>
 
                 </div>
@@ -1034,7 +1034,7 @@ const WorkerJobs: React.FC = () => {
                   {(selectedJob.status === 'cancelled' || selectedJob.status === 'rejected') && (
                     <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-1">
                       <span className="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 flex items-center space-x-1">
-                        <span>🚫 Job {selectedJob.status === 'rejected' ? 'Rejected' : 'Cancelled'} / रद्द किया गया</span>
+                        <span>🚫 Job {selectedJob.status === 'rejected' ? 'Rejected' : 'Cancelled'}</span>
                       </span>
                       <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
                         Reason / Remarks: {selectedJob.cancelReason || 'No reason specified'}
@@ -1092,9 +1092,9 @@ const WorkerJobs: React.FC = () => {
                 </div>
                 <div className="text-left">
                   <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">
-                    {cancelActionType === 'reject' ? 'Reject Job (अस्वीकार करें)' : 'Cancel Job (काम रद्द करें)'}
+                    {cancelActionType === 'reject' ? 'Reject Clean Booking' : 'Cancel Clean Booking'}
                   </h3>
-                  <p className="text-[10px] text-slate-400">काम रद्द करने का कारण (Remarks) दर्ज करें</p>
+                  <p className="text-[10px] text-slate-400">Please provide a reason for cancelling this booking</p>
                 </div>
               </div>
               <button
@@ -1113,42 +1113,20 @@ const WorkerJobs: React.FC = () => {
               </button>
             </div>
 
-            {/* Target Job Info Card */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-1.5 text-xs text-left">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{cancelTargetJob.title}</span>
-                {cancelTargetJob.company && (
-                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    {cancelTargetJob.company}
-                  </span>
-                )}
-              </div>
-              {cancelTargetJob.clientName && (
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Client: <strong className="text-slate-700 dark:text-slate-200">{cancelTargetJob.clientName}</strong>
-                </div>
-              )}
-              {cancelTargetJob.address && (
-                <div className="text-[10px] text-slate-400 truncate">
-                  📍 {cancelTargetJob.address}
-                </div>
-              )}
-            </div>
-
             {/* Mandatory Remarks Textarea */}
             <div className="space-y-1.5 text-left">
               <label className="block text-[11px] font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Reason / Remarks (कारण) *</span>
-                <span className="text-[9px] font-bold text-rose-500 uppercase">अनिवार्य (Mandatory)</span>
+                <span>Reason / Remarks *</span>
+                <span className="text-[9px] font-bold text-rose-500 uppercase">Mandatory</span>
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 value={cancelRemarks}
                 onChange={(e) => {
                   setCancelRemarks(e.target.value);
                   if (cancelError) setCancelError('');
                 }}
-                placeholder="Kripya karan likhein ki kaam kyu cancel ho rha hai... (e.g. Customer ne mana kiya, Address nahi mil raha, Customer phone nahi utha raha, Emergency)"
+                placeholder="Enter reason why this booking is being cancelled (e.g. Customer cancelled, Address unreachable, Customer not answering phone, Emergency)..."
                 className="w-full text-xs font-medium p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-rose-500 resize-none"
                 autoFocus
               />
@@ -1158,7 +1136,7 @@ const WorkerJobs: React.FC = () => {
                 </p>
               )}
               <p className="text-[10px] text-slate-400">
-                Yeh remarks admin notifications aur reports me dikhayi dega.
+                This remark will be sent to admins and permanently saved in system records.
               </p>
             </div>
 
@@ -1175,7 +1153,7 @@ const WorkerJobs: React.FC = () => {
                 }}
                 className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
               >
-                Close / Wapas
+                Cancel
               </button>
               <button
                 type="button"
@@ -1183,7 +1161,7 @@ const WorkerJobs: React.FC = () => {
                 onClick={handleConfirmWorkerCancel}
                 className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 cursor-pointer"
               >
-                <span>{isSubmittingCancel ? 'Submitting...' : 'Confirm (सबमिट करें)'}</span>
+                <span>{isSubmittingCancel ? 'Submitting...' : 'Confirm'}</span>
               </button>
             </div>
           </div>

@@ -1225,7 +1225,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   const handleConfirmCancelJob = async () => {
     if (!cancelRemarks.trim()) {
-      setCancelModalError('Cancellation remarks / reason is mandatory. Kripya reason likhein.');
+      setCancelModalError('Cancellation remarks / reason is mandatory. Please enter a reason.');
       return;
     }
     if (!cancelModalJob?._id) return;
@@ -3958,9 +3958,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <div className="h-8 w-8 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center font-bold text-sm">
                   ✕
                 </div>
-                <div>
+                <div className="text-left">
                   <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">Cancel Clean Booking</h3>
-                  <p className="text-[10px] text-slate-400">काम रद्द करने का कारण (Remarks) दर्ज करें</p>
+                  <p className="text-[10px] text-slate-400">Please provide a reason for cancelling this booking</p>
                 </div>
               </div>
               <button
@@ -3973,48 +3973,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     setCancelModalError('');
                   }
                 }}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            {/* Target Job Info Card */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-1.5 text-xs text-left">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{cancelModalJob.title || 'Cleanup Job'}</span>
-                {cancelModalJob.company && (
-                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    {cancelModalJob.company}
-                  </span>
-                )}
-              </div>
-              {cancelModalJob.clientName && (
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Client: <strong className="text-slate-700 dark:text-slate-200">{cancelModalJob.clientName}</strong> {cancelModalJob.clientPhone ? `(${cancelModalJob.clientPhone})` : ''}
-                </div>
-              )}
-              {cancelModalJob.date && (
-                <div className="text-[10px] text-slate-400">
-                  Scheduled: {cancelModalJob.date} {cancelModalJob.timeSlot ? `• ${cancelModalJob.timeSlot}` : ''}
-                </div>
-              )}
-            </div>
-
             {/* Mandatory Remarks Textarea */}
             <div className="space-y-1.5 text-left">
               <label className="block text-[11px] font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Cancellation Remarks / Reason *</span>
-                <span className="text-[9px] font-bold text-rose-500 uppercase">अनिवार्य (Mandatory)</span>
+                <span>Cancellation Reason / Remarks *</span>
+                <span className="text-[9px] font-bold text-rose-500 uppercase">Mandatory</span>
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 value={cancelRemarks}
                 onChange={(e) => {
                   setCancelRemarks(e.target.value);
                   if (cancelModalError) setCancelModalError('');
                 }}
-                placeholder="Kripya karan likhein ki kaam kyu cancel ho rha hai... (e.g. Customer cancelled, Customer unreachable, Rescheduled, Worker unavailable)"
+                placeholder="Enter reason why this booking is being cancelled (e.g. Customer cancelled, Customer unreachable, Rescheduled, Worker unavailable)..."
                 className="w-full text-xs font-medium p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-rose-500 resize-none"
                 autoFocus
               />
@@ -4024,7 +4002,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </p>
               )}
               <p className="text-[10px] text-slate-400">
-                Yeh remarks database me aur history me save hongi.
+                This remark will be permanently recorded in the database and audit timeline.
               </p>
             </div>
 
@@ -4041,7 +4019,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 }}
                 className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
               >
-                Close / Wapas
+                Cancel
               </button>
               <button
                 type="button"
@@ -4049,7 +4027,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 onClick={handleConfirmCancelJob}
                 className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 cursor-pointer"
               >
-                <span>{isSubmittingCancel ? 'Cancelling...' : 'Confirm Cancellation (रद्द करें)'}</span>
+                <span>{isSubmittingCancel ? 'Cancelling...' : 'Confirm Cancellation'}</span>
               </button>
             </div>
           </div>

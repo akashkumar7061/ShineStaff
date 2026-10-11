@@ -190,12 +190,12 @@ const AdminLogDailyJobs: React.FC = () => {
       visible: true,
       type: 'prompt',
       title: 'Cancel Clean Job',
-      message: 'Please enter the cancellation remarks/reason (Mandatory / अनिवार्य):',
+      message: 'Please enter the cancellation remarks/reason (Mandatory):',
       placeholder: 'Enter reason why this job is being cancelled...',
       inputValue: '',
       onConfirm: async (reason) => {
         if (!reason || !reason.trim()) {
-          alert('Cancellation remarks / reason is mandatory! Kripya karan likhein.');
+          alert('Cancellation remarks / reason is mandatory. Please enter a reason.');
           return;
         }
         try {
@@ -270,7 +270,7 @@ const AdminLogDailyJobs: React.FC = () => {
         visible: true,
         type: 'error',
         title: 'Missing Cancellation Remarks',
-        message: 'Cancellation remarks / reason is mandatory when status is Cancelled. Kripya reason likhein.'
+        message: 'Cancellation remarks / reason is mandatory when status is Cancelled. Please enter a reason.'
       });
       return;
     }
@@ -844,7 +844,7 @@ const AdminLogDailyJobs: React.FC = () => {
                   <div className="col-span-2">
                     <label className="block mb-1 text-[9px] uppercase tracking-wider text-rose-500 font-extrabold flex justify-between">
                       <span>Cancellation Remarks / Reason *</span>
-                      <span className="text-[9px] font-bold text-rose-600 uppercase">अनिवार्य (Mandatory)</span>
+                      <span className="text-[9px] font-bold text-rose-600 uppercase">Mandatory</span>
                     </label>
                     <textarea
                       rows={2}
@@ -929,7 +929,7 @@ const AdminLogDailyJobs: React.FC = () => {
                     type="button"
                     onClick={() => {
                       if (customDialog.type === 'prompt' && (!customDialog.inputValue || !customDialog.inputValue.trim())) {
-                        alert('Cancellation remarks / reason is mandatory! Kripya karan likhein.');
+                        alert('Cancellation remarks / reason is mandatory. Please enter a reason.');
                         return;
                       }
                       setCustomDialog(prev => ({ ...prev, visible: false }));
