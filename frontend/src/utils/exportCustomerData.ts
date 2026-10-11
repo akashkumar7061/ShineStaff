@@ -708,3 +708,217 @@ export const exportJobScheduleToExcel = (
   const finalFilename = `${filenamePrefix}_${todayStr}.xlsx`;
   XLSX.writeFile(workbook, finalFilename);
 };
+
+/**
+ * Export Worker-wise Daily Work & KM Register to Excel (.xlsx)
+ * Matches exact format from screenshot:
+ * Headers: Date | Daily Work / Sales (₹) | KM Travelled | Attendance | Remarks
+ * Sheets: One sheet for each worker (Rohit, Manish, Arun, Rahul, etc.)
+ * Every single day in date range is listed row-by-row.
+ */
+export const exportWorkerDailyRegisterToExcel = (
+  startDate: string,
+  endDate: string,
+  workers: any[] = [],
+  jobs: any[] = [],
+  travelLogs: any[] = [],
+  attendanceLogs: any[] = [],
+  leaveRecords: any[] = [],
+  filenamePrefix = 'worker_daily_register'
+) => {
+  const workbook = XLSX.utils.book_new();
+  const existingSheetNames = new Set<string>();
+
+  // 1. Generate full date array from startDate to endDate
+  const dateList: string[] = [];
+  const s = new Date(startDate);
+  const e = new Date(endDate);
+
+  if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+    const cur = new Date(s);
+    while (cur <= e) {
+      dateList.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+  if (dateList.length === 0) {
+    dateList.push(startDate);
+  }
+
+  // 2. Identify all workers
+  const workerList: any[] = [];
+  const seenIds = new Set<string>();
+  (workers || []).forEach((w) => {
+    const id = String(w._id || w.id || w.name || '');
+    if (id && !seenIds.has(id)) {
+      seenIds.add(id);
+      workerList.push(w);
+    }
+  });
+
+  if (workerList.length === 0) {
+    jobs.forEach((j) => {
+      if (j.workerId) {
+        const id = typeof j.workerId === 'object' ? String(j.workerId._id || j.workerId.id || '') : String(j.workerId);
+        const name = typeof j.workerId === 'object' ? (j.workerId.name || 'Worker') : id;
+        if (id && !seenIds.has(id)) {
+          seenIds.add(id);
+          workerList.push({ _id: id, id, name });
+        }
+      }
+    });
+  }
+
+  const helperFormatDate = (isoDate: string): string => {
+    try {
+      const parts = isoDate.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    } catch {
+      // fallback
+    }
+    return isoDate;
+  };
+
+  const isSunday = (isoDate: string): boolean => {
+    try {
+      const d = new Date(isoDate);
+      return d.getDay() === 0;
+    } catch {
+      return false;
+    }
+  };
+
+  const colWidths = [
+    { wch: 15 }, // Date
+    { wch: 25 }, // Daily Work / Sales (₹)
+    { wch: 16 }, // KM Travelled
+    { wch: 20 }, // Attendance
+    { wch: 30 }  // Remarks
+  ];
+
+  workerList.forEach((worker) => {
+    const wId = String(worker._id || worker.id || '');
+    const wName = (worker.name || worker.fullName || 'Worker').trim();
+
+    const workerJobs = jobs.filter((j) => {
+      if (!j.workerId) return false;
+      const jWorkerId = typeof j.workerId === 'object' ? String(j.workerId._id || j.workerId.id || '') : String(j.workerId);
+      const jWorkerName = typeof j.workerId === 'object' ? (j.workerId.name || '') : '';
+      return (wId && jWorkerId === wId) || (wName && jWorkerName.toLowerCase() === wName.toLowerCase());
+    });
+
+    const workerTravels = travelLogs.filter((t) => {
+      if (!t.workerId) return false;
+      const tWorkerId = typeof t.workerId === 'object' ? String(t.workerId._id || t.workerId.id || '') : String(t.workerId);
+      const tWorkerName = typeof t.workerId === 'object' ? (t.workerId.name || '') : '';
+      return (wId && tWorkerId === wId) || (wName && tWorkerName.toLowerCase() === wName.toLowerCase());
+    });
+
+    const workerAttendance = attendanceLogs.filter((a) => {
+      if (!a.workerId) return false;
+      const aWorkerId = typeof a.workerId === 'object' ? String(a.workerId._id || a.workerId.id || '') : String(a.workerId);
+      const aWorkerName = typeof a.workerId === 'object' ? (a.workerId.name || '') : '';
+      return (wId && aWorkerId === wId) || (wName && aWorkerName.toLowerCase() === wName.toLowerCase());
+    });
+
+    const workerLeaves = leaveRecords.filter((l) => {
+      if (!l.workerId) return false;
+      const lWorkerId = typeof l.workerId === 'object' ? String(l.workerId._id || l.workerId.id || '') : String(l.workerId);
+      return wId && lWorkerId === wId && l.status === 'approved';
+    });
+
+    let totalSalesSum = 0;
+    let totalKmsSum = 0;
+
+    const rows = dateList.map((dt) => {
+      const displayDate = helperFormatDate(dt);
+
+      // 1. Calculate Daily Work / Sales
+      const dayJobs = workerJobs.filter((j) => {
+        const jDate = j.date ? j.date.split('T')[0] : '';
+        return jDate === dt && j.status !== 'cancelled';
+      });
+      const daySales = dayJobs.reduce((sum, j) => sum + (Number(j.price) || 0), 0);
+
+      // 2. Calculate KM Travelled
+      const dayTravels = workerTravels.filter((t) => {
+        const tDate = t.date ? t.date.split('T')[0] : '';
+        return tDate === dt;
+      });
+      const dayKms = dayTravels.reduce((sum, t) => sum + (Number(t.kms) || 0), 0);
+
+      // 3. Attendance Status
+      const dayAtt = workerAttendance.find((a) => {
+        const aDate = a.date ? a.date.split('T')[0] : '';
+        return aDate === dt;
+      });
+
+      const dayLeave = workerLeaves.find((l) => {
+        const start = l.startDate ? l.startDate.split('T')[0] : '';
+        const end = l.endDate ? l.endDate.split('T')[0] : start;
+        return dt >= start && dt <= end;
+      });
+
+      let attendanceText = '';
+      let remarksText = '';
+
+      if (dayLeave) {
+        attendanceText = 'Leave / Absent';
+        remarksText = dayLeave.reason || 'Approved Leave';
+      } else if (dayAtt) {
+        if (dayAtt.status === 'absent') {
+          attendanceText = 'Leave / Absent';
+        } else if (dayAtt.status === 'half-day') {
+          attendanceText = 'Half-day';
+        } else if (dayAtt.status === 'late') {
+          attendanceText = daySales > 0 ? '' : 'Late';
+          remarksText = dayAtt.lateReason || 'Late Check-in';
+        } else if (dayAtt.status === 'present') {
+          attendanceText = daySales > 0 ? '' : 'Present';
+        } else {
+          attendanceText = dayAtt.status;
+        }
+      } else if (dayJobs.length > 0) {
+        attendanceText = '';
+      } else if (isSunday(dt)) {
+        attendanceText = 'Holiday';
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        if (dt < today) {
+          attendanceText = 'Leave / Absent';
+        }
+      }
+
+      if (daySales > 0) totalSalesSum += daySales;
+      if (dayKms > 0) totalKmsSum += dayKms;
+
+      return {
+        'Date': displayDate,
+        'Daily Work / Sales (₹)': daySales > 0 ? daySales : (attendanceText === 'Holiday' || attendanceText.includes('Leave') ? '' : 0),
+        'KM Travelled': dayKms > 0 ? dayKms : '',
+        'Attendance': attendanceText,
+        'Remarks': remarksText
+      };
+    });
+
+    // Add Total Summary Row
+    rows.push({
+      'Date': 'Total',
+      'Daily Work / Sales (₹)': totalSalesSum,
+      'KM Travelled': totalKmsSum > 0 ? totalKmsSum : '',
+      'Attendance': '',
+      'Remarks': ''
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = colWidths;
+    const sheetName = sanitizeSheetName(wName, existingSheetNames);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  });
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const finalFilename = `${filenamePrefix}_${todayStr}.xlsx`;
+  XLSX.writeFile(workbook, finalFilename);
+};

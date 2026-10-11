@@ -76,13 +76,15 @@ export const submitTravelLog = async (req: AuthRequest, res: Response) => {
 
 export const getTravelLogs = async (req: AuthRequest, res: Response) => {
   try {
-    const { workerId, date, status } = req.query;
+    const { workerId, date, status, startDate, endDate } = req.query;
     const filter: any = {};
 
     if (workerId) {
       filter.workerId = workerId;
     }
-    if (date) {
+    if (startDate && endDate) {
+      filter.date = { $gte: String(startDate), $lte: String(endDate) };
+    } else if (date) {
       filter.date = date;
     }
     if (status) {

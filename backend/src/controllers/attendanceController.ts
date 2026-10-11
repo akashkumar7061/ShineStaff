@@ -8,9 +8,16 @@ import { logAudit } from '../utils/auditLog';
 
 export const getTodayAttendance = async (req: Request, res: Response) => {
   try {
-    const queryDate = req.query.date as string;
-    const targetDate = queryDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const logs = await Attendance.find({ date: targetDate })
+    const { startDate, endDate, date } = req.query;
+    const filter: any = {};
+    if (startDate && endDate) {
+      filter.date = { $gte: String(startDate), $lte: String(endDate) };
+    } else if (date) {
+      filter.date = String(date);
+    } else {
+      filter.date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    }
+    const logs = await Attendance.find(filter)
       .populate('workerId', 'name email phone company photo status')
       .lean();
     res.status(200).json(logs);
