@@ -682,19 +682,26 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
 export const cancelJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { reason } = req.body;
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ message: 'Cancellation remarks / reason is mandatory' });
+  }
   try {
     const job = await Job.findById(id);
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
     }
 
+    if (req.user?.role === 'worker' && (!job.workerId || job.workerId.toString() !== req.user.id)) {
+      return res.status(403).json({ message: 'This job is not assigned to you' });
+    }
+
     job.status = 'cancelled';
-    job.cancelReason = reason || 'No reason specified';
+    job.cancelReason = reason.trim();
     if (!job.timeline) job.timeline = [];
     job.timeline.push({
       status: 'cancelled',
       timestamp: new Date(),
-      remarks: `Job cancelled. Reason: ${reason || 'No reason specified'}`,
+      remarks: `Job cancelled. Reason: ${reason.trim()}`,
       updatedBy: req.user ? (req.user.role === 'admin' ? 'Admin' : 'Worker') : 'System'
     });
     await job.save();
@@ -707,7 +714,7 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
       action: 'updated',
       entityType: 'Job',
       entityId: job._id.toString(),
-      summary: `Cancelled job "${job.title}"${reason ? ` (reason: ${reason})` : ''}`
+      summary: `Cancelled job "${job.title}" (reason: ${reason.trim()})`
     });
 
     try {
@@ -716,24 +723,24 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
       if (io) {
         io.emit('adminNotification', {
           type: 'JOB_CANCELLED',
-          message: `Job "${job.title}" has been cancelled.`,
+          message: `Job "${job.title}" has been cancelled. Reason: ${reason.trim()}`,
           jobId: job._id,
           job: populatedJob
         });
         if (job.workerId) {
           io.to(job.workerId.toString()).emit('notification', {
             type: 'JOB_CANCELLED',
-            message: `Job "${job.title}" has been cancelled.`,
+            message: `Job "${job.title}" has been cancelled. Reason: ${reason.trim()}`,
             jobId: job._id,
             job: populatedJob
           });
         }
       }
     } catch (err) {
-      console.error('Failed to send job cancelled socket notification:', err);
+      console.error('Failed to emit job cancelled socket notification:', err);
     }
 
-    res.status(200).json({ message: 'Job status set to cancelled', job });
+    return res.status(200).json({ message: 'Job cancelled successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -935,11 +942,14 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     }
 
     if (status !== undefined) {
+      if (status === 'cancelled' && (!cancelReason || !cancelReason.trim())) {
+        return res.status(400).json({ message: 'Cancellation remarks / reason is mandatory' });
+      }
       if (job.status !== status) {
         const previousStatus = job.status;
         job.status = status as any;
         if (status === 'cancelled') {
-          job.cancelReason = cancelReason || 'No reason specified';
+          job.cancelReason = cancelReason.trim();
         }
         if (status === 'completed') {
           job.adminCompleted = true;
@@ -955,7 +965,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
           status: status as any,
           timestamp: new Date(),
           remarks: status === 'cancelled'
-            ? `Job cancelled. Reason: ${cancelReason || 'No reason specified'}`
+            ? `Job cancelled. Reason: ${cancelReason.trim()}`
             : `Status updated by Admin to ${status}`,
           updatedBy: 'Admin'
         });
@@ -1103,8 +1113,12 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
 
 export const rejectJob = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
+  const { reason } = req.body;
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });
+  }
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ message: 'Rejection/cancellation remarks is mandatory' });
   }
   try {
     const job = await Job.findById(id).populate('workerId');
@@ -1116,12 +1130,13 @@ export const rejectJob = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
     job.status = 'rejected';
+    job.cancelReason = reason.trim();
     job.rejectedAt = new Date();
     if (!job.timeline) job.timeline = [];
     job.timeline.push({
       status: 'rejected',
       timestamp: new Date(),
-      remarks: 'Job rejected by worker',
+      remarks: `Job rejected by worker. Reason: ${reason.trim()}`,
       updatedBy: `Worker (${worker.name})`
     });
     await job.save();
@@ -1131,7 +1146,7 @@ export const rejectJob = async (req: AuthRequest, res: Response) => {
     if (io) {
       io.emit('adminNotification', {
         type: 'JOB_REJECTED',
-        message: `Job "${job.title}" rejected by worker ${worker.name}.`,
+        message: `Job "${job.title}" rejected by worker ${worker.name}. Reason: ${reason.trim()}`,
         jobId: job._id,
         workerName: worker.name,
         rejectedAt: job.rejectedAt,
@@ -1141,7 +1156,7 @@ export const rejectJob = async (req: AuthRequest, res: Response) => {
 
     sendPushToAdmins(
       `🚨 Job Rejected: ${job.company}`,
-      `Worker ${worker.name} rejected job "${job.title}" for client ${job.clientName}.`,
+      `Worker ${worker.name} rejected job "${job.title}" for client ${job.clientName}. Reason: ${reason.trim()}`,
       '/admin'
     );
 

@@ -61,6 +61,7 @@ const AdminLogDailyJobs: React.FC = () => {
   const [editDate, setEditDate] = useState('');
   const [editStatus, setEditStatus] = useState<'pending' | 'completed' | 'cancelled' | 'rejected' | 'accepted' | 'started'>('completed');
   const [editTimeSlot, setEditTimeSlot] = useState('');
+  const [editCancelReason, setEditCancelReason] = useState('');
 
   // --- Custom Confirm/Prompt/Alert Dialog ---
   const [customDialog, setCustomDialog] = useState<{
@@ -189,13 +190,17 @@ const AdminLogDailyJobs: React.FC = () => {
       visible: true,
       type: 'prompt',
       title: 'Cancel Clean Job',
-      message: 'Please enter the reason for cancellation (optional):',
-      placeholder: 'Reason for cancellation',
-      inputValue: 'Cancelled by Admin',
+      message: 'Please enter the cancellation remarks/reason (Mandatory / अनिवार्य):',
+      placeholder: 'Enter reason why this job is being cancelled...',
+      inputValue: '',
       onConfirm: async (reason) => {
+        if (!reason || !reason.trim()) {
+          alert('Cancellation remarks / reason is mandatory! Kripya karan likhein.');
+          return;
+        }
         try {
           await api.put(`/jobs/${jobId}/cancel`, {
-            reason: reason || 'Cancelled by Admin'
+            reason: reason.trim()
           });
           setCustomDialog({
             visible: true,
@@ -204,13 +209,13 @@ const AdminLogDailyJobs: React.FC = () => {
             message: 'The clean job has been successfully marked as cancelled.'
           });
           fetchData();
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to cancel job:', err);
           setCustomDialog({
             visible: true,
             type: 'error',
             title: 'Cancellation Failed',
-            message: 'Failed to cancel the clean job. Please try again.'
+            message: err.response?.data?.message || 'Failed to cancel the clean job. Please try again.'
           });
         }
       }
@@ -260,6 +265,16 @@ const AdminLogDailyJobs: React.FC = () => {
       return;
     }
 
+    if (editStatus === 'cancelled' && !editCancelReason.trim()) {
+      setCustomDialog({
+        visible: true,
+        type: 'error',
+        title: 'Missing Cancellation Remarks',
+        message: 'Cancellation remarks / reason is mandatory when status is Cancelled. Kripya reason likhein.'
+      });
+      return;
+    }
+
     try {
       await api.put(`/jobs/${editingJob._id}`, {
         title: editTitle,
@@ -271,6 +286,7 @@ const AdminLogDailyJobs: React.FC = () => {
         date: editDate,
         timeSlot: editTimeSlot,
         status: editStatus,
+        cancelReason: editStatus === 'cancelled' ? editCancelReason.trim() : undefined,
         paymentStatus: editStatus === 'completed' ? 'received' : 'pending'
       });
 
@@ -657,6 +673,7 @@ const AdminLogDailyJobs: React.FC = () => {
                                  setEditDate(job.date || getTodayString());
                                  setEditStatus(job.status || 'completed');
                                  setEditTimeSlot(job.timeSlot || '09:00 AM - 12:00 PM');
+                                 setEditCancelReason(job.cancelReason || '');
                                }}
                                className={`w-full flex items-center justify-center space-x-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 active:scale-95 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 cursor-pointer transition-all text-[9px] uppercase font-black shadow-sm border border-blue-200/50 dark:border-blue-900/30 ${
                                  job.status === 'completed' ? '' : ''
@@ -822,6 +839,23 @@ const AdminLogDailyJobs: React.FC = () => {
                     className="w-full text-xs font-semibold rounded-lg border border-slate-205 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-2 outline-none focus:border-sky-500 dark:text-white"
                   />
                 </div>
+
+                {editStatus === 'cancelled' && (
+                  <div className="col-span-2">
+                    <label className="block mb-1 text-[9px] uppercase tracking-wider text-rose-500 font-extrabold flex justify-between">
+                      <span>Cancellation Remarks / Reason *</span>
+                      <span className="text-[9px] font-bold text-rose-600 uppercase">अनिवार्य (Mandatory)</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editCancelReason}
+                      onChange={(e) => setEditCancelReason(e.target.value)}
+                      placeholder="Enter reason why this job is cancelled..."
+                      className="w-full text-xs font-semibold rounded-lg border border-rose-300 dark:border-rose-900 bg-rose-50/30 dark:bg-slate-900 p-2 outline-none focus:border-rose-500 text-slate-800 dark:text-white resize-none"
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end space-x-2 pt-2">
@@ -894,6 +928,10 @@ const AdminLogDailyJobs: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
+                      if (customDialog.type === 'prompt' && (!customDialog.inputValue || !customDialog.inputValue.trim())) {
+                        alert('Cancellation remarks / reason is mandatory! Kripya karan likhein.');
+                        return;
+                      }
                       setCustomDialog(prev => ({ ...prev, visible: false }));
                       if (customDialog.onConfirm) {
                         customDialog.onConfirm(customDialog.inputValue);

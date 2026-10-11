@@ -95,6 +95,50 @@ const WorkerJobs: React.FC = () => {
   const [filterDate, setFilterDate] = useState(getTodayString());
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Cancellation / Rejection modal state for Worker
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelTargetJob, setCancelTargetJob] = useState<any | null>(null);
+  const [cancelActionType, setCancelActionType] = useState<'reject' | 'cancel'>('reject');
+  const [cancelRemarks, setCancelRemarks] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  const handleConfirmWorkerCancel = async () => {
+    if (!cancelRemarks.trim()) {
+      setCancelError('Kaam cancel / reject karne ka karan (Remarks) likhna anivaryah hai.');
+      return;
+    }
+    if (!cancelTargetJob?._id) return;
+
+    setIsSubmittingCancel(true);
+    setCancelError('');
+    try {
+      if (cancelActionType === 'reject') {
+        await api.put(`/jobs/${cancelTargetJob._id}/reject`, {
+          reason: cancelRemarks.trim()
+        });
+        window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_REJECTED', jobId: cancelTargetJob._id } }));
+        alert('Job rejected.');
+      } else {
+        await api.put(`/jobs/${cancelTargetJob._id}/cancel`, {
+          reason: cancelRemarks.trim()
+        });
+        window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_CANCELLED', jobId: cancelTargetJob._id } }));
+        alert('Job cancelled successfully.');
+      }
+
+      setCancelModalOpen(false);
+      setCancelTargetJob(null);
+      setCancelRemarks('');
+      setSelectedJob(null);
+      fetchJobs();
+    } catch (err: any) {
+      setCancelError(err.response?.data?.message || 'Failed to process cancellation. Please try again.');
+    } finally {
+      setIsSubmittingCancel(false);
+    }
+  };
+
   // Auto-fetch mapped company QR code whenever UPI/Online is selected
   useEffect(() => {
     if (tempPaymentMode === 'upi_online' && selectedJob?.company) {
@@ -776,19 +820,16 @@ const WorkerJobs: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={async () => {
-                          try {
-                            await api.put(`/jobs/${selectedJob._id}/reject`);
-                            setSelectedJob(null);
-                            window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_REJECTED', jobId: selectedJob._id } }));
-                            alert('Job rejected.');
-                          } catch (err) {
-                            console.error('Reject job error:', err);
-                          }
+                        onClick={() => {
+                          setCancelTargetJob(selectedJob);
+                          setCancelActionType('reject');
+                          setCancelRemarks('');
+                          setCancelError('');
+                          setCancelModalOpen(true);
                         }}
-                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95"
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95 cursor-pointer"
                       >
-                        ✕ Reject
+                        ✕ Reject (अस्वीकार करें)
                       </button>
                     </div>
                   </div>
@@ -964,15 +1005,42 @@ const WorkerJobs: React.FC = () => {
                   <button
                     type="submit"
                     disabled={!tempBeforePhoto || tempAfterPhotos.some(p => !p) || submittingReport}
-                    className="w-full bg-gradient-to-r from-success to-emerald-600 text-white rounded-custom py-3.5 text-xs font-bold shadow transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-success to-emerald-600 text-white rounded-custom py-3.5 text-xs font-bold shadow transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {submittingReport ? 'Submitting Work...' : 'Submit Completed Cleanup'}
+                  </button>
+
+                  {/* Worker Option to Cancel Job with Mandatory Reason */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCancelTargetJob(selectedJob);
+                      setCancelActionType('cancel');
+                      setCancelRemarks('');
+                      setCancelError('');
+                      setCancelModalOpen(true);
+                    }}
+                    className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
+                  >
+                    <span>✕</span>
+                    <span>Cancel Clean Booking (काम रद्द करें)</span>
                   </button>
 
                 </div>
               ) : (
                 // View Mode for completed/cancelled jobs
                 <div className="space-y-4 border-t border-slate-100 dark:border-slate-850 pt-4 text-left">
+
+                  {(selectedJob.status === 'cancelled' || selectedJob.status === 'rejected') && (
+                    <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-1">
+                      <span className="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 flex items-center space-x-1">
+                        <span>🚫 Job {selectedJob.status === 'rejected' ? 'Rejected' : 'Cancelled'} / रद्द किया गया</span>
+                      </span>
+                      <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                        Reason / Remarks: {selectedJob.cancelReason || 'No reason specified'}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-450">Cleanup Notes:</span>
@@ -1011,6 +1079,115 @@ const WorkerJobs: React.FC = () => {
           onCapture={handleCameraCapture}
           onClose={() => setCameraActive(false)}
         />
+      )}
+
+      {/* Cancellation / Rejection Remarks Modal */}
+      {cancelModalOpen && cancelTargetJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-rose-200 dark:border-rose-900/40 p-6 max-w-md w-full shadow-2xl space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-rose-600 dark:text-rose-400">
+                <div className="h-8 w-8 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center font-bold text-sm">
+                  ✕
+                </div>
+                <div className="text-left">
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">
+                    {cancelActionType === 'reject' ? 'Reject Job (अस्वीकार करें)' : 'Cancel Job (काम रद्द करें)'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">काम रद्द करने का कारण (Remarks) दर्ज करें</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isSubmittingCancel) {
+                    setCancelModalOpen(false);
+                    setCancelTargetJob(null);
+                    setCancelRemarks('');
+                    setCancelError('');
+                  }
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Target Job Info Card */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-1.5 text-xs text-left">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{cancelTargetJob.title}</span>
+                {cancelTargetJob.company && (
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {cancelTargetJob.company}
+                  </span>
+                )}
+              </div>
+              {cancelTargetJob.clientName && (
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Client: <strong className="text-slate-700 dark:text-slate-200">{cancelTargetJob.clientName}</strong>
+                </div>
+              )}
+              {cancelTargetJob.address && (
+                <div className="text-[10px] text-slate-400 truncate">
+                  📍 {cancelTargetJob.address}
+                </div>
+              )}
+            </div>
+
+            {/* Mandatory Remarks Textarea */}
+            <div className="space-y-1.5 text-left">
+              <label className="block text-[11px] font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Reason / Remarks (कारण) *</span>
+                <span className="text-[9px] font-bold text-rose-500 uppercase">अनिवार्य (Mandatory)</span>
+              </label>
+              <textarea
+                rows={3}
+                value={cancelRemarks}
+                onChange={(e) => {
+                  setCancelRemarks(e.target.value);
+                  if (cancelError) setCancelError('');
+                }}
+                placeholder="Kripya karan likhein ki kaam kyu cancel ho rha hai... (e.g. Customer ne mana kiya, Address nahi mil raha, Customer phone nahi utha raha, Emergency)"
+                className="w-full text-xs font-medium p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+                autoFocus
+              />
+              {cancelError && (
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                  ⚠️ {cancelError}
+                </p>
+              )}
+              <p className="text-[10px] text-slate-400">
+                Yeh remarks admin notifications aur reports me dikhayi dega.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isSubmittingCancel}
+                onClick={() => {
+                  setCancelModalOpen(false);
+                  setCancelTargetJob(null);
+                  setCancelRemarks('');
+                  setCancelError('');
+                }}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+              >
+                Close / Wapas
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingCancel || !cancelRemarks.trim()}
+                onClick={handleConfirmWorkerCancel}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 cursor-pointer"
+              >
+                <span>{isSubmittingCancel ? 'Submitting...' : 'Confirm (सबमिट करें)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
