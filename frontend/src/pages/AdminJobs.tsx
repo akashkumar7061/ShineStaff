@@ -1209,6 +1209,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setCancelModalJob(targetJob || { _id: jobId });
       setCancelRemarks('');
       setCancelModalError('');
+      setSelectedJobForDrawer(null);
       setCancelModalOpen(true);
       return;
     }
@@ -3968,6 +3969,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 onClick={() => {
                   if (!isSubmittingCancel) {
                     setCancelModalOpen(false);
+                    if (cancelModalJob) {
+                      setSelectedJobForDrawer(cancelModalJob);
+                    }
                     setCancelModalJob(null);
                     setCancelRemarks('');
                     setCancelModalError('');
@@ -4013,6 +4017,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 disabled={isSubmittingCancel}
                 onClick={() => {
                   setCancelModalOpen(false);
+                  if (cancelModalJob) {
+                    setSelectedJobForDrawer(cancelModalJob);
+                  }
                   setCancelModalJob(null);
                   setCancelRemarks('');
                   setCancelModalError('');

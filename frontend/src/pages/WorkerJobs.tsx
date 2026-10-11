@@ -825,6 +825,7 @@ const WorkerJobs: React.FC = () => {
                           setCancelActionType('reject');
                           setCancelRemarks('');
                           setCancelError('');
+                          setSelectedJob(null);
                           setCancelModalOpen(true);
                         }}
                         className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95 cursor-pointer"
@@ -1018,6 +1019,7 @@ const WorkerJobs: React.FC = () => {
                       setCancelActionType('cancel');
                       setCancelRemarks('');
                       setCancelError('');
+                      setSelectedJob(null);
                       setCancelModalOpen(true);
                     }}
                     className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
@@ -1102,6 +1104,9 @@ const WorkerJobs: React.FC = () => {
                 onClick={() => {
                   if (!isSubmittingCancel) {
                     setCancelModalOpen(false);
+                    if (cancelTargetJob) {
+                      setSelectedJob(cancelTargetJob);
+                    }
                     setCancelTargetJob(null);
                     setCancelRemarks('');
                     setCancelError('');
@@ -1147,6 +1152,9 @@ const WorkerJobs: React.FC = () => {
                 disabled={isSubmittingCancel}
                 onClick={() => {
                   setCancelModalOpen(false);
+                  if (cancelTargetJob) {
+                    setSelectedJob(cancelTargetJob);
+                  }
                   setCancelTargetJob(null);
                   setCancelRemarks('');
                   setCancelError('');
