@@ -65,6 +65,19 @@ const getPastDateString = (daysAgo: number) => {
   return `${year}-${month}-${day}`;
 };
 
+export const isWorkerOnHoliday = (worker: any, dateStr: string): boolean => {
+  if (!worker || !worker.weeklyHoliday || worker.weeklyHoliday === 'None' || !dateStr) {
+    return false;
+  }
+  // Safe date parsing avoiding timezone drift
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return false;
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = dayNames[d.getDay()];
+  return (worker.weeklyHoliday || '').toLowerCase() === dayName.toLowerCase();
+};
+
 export const cleanPhoneNumber = (phone: string): string => {
   if (!phone) return '';
   let cleaned = phone.replace(/\D/g, '');
@@ -1895,7 +1908,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                         <div className="text-slate-500 dark:text-slate-400 font-semibold flex items-center space-x-2">
                           <span>🗓️ {job.date || 'No date'} ({job.timeSlot || 'Slot not set'})</span>
                           {job.workerId?.name && (
-                            <span className="text-blue-600 dark:text-blue-400 font-bold">• 👤 {job.workerId.name}</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-bold flex items-center space-x-1">
+                              <span>• 👤 {job.workerId.name}</span>
+                              {isWorkerOnHoliday(job.workerId, job.date) && (
+                                <span className="inline-flex items-center space-x-0.5 px-1 py-0.2 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded text-[8px] font-black uppercase">
+                                  🌴 Holiday
+                                </span>
+                              )}
+                            </span>
                           )}
                         </div>
 
@@ -2159,30 +2179,41 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <span>Time Slot</span>
                   </div>
                 </th>
-                {workers.map((w: any) => (
-                  <th key={w._id} className="px-3 py-3 w-[180px] border-l border-slate-700 bg-[#1e293b] text-white text-left">
-                    <div className="space-y-1">
-                      <span className="block text-white font-bold text-xs normal-case">{w.name}</span>
-                      <span className="block text-[10px] text-slate-350 font-normal font-sans leading-none">{w.phone}</span>
-                      <div className="flex items-center space-x-1.5 pt-2 text-[9px] font-bold uppercase tracking-wider">
-                        <button
-                          onClick={() => window.open(getWhatsAppWorkerScheduleUrl(w), '_blank')}
-                          className="bg-[#22c55e] text-white px-2 py-0.5 rounded text-[9.5px] font-bold flex items-center space-x-1 hover:bg-[#16a34a] transition-colors cursor-pointer"
-                        >
-                          <Calendar className="h-2.5 w-2.5" />
-                          <span>Schedule</span>
-                        </button>
-                        <button
-                          onClick={() => window.open(`https://wa.me/91${w.phone || ''}`, '_blank')}
-                          className="bg-[#2563eb] text-white px-2 py-0.5 rounded text-[9.5px] font-bold flex items-center space-x-1 hover:bg-[#1d4ed8] transition-colors cursor-pointer"
-                        >
-                          <MessageSquare className="h-2.5 w-2.5" />
-                          <span>Ping</span>
-                        </button>
+                {workers.map((w: any) => {
+                  const onHoliday = isWorkerOnHoliday(w, selectedDate);
+                  return (
+                    <th key={w._id} className="px-3 py-3 w-[180px] border-l border-slate-700 bg-[#1e293b] text-white text-left">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-1.5 flex-wrap">
+                          <span className="block text-white font-bold text-xs normal-case">{w.name}</span>
+                          {onHoliday && (
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded text-[9px] font-black uppercase tracking-wider">
+                              <span>🌴</span>
+                              <span>Holiday</span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="block text-[10px] text-slate-350 font-normal font-sans leading-none">{w.phone}</span>
+                        <div className="flex items-center space-x-1.5 pt-2 text-[9px] font-bold uppercase tracking-wider">
+                          <button
+                            onClick={() => window.open(getWhatsAppWorkerScheduleUrl(w), '_blank')}
+                            className="bg-[#22c55e] text-white px-2 py-0.5 rounded text-[9.5px] font-bold flex items-center space-x-1 hover:bg-[#16a34a] transition-colors cursor-pointer"
+                          >
+                            <Calendar className="h-2.5 w-2.5" />
+                            <span>Schedule</span>
+                          </button>
+                          <button
+                            onClick={() => window.open(`https://wa.me/91${w.phone || ''}`, '_blank')}
+                            className="bg-[#2563eb] text-white px-2 py-0.5 rounded text-[9.5px] font-bold flex items-center space-x-1 hover:bg-[#1d4ed8] transition-colors cursor-pointer"
+                          >
+                            <MessageSquare className="h-2.5 w-2.5" />
+                            <span>Ping</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </th>
-                ))}
+                    </th>
+                  );
+                })}
                 <th className="px-3 py-3 w-[160px] border-l border-slate-700 bg-[#1e293b] text-slate-300 italic text-left">
                   <span>Unassigned</span>
                 </th>
@@ -2591,7 +2622,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   {selectedJobForDrawer.workerId ? (
                     <div className="space-y-2.5 font-bold text-slate-700 dark:text-slate-200">
                       <div>
-                        <span className="block font-black text-slate-855 dark:text-white leading-tight">{selectedJobForDrawer.workerId.name}</span>
+                        <div className="flex items-center space-x-1.5 flex-wrap">
+                          <span className="block font-black text-slate-855 dark:text-white leading-tight">{selectedJobForDrawer.workerId.name}</span>
+                          {isWorkerOnHoliday(selectedJobForDrawer.workerId, selectedJobForDrawer.date) && (
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.2 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded text-[8.5px] font-black uppercase tracking-wider">
+                              <span>🌴</span>
+                              <span>Holiday</span>
+                            </span>
+                          )}
+                        </div>
                         <span className="block text-[9.5px] text-slate-400 mt-0.5 leading-none">{selectedJobForDrawer.workerId.phone}</span>
                       </div>
 
@@ -2885,10 +2924,19 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
             <div className="my-4 space-y-4 max-h-[300px] overflow-y-auto">
               {workers.map((w: any) => {
                 const count = dayJobs.filter(j => j.workerId?._id === w._id).length;
+                const onHoliday = isWorkerOnHoliday(w, selectedDate);
                 return (
                   <div key={w._id} className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-200/40">
                     <div>
-                      <span className="block font-black text-slate-800 dark:text-white leading-tight">{w.name}</span>
+                      <div className="flex items-center space-x-1.5 flex-wrap">
+                        <span className="block font-black text-slate-800 dark:text-white leading-tight">{w.name}</span>
+                        {onHoliday && (
+                          <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.2 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded text-[8.5px] font-black uppercase tracking-wider">
+                            <span>🌴</span>
+                            <span>Holiday</span>
+                          </span>
+                        )}
+                      </div>
                       <span className="block text-[9.5px] text-slate-400 mt-0.5 leading-none">{count} job{count !== 1 ? 's' : ''} today</span>
                     </div>
                     <button
@@ -3230,6 +3278,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           }
                           const match = recommendations.find((w: any) => w._id === workerId) || workers.find((w: any) => w._id === workerId);
                           if (!match) return <span>-- Choose Worker --</span>;
+                          const onHoliday = isWorkerOnHoliday(match, date);
                           return (
                             <div className="flex items-center space-x-2">
                               {match.photo ? (
@@ -3240,7 +3289,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                 </div>
                               )}
                               <span className="font-extrabold">{match.name}</span>
-                              {match.matchScore > 0 && (
+                              {onHoliday && (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 text-[8px] font-black uppercase">
+                                  🌴 Holiday
+                                </span>
+                              )}
+                              {match.matchScore > 0 && !onHoliday && (
                                 <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 text-[8px] font-black">{match.matchScore}% Match</span>
                               )}
                             </div>
@@ -3311,9 +3365,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                             let availableIndex = 0;
 
                             return filteredRecs.map((w: any) => {
+                              // Check if on holiday for job's date
+                              const onHoliday = isWorkerOnHoliday(w, date) || w.status === 'Holiday';
+
                               // Medals order for top Available workers
                               let medal = '';
-                              if (w.status === 'Available') {
+                              if (w.status === 'Available' && !onHoliday) {
                                 if (availableIndex === 0) medal = '🥇';
                                 else if (availableIndex === 1) medal = '🥈';
                                 else if (availableIndex === 2) medal = '🥉';
@@ -3324,6 +3381,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               if (w.status === 'Busy') statusColor = 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400';
                               if (w.status === 'On Leave') statusColor = 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400';
                               if (w.status === 'Offline') statusColor = 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400';
+                              if (onHoliday) statusColor = 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40';
 
                               return (
                                 <div
@@ -3348,10 +3406,15 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                       <div className="font-extrabold text-slate-805 dark:text-white flex items-center space-x-1 flex-wrap">
                                         <span>{medal} {w.name}</span>
                                         <span className="text-[8px] text-slate-400 font-bold lowercase">({w.company})</span>
+                                        {onHoliday && (
+                                          <span className="inline-flex items-center space-x-0.5 px-1 py-0.2 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded text-[7.5px] font-black uppercase">
+                                            🌴 Holiday ({w.weeklyHoliday || 'Off Day'})
+                                          </span>
+                                        )}
                                       </div>
                                       
                                       {/* Travel / Proximity detail */}
-                                      {w.status === 'Available' && w.distance !== null && (
+                                      {!onHoliday && w.status === 'Available' && w.distance !== null && (
                                         <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
                                           🚗 {w.distance.toFixed(1)} KM Away | ETA {w.eta} mins
                                         </span>
@@ -3370,9 +3433,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
                                   <div className="flex flex-col items-end space-y-1.5">
                                     <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${statusColor}`}>
-                                      {w.status}
+                                      {onHoliday ? 'Holiday' : w.status}
                                     </span>
-                                    {w.status === 'Available' && (
+                                    {!onHoliday && w.status === 'Available' && (
                                       <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black">
                                         ⭐ {w.matchScore}% Match
                                       </span>

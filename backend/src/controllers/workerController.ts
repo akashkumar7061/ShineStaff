@@ -103,6 +103,7 @@ export const addWorker = async (req: Request, res: Response) => {
       dailySalary,
       monthlySalary,
       company,
+      weeklyHoliday,
       photoDataUrl
     } = req.body;
 
@@ -148,6 +149,7 @@ export const addWorker = async (req: Request, res: Response) => {
         aadhaarNumber,
         dailySalary: Number(dailySalary) || Number((Number(monthlySalary || 0) / 30).toFixed(2)),
         monthlySalary: Number(monthlySalary) || Number((Number(dailySalary || 0) * 30).toFixed(2)),
+        weeklyHoliday: weeklyHoliday || 'None',
         photo: photoUrl,
         status: 'active',
         joiningDate: new Date()
@@ -177,6 +179,7 @@ export const addWorker = async (req: Request, res: Response) => {
       dailySalary,
       monthlySalary,
       company,
+      weeklyHoliday,
       status,
       photoDataUrl
     } = req.body;
@@ -195,6 +198,9 @@ export const addWorker = async (req: Request, res: Response) => {
       worker.email = email || worker.email;
       worker.phone = phone || worker.phone;
       worker.address = address !== undefined ? address : worker.address;
+      if (weeklyHoliday !== undefined) {
+        worker.weeklyHoliday = weeklyHoliday;
+      }
       if (homeLocation !== undefined) {
         const settings = await Settings.findOne({ settingsId: 'global' });
         let homeAddr = homeLocation.address !== undefined ? homeLocation.address : (worker.homeLocation?.address || worker.address || '');
@@ -376,8 +382,13 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
     for (const worker of workers) {
       const workerIdStr = worker._id.toString();
       
-      // A. Leave Status
+      // A. Leave & Holiday Status
       const isOnLeave = leaveWorkerIds.has(workerIdStr);
+
+      // Check weekly off day
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const targetDayOfWeek = dayNames[targetDate.getDay()];
+      const isOnHoliday = Boolean(worker.weeklyHoliday && worker.weeklyHoliday !== 'None' && worker.weeklyHoliday.toLowerCase() === targetDayOfWeek.toLowerCase());
 
       // B. Workload check
       const workerJobs = dayJobs.filter(j => j.workerId && j.workerId.toString() === workerIdStr);
@@ -419,8 +430,10 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
       }
 
       // F. Status calculation
-      let status: 'Available' | 'Busy' | 'On Leave' | 'Offline' = 'Available';
-      if (isOnLeave) {
+      let status: 'Available' | 'Busy' | 'On Leave' | 'Holiday' | 'Offline' = 'Available';
+      if (isOnHoliday) {
+        status = 'Holiday';
+      } else if (isOnLeave) {
         status = 'On Leave';
       } else if (hasConflict) {
         status = 'Busy';
@@ -445,6 +458,8 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
         photo: worker.photo || '',
         phone: worker.phone,
         company: worker.company,
+        weeklyHoliday: worker.weeklyHoliday || 'None',
+        isOnHoliday,
         status,
         distance,
         eta,
@@ -464,11 +479,11 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
       }
     }
 
-    // Sort: Available workers by matchScore descending (and distance ascending), then Busy, then On Leave/Offline
+    // Sort: Available workers by matchScore descending (and distance ascending), then Busy, then On Leave/Holiday/Offline
     result.sort((a, b) => {
-      const statusOrder = { 'Available': 1, 'Busy': 2, 'On Leave': 3, 'Offline': 4 };
-      const orderA = statusOrder[a.status];
-      const orderB = statusOrder[b.status];
+      const statusOrder: { [key: string]: number } = { 'Available': 1, 'Busy': 2, 'On Leave': 3, 'Holiday': 4, 'Offline': 5 };
+      const orderA = statusOrder[a.status] || 99;
+      const orderB = statusOrder[b.status] || 99;
       if (orderA !== orderB) return orderA - orderB;
       if (a.status === 'Available') {
         return b.matchScore - a.matchScore;

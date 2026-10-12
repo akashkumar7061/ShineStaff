@@ -51,6 +51,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
   const [dailySalary, setDailySalary] = useState('');
   const [monthlySalary, setMonthlySalary] = useState('');
   const [company, setCompany] = useState<'SofaShine' | 'CleanCruisers' | 'Both'>('SofaShine');
+  const [weeklyHoliday, setWeeklyHoliday] = useState<string>('None');
   const [photoDataUrl, setPhotoDataUrl] = useState('');
   const [homeAddress, setHomeAddress] = useState('');
   const [homeLat, setHomeLat] = useState<string>('');
@@ -111,6 +112,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
         dailySalary: Number(dailySalary) || 0,
         monthlySalary: Number(monthlySalary) || 0,
         company,
+        weeklyHoliday,
         photoDataUrl
       });
       alert('Worker added successfully!');
@@ -141,6 +143,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
         dailySalary: Number(dailySalary) || 0,
         monthlySalary: Number(monthlySalary) || 0,
         company,
+        weeklyHoliday,
         photoDataUrl
       });
       alert('Worker details updated successfully!');
@@ -149,6 +152,16 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
       fetchWorkers();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to edit worker');
+    }
+  };
+
+  const handleQuickUpdateHoliday = async (workerId: string, newHoliday: string) => {
+    try {
+      await api.put(`/workers/${workerId}`, { weeklyHoliday: newHoliday });
+      setWorkers(prev => prev.map(w => w._id === workerId ? { ...w, weeklyHoliday: newHoliday } : w));
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update weekly holiday');
+      fetchWorkers();
     }
   };
 
@@ -215,6 +228,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     setDailySalary(worker.dailySalary ? worker.dailySalary.toString() : '');
     setMonthlySalary(worker.monthlySalary ? worker.monthlySalary.toString() : '');
     setCompany(worker.company);
+    setWeeklyHoliday(worker.weeklyHoliday || 'None');
     setPhotoDataUrl(worker.photo || '');
     setEditModalOpen(true);
   };
@@ -233,6 +247,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     setDailySalary('');
     setMonthlySalary('');
     setCompany('SofaShine');
+    setWeeklyHoliday('None');
     setPhotoDataUrl('');
   };
 
@@ -286,6 +301,7 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                   <th className="px-6 py-4">Worker</th>
                   <th className="px-6 py-4">Company</th>
                   <th className="px-6 py-4">Wage Rates</th>
+                  <th className="px-6 py-4">Weekly Holiday</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Aadhaar</th>
                   <th className="px-6 py-4 text-center">Actions</th>
@@ -320,6 +336,27 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                       <div>
                         <span className="block font-medium text-slate-700 dark:text-slate-300">Daily: ₹{worker.dailySalary || Math.round((worker.monthlySalary || 0) / 30)}</span>
                         <span className="block text-[10px] text-slate-400 mt-0.5">Monthly: ₹{worker.monthlySalary}</span>
+                      </div>
+                    </td>
+
+                    {/* Weekly Holiday Quick Selector */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-amber-500 font-bold">🌴</span>
+                        <select
+                          value={worker.weeklyHoliday || 'None'}
+                          onChange={(e) => handleQuickUpdateHoliday(worker._id, e.target.value)}
+                          className="text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-amber-50/50 dark:bg-amber-950/20 text-slate-800 dark:text-slate-200 px-2 py-1 outline-none focus:border-amber-500 cursor-pointer"
+                        >
+                          <option value="None">None (No Off)</option>
+                          <option value="Monday">Monday</option>
+                          <option value="Tuesday">Tuesday</option>
+                          <option value="Wednesday">Wednesday</option>
+                          <option value="Thursday">Thursday</option>
+                          <option value="Friday">Friday</option>
+                          <option value="Saturday">Saturday</option>
+                          <option value="Sunday">Sunday</option>
+                        </select>
                       </div>
                     </td>
 
@@ -446,13 +483,28 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Assigned Company <span className="text-red-500">*</span></label>
-                <select value={company} onChange={(e) => setCompany(e.target.value as any)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary">
-                  <option value="SofaShine">SofaShine</option>
-                  <option value="CleanCruisers">CleanCruisers</option>
-                  <option value="Both">Both (Shared)</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Assigned Company <span className="text-red-500">*</span></label>
+                  <select value={company} onChange={(e) => setCompany(e.target.value as any)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary">
+                    <option value="SofaShine">SofaShine</option>
+                    <option value="CleanCruisers">CleanCruisers</option>
+                    <option value="Both">Both (Shared)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-amber-500 uppercase mb-1.5">🌴 Weekly Holiday (Off Day)</label>
+                  <select value={weeklyHoliday} onChange={(e) => setWeeklyHoliday(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-amber-500 font-semibold text-slate-800 dark:text-slate-100">
+                    <option value="None">None (No Off Day)</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -545,17 +597,31 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                 <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-3 outline-none focus:border-secondary" />
               </div>
 
+              <div>
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Phone Number</label>
+                <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary" />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Phone Number</label>
-                  <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary" />
-                </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Assigned Company</label>
                   <select value={company} onChange={(e) => setCompany(e.target.value as any)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-secondary">
                     <option value="SofaShine">SofaShine</option>
                     <option value="CleanCruisers">CleanCruisers</option>
                     <option value="Both">Both (Shared)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-amber-500 uppercase mb-1.5">🌴 Weekly Holiday (Off Day)</label>
+                  <select value={weeklyHoliday} onChange={(e) => setWeeklyHoliday(e.target.value)} className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 outline-none focus:border-amber-500 font-semibold text-slate-800 dark:text-slate-100">
+                    <option value="None">None (No Off Day)</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
                   </select>
                 </div>
               </div>
@@ -719,6 +785,12 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
                   <div className="flex items-center space-x-2">
                     <CreditCard className="h-4 w-4 text-slate-400" />
                     <span>Aadhaar: {selectedWorkerDetails.worker.aadhaarNumber || 'Not Saved'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-amber-500 font-bold">🌴</span>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      Weekly Holiday: {selectedWorkerDetails.worker.weeklyHoliday && selectedWorkerDetails.worker.weeklyHoliday !== 'None' ? selectedWorkerDetails.worker.weeklyHoliday : 'No Off Day (Full Week)'}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-4 w-4 text-slate-400" />

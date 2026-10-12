@@ -23,6 +23,34 @@ export const connectDB = async () => {
     } catch (migErr) {
       console.error('[Migration] Failed to migrate daily salaries:', migErr);
     }
+
+    // Auto-populate default weekly holidays for Rohit, Manish, Arun, Vidyanchal, Rahul
+    try {
+      const defaultHolidays: { [key: string]: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday' } = {
+        'rohit': 'Friday',
+        'manish': 'Tuesday',
+        'arun': 'Thursday',
+        'vidyanchal': 'Wednesday',
+        'rahul': 'Monday'
+      };
+
+      const workers = await User.find({ role: 'worker' });
+      for (const worker of workers) {
+        const lowerName = (worker.name || '').toLowerCase().trim();
+        for (const [key, holiday] of Object.entries(defaultHolidays)) {
+          if (lowerName.includes(key)) {
+            if (!worker.weeklyHoliday || worker.weeklyHoliday === 'None') {
+              worker.weeklyHoliday = holiday;
+              await worker.save();
+              console.log(`[Migration] Set default weekly holiday for ${worker.name} -> ${holiday}`);
+            }
+            break;
+          }
+        }
+      }
+    } catch (holidayMigErr) {
+      console.error('[Migration] Failed to migrate default weekly holidays:', holidayMigErr);
+    }
   } catch (error) {
     console.error(`Database Connection Error: ${error}`);
     process.exit(1);

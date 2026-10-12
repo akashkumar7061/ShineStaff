@@ -14,6 +14,7 @@ export interface IUser extends Document {
   dailySalary: number;
   monthlySalary: number;
   status: 'active' | 'inactive';
+  weeklyHoliday?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday' | 'None';
   currentLocation?: {
     lat: number;
     lng: number;
@@ -47,6 +48,11 @@ const UserSchema = new Schema<IUser>({
   dailySalary: { type: Number, default: 0 },
   monthlySalary: { type: Number, default: 0 },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  weeklyHoliday: { 
+    type: String, 
+    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'None'], 
+    default: 'None' 
+  },
   currentLocation: {
     lat: { type: Number },
     lng: { type: Number }
