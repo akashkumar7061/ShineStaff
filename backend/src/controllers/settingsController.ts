@@ -25,6 +25,7 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
     lateTimeGraceMins,
     halfDayThresholdHours,
     adminEmailForAlerts,
+    adminAlertPhone,
     googleMapsApiKey
   } = req.body;
 
@@ -45,6 +46,9 @@ export const updateSettings = async (req: AuthRequest, res: Response) => {
     settings.lateTimeGraceMins = lateTimeGraceMins !== undefined ? Number(lateTimeGraceMins) : settings.lateTimeGraceMins;
     settings.halfDayThresholdHours = halfDayThresholdHours !== undefined ? Number(halfDayThresholdHours) : settings.halfDayThresholdHours;
     settings.adminEmailForAlerts = adminEmailForAlerts !== undefined ? adminEmailForAlerts : settings.adminEmailForAlerts;
+    if (adminAlertPhone !== undefined) {
+      settings.adminAlertPhone = adminAlertPhone.trim();
+    }
     if (googleMapsApiKey !== undefined) {
       settings.googleMapsApiKey = googleMapsApiKey.trim();
     }

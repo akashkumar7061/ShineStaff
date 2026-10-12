@@ -35,6 +35,7 @@ import draftRoutes from './routes/draftRoutes';
 import qrRoutes from './routes/qrRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
+import materialRoutes from './routes/materialRoutes';
 import { backfillCustomerContacts } from './utils/whatsappHelper';
 import { runScheduledTasks, simulateWhatsAppStatusUpdates } from './utils/whatsappScheduler';
 import QRCode from './models/QRCode';
@@ -131,6 +132,7 @@ app.use('/api/drafts', draftRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/material-requests', materialRoutes);
 
 // Base route
 app.get('/', (req, res) => {

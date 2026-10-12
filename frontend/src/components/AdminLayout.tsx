@@ -27,7 +27,8 @@ import {
   CreditCard,
   MessageSquare,
   Database,
-  ShieldCheck
+  ShieldCheck,
+  Package
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -58,6 +59,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { name: "Attendance", path: '/admin/attendance-logs', icon: CheckCircle2, color: 'text-emerald-500' },
     { name: 'Live GPS Tracking', path: '/admin/map-tracking', icon: Map, color: 'text-violet-500' },
     { name: 'Worker Management', path: '/admin/workers', icon: Users, color: 'text-indigo-500' },
+    { name: '📦 Material Requests', path: '/admin/materials', icon: Package, color: 'text-amber-500' },
     { name: '📱 WhatsApp & Engagement', path: '/admin/whatsapp-engagement', icon: MessageSquare, color: 'text-emerald-600' },
     { name: 'Payment Collection', path: '/admin/payments', icon: Wallet, color: 'text-emerald-500' },
     { name: 'Payroll & Salary', path: '/admin/salary', icon: DollarSign, color: 'text-teal-500' },

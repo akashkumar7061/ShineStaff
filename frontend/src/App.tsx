@@ -16,6 +16,7 @@ const WorkerLeaves = lazy(() => import('./pages/WorkerLeaves'));
 const WorkerSalary = lazy(() => import('./pages/WorkerSalary'));
 const WorkerProfile = lazy(() => import('./pages/WorkerProfile'));
 const WorkerQR = lazy(() => import('./pages/WorkerQR'));
+const WorkerMaterials = lazy(() => import('./pages/WorkerMaterials'));
 
 import WorkerLayout from './components/WorkerLayout';
 import AdminLayout from './components/AdminLayout';
@@ -24,6 +25,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminWorkers = lazy(() => import('./pages/AdminWorkers'));
 const AdminJobs = lazy(() => import('./pages/AdminJobs'));
 const AdminWhatsAppEngagement = lazy(() => import('./pages/AdminWhatsAppEngagement'));
+const AdminMaterials = lazy(() => import('./pages/AdminMaterials'));
 const AdminSalary = lazy(() => import('./pages/AdminSalary'));
 const AdminReports = lazy(() => import('./pages/AdminReports'));
 const AdminDatabaseBackup = lazy(() => import('./pages/AdminDatabaseBackup'));
@@ -518,6 +520,16 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/worker/materials"
+                element={
+                  <ProtectedRoute allowedRole="worker">
+                    <WorkerPortalWrapper>
+                      <WorkerMaterials />
+                    </WorkerPortalWrapper>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin Routes (Desktop Management Panel) */}
               <Route
@@ -619,6 +631,16 @@ const App: React.FC = () => {
                   <ProtectedRoute allowedRole="admin">
                     <AdminRouteWrapper>
                       <AdminWhatsAppEngagement />
+                    </AdminRouteWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/materials"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminRouteWrapper>
+                      <AdminMaterials companyFilter="All" />
                     </AdminRouteWrapper>
                   </ProtectedRoute>
                 }

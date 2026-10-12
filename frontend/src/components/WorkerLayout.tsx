@@ -18,7 +18,8 @@ import {
   Sparkles,
   QrCode,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Package
 } from 'lucide-react';
 
 interface WorkerLayoutProps {
@@ -29,6 +30,7 @@ const menuItems = [
   { name: 'Home Dashboard', path: '/worker', icon: Clock, color: 'text-secondary' },
   { name: 'Cleanups', path: '/worker/jobs', icon: Compass, color: 'text-amber-500' },
   { name: 'Payment QR Code', path: '/worker/qr', icon: QrCode, color: 'text-emerald-500' },
+  { name: '📦 Material Request', path: '/worker/materials', icon: Package, color: 'text-amber-500' },
   { name: 'Leave Tracker', path: '/worker/leaves', icon: ClipboardList, color: 'text-rose-500' },
   { name: 'Salary & Payouts', path: '/worker/salary', icon: DollarSign, color: 'text-emerald-500' },
   { name: 'My Attendance', path: '/worker/attendance', icon: Calendar, color: 'text-teal-500' },

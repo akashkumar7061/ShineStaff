@@ -7,7 +7,9 @@ import {
   Sparkles,
   Upload,
   Coins,
-  MapPin
+  MapPin,
+  MessageSquare,
+  Phone
 } from 'lucide-react';
 
 const AdminSettings: React.FC = () => {
@@ -19,6 +21,7 @@ const AdminSettings: React.FC = () => {
   const [lateTimeGraceMins, setLateTimeGraceMins] = useState('');
   const [halfDayThresholdHours, setHalfDayThresholdHours] = useState('');
   const [adminEmailForAlerts, setAdminEmailForAlerts] = useState('');
+  const [adminAlertPhone, setAdminAlertPhone] = useState('');
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [testingApiKey, setTestingApiKey] = useState(false);
   const [apiTestResult, setApiTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -36,6 +39,7 @@ const AdminSettings: React.FC = () => {
       setLateTimeGraceMins(s.lateTimeGraceMins ? s.lateTimeGraceMins.toString() : '15');
       setHalfDayThresholdHours(s.halfDayThresholdHours ? s.halfDayThresholdHours.toString() : '4');
       setAdminEmailForAlerts(s.adminEmailForAlerts || '');
+      setAdminAlertPhone(s.adminAlertPhone || '');
       setGoogleMapsApiKey(s.googleMapsApiKey || '');
       setSofaLogo(s.sofaShineLogo || '');
       setCruiserLogo(s.cleanCruisersLogo || '');
@@ -94,6 +98,7 @@ const AdminSettings: React.FC = () => {
         lateTimeGraceMins: Number(lateTimeGraceMins),
         halfDayThresholdHours: Number(halfDayThresholdHours),
         adminEmailForAlerts,
+        adminAlertPhone,
         googleMapsApiKey,
         sofaShineLogoDataUrl: sofaLogo,
         cleanCruisersLogoDataUrl: cruiserLogo
@@ -128,7 +133,7 @@ const AdminSettings: React.FC = () => {
               <h3 className="text-sm font-bold uppercase tracking-wider">Payroll & Fuel Rules</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Fuel Allowance Rate (₹ / KM)</label>
                 <input
@@ -141,13 +146,27 @@ const AdminSettings: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Admin Email for Notifications</label>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Admin Email for Alerts</label>
                 <input
                   type="email"
                   value={adminEmailForAlerts}
                   onChange={(e) => setAdminEmailForAlerts(e.target.value)}
                   placeholder="alerts@shinestaff.com"
                   className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-855 bg-slate-50/50 dark:bg-slate-955/50 p-3 outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-1.5 flex items-center space-x-1">
+                  <MessageSquare className="h-3 w-3" />
+                  <span>Admin WhatsApp for Alerts</span>
+                </label>
+                <input
+                  type="text"
+                  value={adminAlertPhone}
+                  onChange={(e) => setAdminAlertPhone(e.target.value)}
+                  placeholder="e.g. 919876543210"
+                  className="w-full text-xs rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/20 p-3 outline-none focus:border-emerald-500 font-semibold text-slate-800 dark:text-slate-100"
                 />
               </div>
             </div>

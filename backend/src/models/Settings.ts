@@ -8,6 +8,7 @@ export interface ISettings extends Document {
   lateTimeGraceMins: number; // grace period in minutes (e.g. 15)
   halfDayThresholdHours: number; // hours after which work is considered full day (otherwise half day)
   adminEmailForAlerts: string;
+  adminAlertPhone?: string; // WhatsApp number to receive material & emergency alerts
   qrSecurityPassword?: string;
   googleMapsApiKey?: string;
 }
@@ -20,6 +21,7 @@ const SettingsSchema = new Schema<ISettings>({
   lateTimeGraceMins: { type: Number, default: 15 }, // 15 mins
   halfDayThresholdHours: { type: Number, default: 4 },
   adminEmailForAlerts: { type: String, default: '' },
+  adminAlertPhone: { type: String, default: '' },
   qrSecurityPassword: { type: String, default: 'admin123' },
   googleMapsApiKey: { type: String, default: '' }
 }, {
