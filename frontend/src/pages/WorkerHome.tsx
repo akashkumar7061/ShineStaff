@@ -265,7 +265,16 @@ const WorkerHome: React.FC = () => {
                         {jobsSummary.active.company}
                       </span>
                       <h4 className="text-base font-bold text-slate-800 dark:text-white truncate">{jobsSummary.active.title}</h4>
-                      <p className="text-xs text-slate-405 mt-1 truncate">📍 {jobsSummary.active.address}</p>
+                      <a
+                        href={getJobMapUrl(jobsSummary.active)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => openJobLocationInMaps(jobsSummary.active, e)}
+                        className="text-xs text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 mt-1 truncate block hover:underline cursor-pointer"
+                        title="Click to open location in Google Maps"
+                      >
+                        📍 {jobsSummary.active.address}
+                      </a>
                       <p className="text-xs text-slate-405 mt-1">
                         👤 Client: {jobsSummary.active.clientName} (
                         <a
@@ -328,10 +337,11 @@ const WorkerHome: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => openJobLocationInMaps(jobsSummary.active, e)}
-                      className="flex-1 flex items-center justify-center space-x-1.5 rounded-custom border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 py-3.5 text-xs font-bold transition-colors cursor-pointer"
+                      className="flex-1 flex items-center justify-center space-x-1.5 rounded-custom border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 py-3.5 text-xs font-bold transition-colors cursor-pointer shadow-xs active:scale-95"
+                      title="Open location directly in Google Maps"
                     >
-                      <MapPin className="h-3.5 w-3.5 text-amber-500" />
-                      <span>Directions</span>
+                      <MapPin className="h-3.5 w-3.5 text-blue-600 fill-blue-600" />
+                      <span>Google Maps (Rasta)</span>
                     </a>
 
                     <button

@@ -2,85 +2,110 @@
  * Utility functions for resolving and opening Google Maps locations accurately across devices.
  */
 
+export const extractMapUrl = (text?: string): string | null => {
+  if (!text) return null;
+  const clean = text.trim();
+
+  // Direct URL starting with http:// or https://
+  if (/^https?:\/\//i.test(clean)) {
+    return clean;
+  }
+
+  // URL without protocol (e.g. maps.app.goo.gl/xyz or goo.gl/maps/xyz or maps.google.com/...)
+  if (/^(?:www\.)?(?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|google\.com\/maps)/i.test(clean)) {
+    return `https://${clean}`;
+  }
+
+  // Embedded URL inside text (e.g. "Near ABC Hospital https://maps.app.goo.gl/xyz")
+  const urlMatch = clean.match(/(https?:\/\/[^\s]+)/i);
+  if (urlMatch) {
+    return urlMatch[1].replace(/[),.;]+$/, '');
+  }
+
+  // Embedded URL without https inside text (e.g. "Near ABC Hospital maps.app.goo.gl/xyz")
+  const shortMatch = clean.match(/((?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com)[^\s]+)/i);
+  if (shortMatch) {
+    return `https://${shortMatch[1].replace(/[),.;]+$/, '')}`;
+  }
+
+  return null;
+};
+
 export const getJobMapUrl = (job: any): string => {
   if (!job) return 'https://maps.google.com';
 
   const locName = (job.locationName || '').trim();
   const addr = (job.address || '').trim();
 
-  // 1. If locationName is a direct URL (e.g. https://maps.app.goo.gl/... or https://goo.gl/maps/...)
-  if (locName.startsWith('http://') || locName.startsWith('https://')) {
-    return locName;
+  // 1. Check if locationName contains an exact Google Maps URL
+  const urlFromLoc = extractMapUrl(locName);
+  if (urlFromLoc) {
+    return urlFromLoc;
   }
 
-  // 2. If address itself is a direct URL
-  if (addr.startsWith('http://') || addr.startsWith('https://')) {
-    return addr;
+  // 2. Check if address contains an exact Google Maps URL
+  const urlFromAddr = extractMapUrl(addr);
+  if (urlFromAddr) {
+    return urlFromAddr;
   }
 
-  // 3. If exact GPS coordinates exist on job.location
+  // 3. Exact GPS coordinates on job.location
   if (
     job.location &&
     typeof job.location.lat === 'number' &&
     typeof job.location.lng === 'number' &&
     !isNaN(job.location.lat) &&
-    !isNaN(job.location.lng)
+    !isNaN(job.location.lng) &&
+    (job.location.lat !== 0 || job.location.lng !== 0)
   ) {
-    return `https://www.google.com/maps/search/?api=1&query=${job.location.lat},${job.location.lng}`;
+    return `https://maps.google.com/?q=${job.location.lat},${job.location.lng}`;
   }
 
-  // 4. If locationName contains coordinates (e.g. "28.5355, 77.3910" or "28.5355,77.3910")
+  // 4. Coordinates inside locationName (e.g. "28.5355, 77.3910")
   const coordRegex = /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/;
   const locMatch = locName.match(coordRegex);
   if (locMatch) {
-    return `https://www.google.com/maps/search/?api=1&query=${locMatch[1]},${locMatch[2]}`;
+    return `https://maps.google.com/?q=${locMatch[1]},${locMatch[2]}`;
   }
 
-  // 5. If address contains coordinates
+  // 5. Coordinates inside address
   const addrMatch = addr.match(coordRegex);
   if (addrMatch) {
-    return `https://www.google.com/maps/search/?api=1&query=${addrMatch[1]},${addrMatch[2]}`;
+    return `https://maps.google.com/?q=${addrMatch[1]},${addrMatch[2]}`;
   }
 
-  // 6. Check if locName or addr contains an embedded URL (e.g. "Near ABC Hospital https://maps.app.goo.gl/xyz")
-  const urlRegex = /(https?:\/\/[^\s]+)/i;
-  const embeddedUrlInLoc = locName.match(urlRegex);
-  if (embeddedUrlInLoc) {
-    return embeddedUrlInLoc[1];
-  }
-  const embeddedUrlInAddr = addr.match(urlRegex);
-  if (embeddedUrlInAddr) {
-    return embeddedUrlInAddr[1];
-  }
-
-  // 7. If text address + landmark
+  // 6. Address + Landmark text query
   if (addr && locName && locName !== addr) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${addr}, ${locName}`)}`;
+    return `https://maps.google.com/?q=${encodeURIComponent(`${addr}, ${locName}`)}`;
   }
 
   if (addr) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
+    return `https://maps.google.com/?q=${encodeURIComponent(addr)}`;
   }
 
   if (locName) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locName)}`;
+    return `https://maps.google.com/?q=${encodeURIComponent(locName)}`;
   }
 
   return 'https://maps.google.com';
 };
 
 /**
- * Safely opens Google Maps on mobile / desktop browsers, preventing pop-up blocks.
+ * Safely opens Google Maps on mobile and desktop devices.
  */
-export const openJobLocationInMaps = (job: any, e?: React.MouseEvent) => {
+export const openJobLocationInMaps = (job: any, e?: React.MouseEvent | React.TouchEvent) => {
   if (e) {
     e.stopPropagation();
+    // If clicked on an <a> element, let native browser navigation take over smoothly
+    const target = (e.currentTarget || e.target) as HTMLElement | null;
+    if (target?.tagName?.toLowerCase() === 'a' || target?.closest('a')) {
+      return;
+    }
   }
+
   const url = getJobMapUrl(job);
   if (!url) return;
 
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!win || win.closed || typeof win.closed === 'undefined') {
-    window.location.href = url;
-  }
+  // Open in an external browsing context so mobile OS intercepts Google Maps app
+  window.open(url, '_blank', 'noopener,noreferrer');
 };

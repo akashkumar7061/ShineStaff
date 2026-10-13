@@ -796,28 +796,32 @@ const WorkerJobs: React.FC = () => {
 
                           {/* Address & GPS */}
                           <div className="space-y-1 text-xs">
-                            <div className="flex items-start gap-1.5 text-slate-650 dark:text-slate-300">
-                              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
-                              <p className="line-clamp-2 text-xs font-medium leading-relaxed">
+                            <a
+                              href={getJobMapUrl(job)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => openJobLocationInMaps(job, e)}
+                              className="flex items-start gap-1.5 text-slate-650 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 group cursor-pointer"
+                              title="Click to open in Google Maps"
+                            >
+                              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                              <p className="line-clamp-2 text-xs font-medium leading-relaxed group-hover:underline">
                                 {job.address}
                               </p>
-                            </div>
+                            </a>
                             {job.locationName && (
                               <div className="pl-5 text-[10px] font-bold text-violet-500 dark:text-violet-400 truncate">
-                                {job.locationName.startsWith('http') ? (
-                                  <a
-                                    href={job.locationName}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="hover:underline flex items-center gap-1"
-                                  >
-                                    <span>GPS Link</span>
-                                    <Navigation className="h-2.5 w-2.5 inline" />
-                                  </a>
-                                ) : (
+                                <a
+                                  href={getJobMapUrl(job)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => openJobLocationInMaps(job, e)}
+                                  className="hover:underline flex items-center gap-1 cursor-pointer"
+                                  title="Open location in Google Maps"
+                                >
                                   <span>GPS / Landmark: {job.locationName}</span>
-                                )}
+                                  <Navigation className="h-2.5 w-2.5 inline" />
+                                </a>
                               </div>
                             )}
                           </div>
@@ -829,10 +833,11 @@ const WorkerJobs: React.FC = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => openJobLocationInMaps(job, e)}
-                              className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
+                              className="flex-1 py-2.5 px-3 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-xs cursor-pointer active:scale-95"
+                              title="Open directly in Google Maps"
                             >
-                              <Navigation className="h-3.5 w-3.5 text-secondary" />
-                              <span>Maps</span>
+                              <Navigation className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 fill-blue-600 dark:fill-blue-400" />
+                              <span>Google Maps</span>
                             </a>
 
                             <button
@@ -1114,22 +1119,36 @@ const WorkerJobs: React.FC = () => {
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
                         📍 Client Address & Location:
                       </span>
-                      <p className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm leading-snug break-words">
+                      <a
+                        href={getJobMapUrl(selectedJob)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => openJobLocationInMaps(selectedJob, e)}
+                        className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm leading-snug break-words hover:text-blue-600 dark:hover:text-blue-400 hover:underline block cursor-pointer"
+                        title="Click to open location in Google Maps"
+                      >
                         {selectedJob.address && !selectedJob.address.startsWith('http')
                           ? selectedJob.address
                           : selectedJob.locationName && !selectedJob.locationName.startsWith('http')
                           ? selectedJob.locationName
                           : 'Location provided in GPS link below'}
-                      </p>
+                      </a>
                       
                       {/* Landmark or GPS notes if separate */}
                       {selectedJob.locationName &&
                         !selectedJob.locationName.startsWith('http') &&
                         selectedJob.locationName !== selectedJob.address && (
-                          <div className="mt-1.5 text-[11px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-2 py-1 rounded-lg inline-flex items-center space-x-1">
+                          <a
+                            href={getJobMapUrl(selectedJob)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => openJobLocationInMaps(selectedJob, e)}
+                            className="mt-1.5 text-[11px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 hover:bg-violet-500/20 px-2 py-1 rounded-lg inline-flex items-center space-x-1 cursor-pointer"
+                            title="Open landmark in Google Maps"
+                          >
                             <span>🏛️ Landmark:</span>
                             <span>{selectedJob.locationName}</span>
-                          </div>
+                          </a>
                         )}
                     </div>
 
@@ -1154,9 +1173,10 @@ const WorkerJobs: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => openJobLocationInMaps(selectedJob, e)}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center space-x-2 transition-all active:scale-95 cursor-pointer"
+                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-500/25 flex items-center justify-center space-x-2 transition-all active:scale-95 cursor-pointer"
+                    title="Open directly in Google Maps application"
                   >
-                    <Navigation className="h-4 w-4" />
+                    <Navigation className="h-4 w-4 fill-white text-white" />
                     <span>Open in Google Maps (Google Maps me Rasta Dekhein)</span>
                   </a>
                 </div>

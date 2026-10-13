@@ -1762,6 +1762,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         text += `⏰ Slot: ${j.timeSlot}\n`;
         text += `👤 Client: ${j.clientName} (${j.clientPhone})\n`;
         text += `📍 Address: ${j.address}\n`;
+        text += `🗺️ Google Map: ${getGridMapLinkUrl(j)}\n`;
         text += `💵 Amount: ₹${j.price}\n\n`;
       });
     }
