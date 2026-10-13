@@ -11,6 +11,8 @@ export interface IMaterialRequest extends Document {
   items: IMaterialItem[];
   urgency: 'Normal' | 'Urgent' | 'Critical';
   reason?: string;
+  neededByDate?: string;
+  neededBy?: Date;
   jobId?: mongoose.Types.ObjectId;
   status: 'pending' | 'approved' | 'dispatched' | 'completed' | 'rejected';
   adminRemarks?: string;
@@ -29,6 +31,8 @@ const MaterialRequestSchema = new Schema<IMaterialRequest>({
   ],
   urgency: { type: String, enum: ['Normal', 'Urgent', 'Critical'], default: 'Normal' },
   reason: { type: String, default: '' },
+  neededByDate: { type: String, default: '' },
+  neededBy: { type: Date },
   jobId: { type: Schema.Types.ObjectId, ref: 'Job' },
   status: {
     type: String,

@@ -27,7 +27,10 @@ import {
   ArrowLeft,
   Package,
   Send,
-  Sparkles
+  Sparkles,
+  Edit3,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -41,6 +44,15 @@ const getTodayString = () => {
 const getTomorrowString = () => {
   const d = new Date();
   d.setDate(d.getDate() + 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getInTwoDaysString = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -111,47 +123,81 @@ const WorkerJobs: React.FC = () => {
 
   // Quick Material Request modal state
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
-  const [materialItemName, setMaterialItemName] = useState('');
-  const [materialQty, setMaterialQty] = useState('1 Unit');
+  const [materialCatalog, setMaterialCatalog] = useState<any[]>([]);
+  const [quickMaterialItems, setQuickMaterialItems] = useState<{ selectedCatalog: string; customName: string; quantity: string }[]>([
+    { selectedCatalog: '', customName: '', quantity: '1 Unit' }
+  ]);
+  const [materialNeededByDate, setMaterialNeededByDate] = useState<string>(getTodayString());
   const [materialUrgency, setMaterialUrgency] = useState<'Normal' | 'Urgent' | 'Critical'>('Normal');
   const [materialReason, setMaterialReason] = useState('');
   const [submittingMaterial, setSubmittingMaterial] = useState(false);
 
-  const QUICK_MATERIAL_PRESETS = [
-    { label: '🧴 Sofa Shampoo (5L)', name: 'Fabric & Sofa Shampoo (5L)', defaultQty: '1 Can' },
-    { label: '✨ Stain Remover', name: 'Stain Remover Liquid', defaultQty: '1 Bottle' },
-    { label: '🧽 Microfiber Cloths', name: 'Microfiber Cleaning Cloths (Pack of 5)', defaultQty: '1 Pack' },
-    { label: '🧹 Scrubbing Brush', name: 'Heavy Duty Scrubbing Brush', defaultQty: '1 Pc' },
-    { label: '🧤 Safety Gloves', name: 'Rubber Safety Gloves', defaultQty: '1 Pair' },
-    { label: '⚡ Foam Booster', name: 'Foam Cleaning Booster', defaultQty: '1 Bottle' },
-    { label: '🌪️ Vacuum Filter', name: 'Vacuum Extraction Filter', defaultQty: '1 Pc' },
-    { label: '🌸 Fragrance Mist', name: 'Disinfectant & Fragrance Mist', defaultQty: '1 Can' }
-  ];
+  useEffect(() => {
+    if (materialModalOpen && materialCatalog.length === 0) {
+      api.get('/material-requests/catalog')
+        .then(res => setMaterialCatalog(res.data))
+        .catch(err => console.error('Error fetching catalog:', err));
+    }
+  }, [materialModalOpen]);
+
+  const handleAddQuickMaterialItem = () => {
+    setQuickMaterialItems([
+      ...quickMaterialItems,
+      { selectedCatalog: '', customName: '', quantity: '1 Unit' }
+    ]);
+  };
+
+  const handleRemoveQuickMaterialItem = (index: number) => {
+    if (quickMaterialItems.length <= 1) return;
+    setQuickMaterialItems(quickMaterialItems.filter((_, idx) => idx !== index));
+  };
+
+  const handleQuickMaterialItemChange = (index: number, field: 'selectedCatalog' | 'customName' | 'quantity', val: string) => {
+    const updated = [...quickMaterialItems];
+    updated[index][field] = val;
+
+    if (field === 'selectedCatalog' && val && val !== '__CUSTOM__') {
+      const found = materialCatalog.find(c => c.name === val);
+      if (found && found.defaultUnit && updated[index].quantity === '1 Unit') {
+        updated[index].quantity = found.defaultUnit;
+      }
+    }
+
+    setQuickMaterialItems(updated);
+  };
 
   const handleQuickMaterialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!materialItemName.trim()) {
-      alert('Please select or enter the material/chemical name.');
+    const validItems = quickMaterialItems
+      .map(it => {
+        const itemName = it.selectedCatalog === '__CUSTOM__' ? it.customName.trim() : it.selectedCatalog.trim();
+        return { itemName, quantity: it.quantity.trim() || '1 Unit' };
+      })
+      .filter(it => it.itemName !== '');
+
+    if (validItems.length === 0) {
+      alert('Kripya kam se kam ek material select karein ya likhein.');
       return;
     }
 
     setSubmittingMaterial(true);
     try {
       const res = await api.post('/material-requests/request', {
-        items: [{ itemName: materialItemName.trim(), quantity: materialQty }],
+        items: validItems,
         urgency: materialUrgency,
+        neededByDate: materialNeededByDate,
         reason: materialReason.trim()
       });
 
-      alert('Material request submitted to Admin successfully!');
+      alert('Material request Admin ko bhej di gayi hai!');
       setMaterialModalOpen(false);
-      setMaterialItemName('');
-      setMaterialQty('1 Unit');
+      setQuickMaterialItems([{ selectedCatalog: '', customName: '', quantity: '1 Unit' }]);
+      setMaterialNeededByDate(getTodayString());
       setMaterialUrgency('Normal');
       setMaterialReason('');
 
       if (res.data?.directWaUrl) {
-        if (window.confirm('Request logged! Would you like to also open WhatsApp to notify Admin instantly?')) {
+        if (window.confirm('Request submit ho gayi! Kya aap Admin ko instant WhatsApp message bhi bhejna chahte hain?')) {
           window.open(res.data.directWaUrl, '_blank');
         }
       }
@@ -1556,85 +1602,12 @@ const WorkerJobs: React.FC = () => {
             </div>
 
             {/* Form Body */}
-            <form onSubmit={handleQuickMaterialSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
-              {/* Preset Chips */}
-              <div className="space-y-1.5 text-left">
+            <form onSubmit={handleQuickMaterialSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs flex-1 text-left">
+              
+              {/* Urgency selection */}
+              <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  Quick Select Material (1-Tap):
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {QUICK_MATERIAL_PRESETS.map((preset) => {
-                    const isSelected = materialItemName === preset.name;
-                    return (
-                      <button
-                        type="button"
-                        key={preset.name}
-                        onClick={() => {
-                          setMaterialItemName(preset.name);
-                          setMaterialQty(preset.defaultQty);
-                        }}
-                        className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all active:scale-95 cursor-pointer ${
-                          isSelected
-                            ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                            : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-amber-500/50'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Material Item Name Input */}
-              <div className="space-y-1 text-left">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  Material / Chemical Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Fabric & Sofa Shampoo, Microfiber Cloths..."
-                  value={materialItemName}
-                  onChange={(e) => setMaterialItemName(e.target.value)}
-                  className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
-                />
-              </div>
-
-              {/* Quantity Selection */}
-              <div className="space-y-1.5 text-left">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  Quantity
-                </label>
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {['1 Unit', '2 Units', '5L Can', '1 Pack (5 Pcs)', '2 Packs'].map((q) => (
-                    <button
-                      type="button"
-                      key={q}
-                      onClick={() => setMaterialQty(q)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
-                        materialQty === q
-                          ? 'bg-secondary text-white border-secondary'
-                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                      }`}
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="text"
-                  placeholder="Or custom quantity..."
-                  value={materialQty}
-                  onChange={(e) => setMaterialQty(e.target.value)}
-                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
-                />
-              </div>
-
-              {/* Urgency Selection */}
-              <div className="space-y-1 text-left">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  Urgency Level
+                  Priority / Urgency
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['Normal', 'Urgent', 'Critical'] as const).map((level) => (
@@ -1642,13 +1615,13 @@ const WorkerJobs: React.FC = () => {
                       type="button"
                       key={level}
                       onClick={() => setMaterialUrgency(level)}
-                      className={`py-2 px-2 rounded-xl text-xs font-extrabold border transition-all active:scale-95 cursor-pointer ${
+                      className={`py-2 px-1 text-center rounded-xl text-xs font-extrabold border transition-all active:scale-95 cursor-pointer ${
                         materialUrgency === level
                           ? level === 'Critical'
-                            ? 'bg-rose-500 text-white border-rose-600 shadow'
+                            ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
                             : level === 'Urgent'
-                            ? 'bg-amber-500 text-white border-amber-600 shadow'
-                            : 'bg-teal-500 text-white border-teal-600 shadow'
+                            ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                            : 'bg-teal-500 text-white border-teal-600 shadow-sm'
                           : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}
                     >
@@ -1656,6 +1629,184 @@ const WorkerJobs: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Needed By Date (Kab tak chahiye?) */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center space-x-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Kab Tak Chahiye? (Needed By Date) *</span>
+                  </label>
+                </div>
+                
+                {/* Quick Date Chips */}
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMaterialNeededByDate(getTodayString())}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                      materialNeededByDate === getTodayString()
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    ⚡ Aaj Chahiye (Today)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMaterialNeededByDate(getTomorrowString())}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                      materialNeededByDate === getTomorrowString()
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    🌅 Kal Subah (Tomorrow)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMaterialNeededByDate(getInTwoDaysString())}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                      materialNeededByDate === getInTwoDaysString()
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    📅 2 Din Me
+                  </button>
+                </div>
+
+                <input
+                  type="date"
+                  required
+                  min={getTodayString()}
+                  value={materialNeededByDate}
+                  onChange={(e) => setMaterialNeededByDate(e.target.value)}
+                  className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-amber-500 dark:color-scheme-dark mt-1"
+                />
+              </div>
+
+              {/* Items List (Multiple Materials Support) */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    Materials List ({quickMaterialItems.length} item{quickMaterialItems.length > 1 ? 's' : ''}) <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddQuickMaterialItem}
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10.5px] font-extrabold border border-amber-500/30 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>+ Add Another</span>
+                  </button>
+                </div>
+
+                {quickMaterialItems.map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-slate-50 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800 rounded-2xl space-y-2.5 relative shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                        📦 Material #{idx + 1}
+                      </span>
+                      {quickMaterialItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveQuickMaterialItem(idx)}
+                          className="p-1 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                          title="Remove item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Material Select Dropdown */}
+                    <div className="space-y-1">
+                      <label className="block text-[9.5px] font-bold text-slate-450 uppercase">
+                        Select Material from Dropdown:
+                      </label>
+                      <select
+                        required
+                        value={it.selectedCatalog}
+                        onChange={(e) => handleQuickMaterialItemChange(idx, 'selectedCatalog', e.target.value)}
+                        className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                      >
+                        <option value="">-- Choose Material / Chemical --</option>
+                        {materialCatalog.map((c) => (
+                          <option key={c._id} value={c.name}>
+                            {c.name} {c.category ? `(${c.category})` : ''}
+                          </option>
+                        ))}
+                        <option value="__CUSTOM__">✍️ Other / Naya Saman (Dropdown me nahi hai toh yaha likhein)</option>
+                      </select>
+                    </div>
+
+                    {/* Custom Material Name Input if selected */}
+                    {it.selectedCatalog === '__CUSTOM__' && (
+                      <div className="space-y-1 animate-fade-in">
+                        <label className="block text-[9.5px] font-bold text-amber-600 dark:text-amber-400 uppercase flex items-center space-x-1">
+                          <Edit3 className="h-3 w-3" />
+                          <span>Custom Material Name Likhein:</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Special Stain Remover, Car Wax 500ml..."
+                          value={it.customName}
+                          onChange={(e) => handleQuickMaterialItemChange(idx, 'customName', e.target.value)}
+                          className="w-full text-xs font-bold rounded-xl border border-amber-500/50 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* Quantity Row */}
+                    <div className="space-y-1">
+                      <label className="block text-[9.5px] font-bold text-slate-450 uppercase">
+                        Quantity (Apne Anusaar Likhein):
+                      </label>
+                      
+                      {/* Quantity Preset Chips */}
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {['1 Unit', '2 Units', '5L Can', '1 Pack', '2 Packs'].map((q) => (
+                          <button
+                            type="button"
+                            key={q}
+                            onClick={() => handleQuickMaterialItemChange(idx, 'quantity', q)}
+                            className={`px-2 py-0.5 rounded-md text-[9px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                              it.quantity === q
+                                ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                                : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'
+                            }`}
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 2 Cans, 5 Litres, 10 Cloths, 1 Pair..."
+                        value={it.quantity}
+                        onChange={(e) => handleQuickMaterialItemChange(idx, 'quantity', e.target.value)}
+                        className="w-full text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={handleAddQuickMaterialItem}
+                  className="w-full py-2 px-3 border border-dashed border-amber-500/40 hover:border-amber-500 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-extrabold flex items-center justify-center space-x-1 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>+ Ek Aur Material Add Karein</span>
+                </button>
               </div>
 
               {/* Optional Reason / Notes */}

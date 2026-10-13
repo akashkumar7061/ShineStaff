@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import MaterialRequest from '../models/MaterialRequest';
+import MaterialCatalog from '../models/MaterialCatalog';
 import User from '../models/User';
 import Settings from '../models/Settings';
 import { AuthRequest } from '../middleware/auth';
@@ -7,6 +8,136 @@ import { getIO } from '../index';
 import { logAudit } from '../utils/auditLog';
 import { sendWhatsAppMessage } from '../utils/whatsappHelper';
 
+const INITIAL_MATERIALS = [
+  { name: 'Fabric & Sofa Shampoo (5L)', category: 'Cleaning Chemical', defaultUnit: '5L Can' },
+  { name: 'Foam Cleaning Booster', category: 'Cleaning Chemical', defaultUnit: '1 Bottle' },
+  { name: 'Stain Remover Liquid', category: 'Cleaning Chemical', defaultUnit: '1 Bottle' },
+  { name: 'Microfiber Cleaning Cloths (Pack of 5)', category: 'Cleaning Tools', defaultUnit: '1 Pack' },
+  { name: 'Heavy Duty Scrubbing Brush', category: 'Cleaning Tools', defaultUnit: '1 Pc' },
+  { name: 'Soft Upholstery Brush', category: 'Cleaning Tools', defaultUnit: '1 Pc' },
+  { name: 'Vacuum Extraction Filter', category: 'Machine Parts', defaultUnit: '1 Pc' },
+  { name: 'Disinfectant & Fragrance Mist', category: 'Cleaning Chemical', defaultUnit: '1 Can' },
+  { name: 'Rubber Safety Gloves', category: 'Safety Equipment', defaultUnit: '1 Pair' },
+  { name: 'Extension Cable / Power Strip', category: 'Equipment', defaultUnit: '1 Pc' },
+  { name: 'Leather Conditioner Cream', category: 'Cleaning Chemical', defaultUnit: '1 Bottle' }
+];
+
+// Helper to seed initial materials if catalog is empty
+const ensureCatalogSeeded = async () => {
+  const count = await MaterialCatalog.countDocuments();
+  if (count === 0) {
+    await MaterialCatalog.insertMany(INITIAL_MATERIALS.map(m => ({ ...m, isActive: true })));
+  }
+};
+
+// GET /api/material-requests/catalog - Fetch active materials for dropdown (Worker & Admin)
+export const getMaterialCatalog = async (req: AuthRequest, res: Response) => {
+  try {
+    await ensureCatalogSeeded();
+    const catalog = await MaterialCatalog.find({ isActive: true }).sort({ name: 1 });
+    res.status(200).json(catalog);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to fetch material catalog', error: error.message });
+  }
+};
+
+// GET /api/material-requests/catalog/all - Fetch all materials for Admin management
+export const getAllCatalogAdmin = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  try {
+    await ensureCatalogSeeded();
+    const catalog = await MaterialCatalog.find().sort({ createdAt: -1 });
+    res.status(200).json(catalog);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to fetch catalog', error: error.message });
+  }
+};
+
+// POST /api/material-requests/catalog - Admin adds new material to catalog
+export const addCatalogItem = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  try {
+    const { name, category, defaultUnit, description } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Material name is required' });
+    }
+
+    const cleanName = name.trim();
+    const existing = await MaterialCatalog.findOne({
+      name: { $regex: new RegExp(`^${cleanName}$`, 'i') }
+    });
+
+    if (existing) {
+      if (!existing.isActive) {
+        existing.isActive = true;
+        if (category) existing.category = category.trim();
+        if (defaultUnit) existing.defaultUnit = defaultUnit.trim();
+        await existing.save();
+        return res.status(200).json({ message: 'Material reactivated in dropdown catalog', item: existing });
+      }
+      return res.status(400).json({ message: 'Material with this name already exists in catalog' });
+    }
+
+    const newItem = new MaterialCatalog({
+      name: cleanName,
+      category: category?.trim() || 'General Material',
+      defaultUnit: defaultUnit?.trim() || '1 Unit',
+      description: description?.trim() || '',
+      isActive: true,
+      createdBy: req.user?.id
+    });
+
+    await newItem.save();
+
+    logAudit(req, {
+      action: 'created',
+      entityType: 'MaterialCatalog',
+      entityId: newItem._id.toString(),
+      summary: `Added new material "${newItem.name}" to inventory catalog`
+    });
+
+    res.status(201).json({ message: 'Material added to catalog successfully', item: newItem });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to add material', error: error.message });
+  }
+};
+
+// DELETE /api/material-requests/catalog/:id - Admin removes or disables material
+export const deleteCatalogItem = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    const item = await MaterialCatalog.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: 'Material not found in catalog' });
+    }
+
+    await MaterialCatalog.findByIdAndDelete(id);
+
+    logAudit(req, {
+      action: 'deleted',
+      entityType: 'MaterialCatalog',
+      entityId: id,
+      summary: `Removed material "${item.name}" from catalog`
+    });
+
+    res.status(200).json({ message: `Material "${item.name}" removed from catalog` });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to remove material', error: error.message });
+  }
+};
+
+// GET /api/material-requests - List requests
 export const getMaterialRequests = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -40,15 +171,27 @@ export const getMaterialRequests = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// POST /api/material-requests/request - Worker submits multiple materials
 export const createMaterialRequest = async (req: AuthRequest, res: Response) => {
   if (!req.user || req.user.role !== 'worker') {
     return res.status(403).json({ message: 'Only workers can submit material requests' });
   }
 
-  const { items, urgency, reason, jobId } = req.body;
+  const { items, urgency, reason, neededByDate, jobId } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: 'Please specify at least one material/chemical item' });
+  }
+
+  const cleanItems = items
+    .filter((i: any) => i && i.itemName && i.itemName.trim())
+    .map((i: any) => ({
+      itemName: i.itemName.trim(),
+      quantity: i.quantity?.trim() || '1 Unit'
+    }));
+
+  if (cleanItems.length === 0) {
+    return res.status(400).json({ message: 'Please specify at least one valid material name' });
   }
 
   try {
@@ -60,12 +203,11 @@ export const createMaterialRequest = async (req: AuthRequest, res: Response) => 
     const materialRequest = new MaterialRequest({
       workerId: worker._id,
       company: worker.company || 'SofaShine',
-      items: items.map((i: any) => ({
-        itemName: i.itemName?.trim() || 'General Material',
-        quantity: i.quantity?.trim() || '1 Unit'
-      })),
+      items: cleanItems,
       urgency: urgency || 'Normal',
       reason: reason || '',
+      neededByDate: neededByDate || '',
+      neededBy: neededByDate ? new Date(neededByDate) : undefined,
       jobId: jobId || undefined,
       status: 'pending'
     });
@@ -74,15 +216,17 @@ export const createMaterialRequest = async (req: AuthRequest, res: Response) => 
 
     // Summary of requested items
     const itemsSummary = materialRequest.items
-      .map((it: any) => `• ${it.itemName} (${it.quantity})`)
+      .map((it: any) => `• ${it.itemName} (Qty: ${it.quantity})`)
       .join('\n');
+
+    const neededDateText = materialRequest.neededByDate ? `\n📅 *Needed By:* ${materialRequest.neededByDate}` : '';
 
     // 1. Socket.io Alert to Admin
     const io = getIO();
     if (io) {
       io.emit('adminNotification', {
         type: 'MATERIAL_REQUEST_SUBMITTED',
-        message: `📦 Material Request (${materialRequest.urgency}): ${worker.name} requested ${materialRequest.items.length} items.`
+        message: `📦 Material Request (${materialRequest.urgency}): ${worker.name} requested ${materialRequest.items.length} item(s).`
       });
     }
 
@@ -93,8 +237,8 @@ export const createMaterialRequest = async (req: AuthRequest, res: Response) => 
     let whatsappSent = false;
     if (adminPhone) {
       try {
-        const textMsg = `🚨 *ShineStaff Material Request Alert*\n\n👤 *Worker:* ${worker.name} (${worker.company})\n📞 *Phone:* ${worker.phone}\n⚡ *Urgency:* ${materialRequest.urgency}\n\n📦 *Items Requested:*\n${itemsSummary}${materialRequest.reason ? `\n\n📝 *Notes:* ${materialRequest.reason}` : ''}\n\n_Review and dispatch in ShineStaff Admin Panel._`;
-        
+        const textMsg = `🚨 *ShineStaff Material Request Alert*\n\n👤 *Worker:* ${worker.name} (${worker.company})\n📞 *Phone:* ${worker.phone}\n⚡ *Urgency:* ${materialRequest.urgency}${neededDateText}\n\n📦 *Items Requested:*\n${itemsSummary}${materialRequest.reason ? `\n\n📝 *Notes:* ${materialRequest.reason}` : ''}\n\n_Review and dispatch in ShineStaff Admin Panel._`;
+
         await sendWhatsAppMessage(
           adminPhone,
           textMsg,
@@ -109,9 +253,9 @@ export const createMaterialRequest = async (req: AuthRequest, res: Response) => 
       }
     }
 
-    // Also build direct WhatsApp URL for worker click-to-send
+    // Direct WhatsApp URL for worker click-to-send
     const directWaPhone = adminPhone ? adminPhone.replace(/\D/g, '') : '';
-    const directWaMessage = `Hello Admin, I have submitted a Material Request:\n\nWorker: ${worker.name} (${worker.company})\nUrgency: ${materialRequest.urgency}\n\nItems Needed:\n${itemsSummary}${materialRequest.reason ? `\n\nNotes: ${materialRequest.reason}` : ''}`;
+    const directWaMessage = `Hello Admin, I have submitted a Material Request:\n\nWorker: ${worker.name} (${worker.company})\nUrgency: ${materialRequest.urgency}${materialRequest.neededByDate ? `\nNeeded By: ${materialRequest.neededByDate}` : ''}\n\nItems Needed:\n${itemsSummary}${materialRequest.reason ? `\n\nNotes: ${materialRequest.reason}` : ''}`;
     const directWaUrl = directWaPhone
       ? `https://wa.me/${directWaPhone}?text=${encodeURIComponent(directWaMessage)}`
       : `https://wa.me/?text=${encodeURIComponent(directWaMessage)}`;
@@ -127,6 +271,7 @@ export const createMaterialRequest = async (req: AuthRequest, res: Response) => 
   }
 };
 
+// PUT /api/material-requests/:id/status - Admin updates request status
 export const updateMaterialRequestStatus = async (req: AuthRequest, res: Response) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Only admins can update material requests' });

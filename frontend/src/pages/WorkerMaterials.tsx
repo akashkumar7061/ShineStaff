@@ -1,38 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
-import { Package, Plus, Trash2, Send, MessageSquare, Clock, CheckCircle, AlertTriangle, XCircle, Info } from 'lucide-react';
+import {
+  Package,
+  Plus,
+  Trash2,
+  Send,
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Info,
+  Calendar,
+  Sparkles,
+  ChevronDown,
+  Edit3
+} from 'lucide-react';
 
-interface MaterialItem {
-  itemName: string;
+interface MaterialItemForm {
+  selectedCatalog: string; // Catalog item name or '__CUSTOM__'
+  customName: string;
   quantity: string;
 }
 
-const COMMON_MATERIALS = [
-  'Fabric & Sofa Shampoo (5L)',
-  'Foam Cleaning Booster',
-  'Stain Remover Liquid',
-  'Microfiber Cleaning Cloths (Pack of 5)',
-  'Heavy Duty Scrubbing Brush',
-  'Soft Upholstery Brush',
-  'Vacuum Extraction Filter',
-  'Disinfectant & Fragrance Mist',
-  'Rubber Safety Gloves',
-  'Extension Cable / Power Strip',
-  'Leather Conditioner Cream'
-];
+interface CatalogOption {
+  _id: string;
+  name: string;
+  category: string;
+  defaultUnit: string;
+}
+
+const getTodayString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getTomorrowString = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const year = tomorrow.getFullYear();
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+  const day = String(tomorrow.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getInTwoDaysString = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const WorkerMaterials: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Catalog loaded from server
+  const [catalog, setCatalog] = useState<CatalogOption[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+
   // Form states
-  const [items, setItems] = useState<MaterialItem[]>([
-    { itemName: '', quantity: '1 Unit' }
+  const [items, setItems] = useState<MaterialItemForm[]>([
+    { selectedCatalog: '', customName: '', quantity: '1 Unit' }
   ]);
   const [urgency, setUrgency] = useState<'Normal' | 'Urgent' | 'Critical'>('Normal');
+  const [neededByDate, setNeededByDate] = useState<string>(getTodayString());
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [lastSubmission, setLastSubmission] = useState<any>(null);
+
+  const fetchCatalog = async () => {
+    setCatalogLoading(true);
+    try {
+      const res = await api.get('/material-requests/catalog');
+      setCatalog(res.data);
+    } catch (err) {
+      console.error('Failed to fetch material catalog:', err);
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -47,11 +99,15 @@ const WorkerMaterials: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchCatalog();
     fetchRequests();
   }, []);
 
   const handleAddItem = () => {
-    setItems([...items, { itemName: '', quantity: '1 Unit' }]);
+    setItems([
+      ...items,
+      { selectedCatalog: '', customName: '', quantity: '1 Unit' }
+    ]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -59,18 +115,37 @@ const WorkerMaterials: React.FC = () => {
     setItems(items.filter((_, idx) => idx !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof MaterialItem, val: string) => {
+  const handleItemChange = (index: number, field: keyof MaterialItemForm, val: string) => {
     const updated = [...items];
     updated[index][field] = val;
+
+    // If worker selects a catalog item that has a default unit, pre-fill quantity if default
+    if (field === 'selectedCatalog' && val && val !== '__CUSTOM__') {
+      const found = catalog.find(c => c.name === val);
+      if (found && found.defaultUnit && updated[index].quantity === '1 Unit') {
+        updated[index].quantity = found.defaultUnit;
+      }
+    }
+
     setItems(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validItems = items.filter(it => it.itemName.trim() !== '');
+    // Map items to backend payload
+    const validItems = items
+      .map((it) => {
+        const itemName = it.selectedCatalog === '__CUSTOM__' ? it.customName.trim() : it.selectedCatalog.trim();
+        return {
+          itemName,
+          quantity: it.quantity.trim() || '1 Unit'
+        };
+      })
+      .filter((it) => it.itemName !== '');
+
     if (validItems.length === 0) {
-      alert('Please select or type at least one material/chemical name.');
+      alert('Kripya kam se kam ek material ya chemical select karein ya likhein.');
       return;
     }
 
@@ -79,19 +154,21 @@ const WorkerMaterials: React.FC = () => {
       const res = await api.post('/material-requests/request', {
         items: validItems,
         urgency,
-        reason
+        neededByDate,
+        reason: reason.trim()
       });
 
       setLastSubmission(res.data);
-      alert('Material request submitted to Admin successfully!');
-      setItems([{ itemName: '', quantity: '1 Unit' }]);
+      alert('Material request Admin ko bhej di gayi hai!');
+      setItems([{ selectedCatalog: '', customName: '', quantity: '1 Unit' }]);
       setUrgency('Normal');
+      setNeededByDate(getTodayString());
       setReason('');
       fetchRequests();
 
       // Automatically offer to open WhatsApp
       if (res.data?.directWaUrl) {
-        if (window.confirm('Request logged! Would you like to also open WhatsApp to notify Admin instantly?')) {
+        if (window.confirm('Request submit ho gayi! Kya aap Admin ko instant WhatsApp message bhi bhejna chahte hain?')) {
           window.open(res.data.directWaUrl, '_blank');
         }
       }
@@ -135,17 +212,17 @@ const WorkerMaterials: React.FC = () => {
         <div className="absolute bottom-20 right-10 h-[300px] w-[300px] rounded-full bg-emerald-400/15 dark:bg-emerald-600/5 blur-[80px]" />
       </div>
 
-      <main className="p-4 md:p-6 pt-24 max-w-7xl mx-auto space-y-6 z-10 relative">
+      <main className="p-3 sm:p-6 pt-20 sm:pt-24 max-w-7xl mx-auto space-y-4 sm:space-y-6 z-10 relative">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-3">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
-              <Package className="h-5 w-5 text-secondary" />
-              <span>Material & Chemical Request</span>
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
+              <Package className="h-6 w-6 text-amber-500" />
+              <span>Material & Chemical Requisition</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Request shampoo, chemicals, tools or cloths from admin with live status & WhatsApp alert
+              Chemicals, cloths, gloves ya cleaning tools request karein — live status aur instant WhatsApp update
             </p>
           </div>
         </div>
@@ -153,19 +230,22 @@ const WorkerMaterials: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
           {/* Left Column: Form */}
-          <div className="lg:col-span-1 glass-card p-5 md:p-6 border border-slate-200/80 dark:border-slate-800 space-y-4 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center space-x-1.5">
-                <span>📝 New Request</span>
+          <div className="lg:col-span-1 glass-card p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 space-y-4 rounded-3xl shadow-sm text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <div className="flex items-center space-x-2 text-slate-800 dark:text-white">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <h3 className="font-extrabold text-sm uppercase tracking-wider">New Material Request</h3>
+              </div>
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
+                Fast Admin Alert
               </span>
-              <span className="text-[10px] text-slate-400 font-medium">Fast Admin Notification</span>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               
               {/* Urgency selection */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   Priority / Urgency
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -174,13 +254,13 @@ const WorkerMaterials: React.FC = () => {
                       key={lvl}
                       type="button"
                       onClick={() => setUrgency(lvl)}
-                      className={`py-2 px-1 text-center rounded-xl text-[10.5px] font-bold transition-all border ${
+                      className={`py-2 px-1 text-center rounded-xl text-xs font-extrabold transition-all border active:scale-95 cursor-pointer ${
                         urgency === lvl
                           ? lvl === 'Critical'
-                            ? 'bg-red-500 text-white border-red-500 shadow'
+                            ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
                             : lvl === 'Urgent'
-                            ? 'bg-amber-500 text-white border-amber-500 shadow'
-                            : 'bg-secondary text-white border-secondary shadow'
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                            : 'bg-teal-500 text-white border-teal-500 shadow-sm'
                           : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
                       }`}
                     >
@@ -191,31 +271,92 @@ const WorkerMaterials: React.FC = () => {
                 </div>
               </div>
 
-              {/* Items List */}
-              <div className="space-y-2.5">
+              {/* Needed By Date (Kab tak chahiye?) */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center space-x-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Kab Tak Chahiye? (Needed By Date) *</span>
+                  </label>
+                </div>
+                
+                {/* Quick Date Chips */}
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setNeededByDate(getTodayString())}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                      neededByDate === getTodayString()
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    ⚡ Aaj Chahiye (Today)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNeededByDate(getTomorrowString())}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                      neededByDate === getTomorrowString()
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    🌅 Kal Subah (Tomorrow)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNeededByDate(getInTwoDaysString())}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                      neededByDate === getInTwoDaysString()
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    📅 2 Din Me
+                  </button>
+                </div>
+
+                <input
+                  type="date"
+                  required
+                  min={getTodayString()}
+                  value={neededByDate}
+                  onChange={(e) => setNeededByDate(e.target.value)}
+                  className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 outline-none focus:border-amber-500 dark:color-scheme-dark mt-1"
+                />
+              </div>
+
+              {/* Items List (Multiple Materials Support) */}
+              <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="block text-[10px] font-bold text-slate-450 uppercase">
-                    Items & Quantities <span className="text-red-500">*</span>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    Materials List ({items.length} item{items.length > 1 ? 's' : ''}) <span className="text-rose-500">*</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="text-[10px] font-bold text-secondary hover:underline flex items-center space-x-0.5"
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10.5px] font-extrabold border border-amber-500/30 transition-all active:scale-95 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
-                    <span>Add Item</span>
+                    <span>+ Add Another</span>
                   </button>
                 </div>
 
                 {items.map((it, idx) => (
-                  <div key={idx} className="p-2.5 bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-2">
+                  <div
+                    key={idx}
+                    className="p-3 bg-slate-50 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800 rounded-2xl space-y-2.5 relative shadow-xs"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-extrabold uppercase text-slate-400">Item #{idx + 1}</span>
+                      <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                        📦 Material #{idx + 1}
+                      </span>
                       {items.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(idx)}
-                          className="text-red-500 hover:text-red-600 text-[10px] p-0.5 font-bold"
+                          className="p-1 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                           title="Remove item"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -223,137 +364,210 @@ const WorkerMaterials: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Common items quick select */}
-                    <input
-                      list={`material-suggestions-${idx}`}
-                      type="text"
-                      required
-                      placeholder="e.g. Sofa Shampoo, Microfiber Cloth, Scrub Pad..."
-                      value={it.itemName}
-                      onChange={(e) => handleItemChange(idx, 'itemName', e.target.value)}
-                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-secondary font-medium"
-                    />
-                    <datalist id={`material-suggestions-${idx}`}>
-                      {COMMON_MATERIALS.map((m, mIdx) => (
-                        <option key={mIdx} value={m} />
-                      ))}
-                    </datalist>
+                    {/* Material Select Dropdown */}
+                    <div className="space-y-1">
+                      <label className="block text-[9.5px] font-bold text-slate-450 uppercase">
+                        Select Material from Dropdown:
+                      </label>
+                      <select
+                        required
+                        value={it.selectedCatalog}
+                        onChange={(e) => handleItemChange(idx, 'selectedCatalog', e.target.value)}
+                        className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                      >
+                        <option value="">-- Choose Material / Chemical --</option>
+                        {catalog.map((c) => (
+                          <option key={c._id} value={c.name}>
+                            {c.name} {c.category ? `(${c.category})` : ''}
+                          </option>
+                        ))}
+                        <option value="__CUSTOM__">✍️ Other / Naya Saman (Dropdown me nahi hai toh yaha likhein)</option>
+                      </select>
+                    </div>
 
-                    <div>
+                    {/* Custom Material Name Input if selected */}
+                    {it.selectedCatalog === '__CUSTOM__' && (
+                      <div className="space-y-1 animate-fade-in">
+                        <label className="block text-[9.5px] font-bold text-amber-600 dark:text-amber-400 uppercase flex items-center space-x-1">
+                          <Edit3 className="h-3 w-3" />
+                          <span>Custom Material Name Likhein:</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Special Stain Remover, Car Wax 500ml..."
+                          value={it.customName}
+                          onChange={(e) => handleItemChange(idx, 'customName', e.target.value)}
+                          className="w-full text-xs font-bold rounded-xl border border-amber-500/50 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* Quantity Row */}
+                    <div className="space-y-1">
+                      <label className="block text-[9.5px] font-bold text-slate-450 uppercase">
+                        Quantity (Apne Anusaar Likhein):
+                      </label>
+                      
+                      {/* Quantity Preset Chips */}
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {['1 Unit', '2 Units', '5L Can', '1 Pack', '2 Packs'].map((q) => (
+                          <button
+                            type="button"
+                            key={q}
+                            onClick={() => handleItemChange(idx, 'quantity', q)}
+                            className={`px-2 py-0.5 rounded-md text-[9px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                              it.quantity === q
+                                ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                                : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'
+                            }`}
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+
                       <input
                         type="text"
                         required
-                        placeholder="Quantity (e.g. 2 Litres, 5 Pcs, 1 Box)"
+                        placeholder="e.g. 2 Cans, 5 Litres, 10 Cloths, 1 Pair..."
                         value={it.quantity}
                         onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2 outline-none focus:border-secondary"
+                        className="w-full text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
                       />
                     </div>
                   </div>
                 ))}
+
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="w-full py-2 px-3 border border-dashed border-amber-500/40 hover:border-amber-500 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-extrabold flex items-center justify-center space-x-1 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>+ Ek Aur Material Add Karein</span>
+                </button>
               </div>
 
-              {/* Reason / Remarks */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">
+              {/* Remarks / Reason */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   Remarks / Reason (Optional)
                 </label>
                 <textarea
                   rows={2}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g. Bottle almost finished, needed for tomorrow's job..."
-                  className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 outline-none focus:border-secondary resize-none"
+                  placeholder="e.g. Kal subah ke cleanup ke liye shampoo kam pad raha hai..."
+                  className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 resize-none text-slate-800 dark:text-white"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="btn-blue-gradient w-full flex items-center justify-center space-x-2 rounded-xl py-3 text-xs font-bold shadow-md cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center space-x-2"
               >
-                <Send className="h-3.5 w-3.5" />
-                <span>{submitting ? 'Submitting...' : 'Send Request to Admin'}</span>
+                <Send className="h-4 w-4" />
+                <span>{submitting ? 'Submitting Request...' : 'Submit Material Request to Admin'}</span>
               </button>
-
-              {lastSubmission?.directWaUrl && (
-                <button
-                  type="button"
-                  onClick={() => window.open(lastSubmission.directWaUrl, '_blank')}
-                  className="w-full flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Share Last Request on WhatsApp ↗</span>
-                </button>
-              )}
             </form>
           </div>
 
-          {/* Right Column: History of requests */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center space-x-1.5">
-                <span>📦 My Material Request History</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-semibold">{requests.length} requests</span>
-            </div>
+          {/* Right Column: History */}
+          <div className="lg:col-span-2 space-y-4 text-left">
+            <div className="glass-card p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-white flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-secondary" />
+                    <span>My Past Requisitions ({requests.length})</span>
+                  </h3>
+                  <p className="text-[10px] text-slate-400">Track delivery status of chemicals and cleaning equipment requested</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchRequests}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Refresh"
+                >
+                  <Clock className="h-4 w-4" />
+                </button>
+              </div>
 
-            <div className="space-y-3">
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((n) => (
-                    <div key={n} className="animate-shimmer h-24 w-full rounded-2xl" />
+                    <div key={n} className="animate-shimmer h-20 w-full rounded-2xl" />
                   ))}
                 </div>
               ) : requests.length === 0 ? (
-                <div className="glass-card p-10 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-                  No material requests submitted yet. Use the form on the left to request chemicals or tools.
+                <div className="text-center py-12 text-slate-400 text-xs border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                  Aapne abhi tak koi material request nahi daali hai.
                 </div>
               ) : (
-                requests.map((req) => (
-                  <div
-                    key={req._id}
-                    className="glass-card p-4.5 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl space-y-3 shadow-sm hover:shadow transition-shadow"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-850 pb-2.5">
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${getUrgencyBadge(req.urgency)}`}>
-                          {req.urgency}
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                          Requested on {new Date(req.createdAt).toLocaleDateString()} at {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <div>{getStatusBadge(req.status)}</div>
-                    </div>
-
-                    {/* Items List */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-450 uppercase block">Items:</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {req.items?.map((it: any, iIdx: number) => (
-                          <div key={iIdx} className="flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-150 dark:border-slate-800 text-xs">
-                            <span className="font-bold text-slate-800 dark:text-slate-200">{it.itemName}</span>
-                            <span className="text-[10px] font-extrabold text-secondary bg-secondary/10 px-2 py-0.5 rounded-full">{it.quantity}</span>
+                <div className="space-y-3">
+                  {requests.map((req) => (
+                    <div
+                      key={req._id}
+                      className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs space-y-2.5 hover:border-amber-500/40 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                            {getStatusBadge(req.status)}
+                            <span className={`px-2 py-0.5 rounded text-[8.5px] font-black uppercase ${getUrgencyBadge(req.urgency)}`}>
+                              {req.urgency}
+                            </span>
+                            {req.neededByDate && (
+                              <span className="inline-flex items-center space-x-1 text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                                <Calendar className="h-2.5 w-2.5" />
+                                <span>Needed: {req.neededByDate}</span>
+                              </span>
+                            )}
                           </div>
-                        ))}
+                          <span className="text-[10px] text-slate-400 block">
+                            Requested on: {new Date(req.createdAt).toLocaleDateString()} at {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Items */}
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-150/60 dark:border-slate-800 space-y-1">
+                        <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">
+                          Requested Materials:
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {req.items?.map((it: any, iIdx: number) => (
+                            <div key={iIdx} className="flex items-center space-x-1.5 text-xs">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{it.itemName}</span>
+                              <span className="font-black text-[10px] text-amber-600 dark:text-amber-400">
+                                ({it.quantity})
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Notes / Admin Remarks */}
+                      {(req.reason || req.adminRemarks) && (
+                        <div className="text-[11px] space-y-1">
+                          {req.reason && (
+                            <p className="text-slate-500 dark:text-slate-400 italic">
+                              📝 Notes: "{req.reason}"
+                            </p>
+                          )}
+                          {req.adminRemarks && (
+                            <p className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20">
+                              💬 Admin Reply: {req.adminRemarks}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-
-                    {req.reason && (
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 italic bg-slate-50/50 dark:bg-slate-900/30 p-2 rounded-lg">
-                        Note: "{req.reason}"
-                      </div>
-                    )}
-
-                    {req.adminRemarks && (
-                      <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50/50 dark:bg-indigo-950/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/30 flex items-center space-x-1.5">
-                        <Info className="h-3.5 w-3.5 shrink-0" />
-                        <span>Admin remarks: {req.adminRemarks}</span>
-                      </div>
-                    )}
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -361,6 +575,7 @@ const WorkerMaterials: React.FC = () => {
         </div>
 
       </main>
+
     </div>
   );
 };
