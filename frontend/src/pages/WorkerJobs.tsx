@@ -22,7 +22,8 @@ import {
   Phone,
   QrCode,
   Copy,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -877,31 +878,51 @@ const WorkerJobs: React.FC = () => {
 
       {/* FULL-WIDTH INTERACTIVE CLEANUP WORK SHEET DRAWER MODAL */}
       {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedJob(null);
+          }}
+        >
           <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-850 flex flex-col max-h-[94vh] sm:max-h-[90vh]">
             
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-              <div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Job Work Sheet</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
-                    selectedJob.status === 'completed' ? 'bg-success/15 text-success' :
-                    selectedJob.status === 'started' ? 'bg-secondary/15 text-secondary' :
-                    'bg-warning/15 text-warning'
-                  }`}>
-                    {selectedJob.status}
-                  </span>
-                  {getPaymentBadge(
-                    (tempPaymentMode === 'cash' || tempPaymentMode === 'upi_online' || selectedJob.paymentStatus === 'received') ? 'received' : (selectedJob.paymentStatus || 'pending'),
-                    tempPaymentMode !== 'not_selected' ? tempPaymentMode : selectedJob.paymentMode
-                  )}
+            {/* Modal Header with Back Button */}
+            <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 mr-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedJob(null)}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
+                  title="Go Back"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back</span>
+                </button>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Job Work Sheet</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
+                      selectedJob.status === 'completed' ? 'bg-success/15 text-success' :
+                      selectedJob.status === 'started' ? 'bg-secondary/15 text-secondary' :
+                      'bg-warning/15 text-warning'
+                    }`}>
+                      {selectedJob.status}
+                    </span>
+                    {getPaymentBadge(
+                      (tempPaymentMode === 'cash' || tempPaymentMode === 'upi_online' || selectedJob.paymentStatus === 'received') ? 'received' : (selectedJob.paymentStatus || 'pending'),
+                      tempPaymentMode !== 'not_selected' ? tempPaymentMode : selectedJob.paymentMode
+                    )}
+                  </div>
+                  <h3 className="font-bold text-xs sm:text-sm text-slate-800 dark:text-white mt-0.5 truncate">{selectedJob.title}</h3>
                 </div>
-                <h3 className="font-bold text-sm text-slate-800 dark:text-white mt-0.5">{selectedJob.title}</h3>
               </div>
+
               <button
+                type="button"
                 onClick={() => setSelectedJob(null)}
-                className="text-slate-400 hover:text-slate-650 rounded-full p-1.5 hover:bg-slate-105 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-slate-400 hover:text-slate-650 dark:hover:text-white rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0 transition-colors"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1203,6 +1224,16 @@ const WorkerJobs: React.FC = () => {
                     <span>Cancel Clean Booking</span>
                   </button>
 
+                  {/* Bottom Back Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedJob(null)}
+                    className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-extrabold transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer shadow-xs"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Back to Jobs</span>
+                  </button>
+
                 </div>
               ) : (
                 // View Mode for completed/cancelled jobs
@@ -1234,12 +1265,20 @@ const WorkerJobs: React.FC = () => {
                     </div>
                   </div>
 
-
-
                   <div className="flex justify-between">
                     <span className="text-slate-450">Completed Time:</span>
                     <span className="font-bold text-slate-700 dark:text-slate-200">{new Date(selectedJob.completedAt).toLocaleString()}</span>
                   </div>
+
+                  {/* Bottom Back Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedJob(null)}
+                    className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-extrabold transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer mt-4 shadow-xs"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Back to Jobs</span>
+                  </button>
                 </div>
               )}
 
