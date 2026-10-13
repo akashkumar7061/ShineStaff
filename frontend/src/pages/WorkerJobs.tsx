@@ -4,6 +4,7 @@ import api from '../utils/api';
 import CameraCapture from '../components/CameraCapture';
 import GPSAddress from '../components/GPSAddress';
 import { Link } from 'react-router-dom';
+import { getJobMapUrl, openJobLocationInMaps } from '../utils/mapUtils';
 import {
   Camera,
   CheckCircle,
@@ -824,10 +825,10 @@ const WorkerJobs: React.FC = () => {
                           {/* Touch-Friendly Action Buttons */}
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
                             <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`}
+                              href={getJobMapUrl(job)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => openJobLocationInMaps(job, e)}
                               className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
                             >
                               <Navigation className="h-3.5 w-3.5 text-secondary" />
@@ -936,10 +937,10 @@ const WorkerJobs: React.FC = () => {
                             <td className="px-6 py-5 max-w-[200px]">
                               <div className="space-y-1">
                                 <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`}
+                                  href={getJobMapUrl(job)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => openJobLocationInMaps(job, e)}
                                   className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium"
                                   title="Click to view on Google Maps"
                                 >
@@ -951,7 +952,7 @@ const WorkerJobs: React.FC = () => {
                                       href={job.locationName}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => openJobLocationInMaps(job, e)}
                                       className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
                                       title="Click to open link"
                                     >
@@ -1107,37 +1108,57 @@ const WorkerJobs: React.FC = () => {
                     <span className="font-black text-emerald-500 dark:text-emerald-450 text-sm bg-emerald-500/10 px-2 py-0.5 rounded">₹{selectedJob.price}</span>
                   </div>
                 )}
-                <div className="pb-1 border-b border-slate-200 dark:border-slate-800 flex flex-col pt-1.5 space-y-1">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">📍 Address:</span>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJob.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold text-secondary hover:underline text-xs block leading-snug"
-                      title="Click to view on Google Maps"
-                    >
-                      {selectedJob.address}
-                    </a>
-                  </div>
-                  {selectedJob.locationName && (
-                    <div className="text-[10px] font-bold text-violet-500">
-                      GPS/Landmark: {
-                        selectedJob.locationName.startsWith('http://') || selectedJob.locationName.startsWith('https://') ? (
-                          <a
-                            href={selectedJob.locationName}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-secondary hover:underline break-all font-semibold"
-                          >
-                            {selectedJob.locationName}
-                          </a>
-                        ) : (
-                          selectedJob.locationName
-                        )
-                      }
+                <div className="pb-2.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5 pt-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                        📍 Client Address & Location:
+                      </span>
+                      <p className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm leading-snug break-words">
+                        {selectedJob.address && !selectedJob.address.startsWith('http')
+                          ? selectedJob.address
+                          : selectedJob.locationName && !selectedJob.locationName.startsWith('http')
+                          ? selectedJob.locationName
+                          : 'Location provided in GPS link below'}
+                      </p>
+                      
+                      {/* Landmark or GPS notes if separate */}
+                      {selectedJob.locationName &&
+                        !selectedJob.locationName.startsWith('http') &&
+                        selectedJob.locationName !== selectedJob.address && (
+                          <div className="mt-1.5 text-[11px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-2 py-1 rounded-lg inline-flex items-center space-x-1">
+                            <span>🏛️ Landmark:</span>
+                            <span>{selectedJob.locationName}</span>
+                          </div>
+                        )}
                     </div>
-                  )}
+
+                    {/* Copy Address Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textToCopy = selectedJob.address || selectedJob.locationName || '';
+                        navigator.clipboard?.writeText(textToCopy);
+                        alert('Address copied to clipboard!');
+                      }}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors shrink-0 cursor-pointer shadow-2xs"
+                      title="Copy Address"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* PROMINENT GOOGLE MAPS NAVIGATION BUTTON */}
+                  <a
+                    href={getJobMapUrl(selectedJob)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => openJobLocationInMaps(selectedJob, e)}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center space-x-2 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Navigation className="h-4 w-4" />
+                    <span>Open in Google Maps (Google Maps me Rasta Dekhein)</span>
+                  </a>
                 </div>
                 <div>
                   👤 Client: <span className="font-semibold text-slate-700 dark:text-slate-250">{selectedJob.clientName}</span>{' '}

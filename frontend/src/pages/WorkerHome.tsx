@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CameraCapture from '../components/CameraCapture';
+import { getJobMapUrl, openJobLocationInMaps } from '../utils/mapUtils';
 import {
   Camera,
   Compass,
@@ -323,10 +324,11 @@ const WorkerHome: React.FC = () => {
                   {/* Navigation & shutter buttons */}
                   <div className="flex space-x-4">
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(jobsSummary.active.address)}`}
+                      href={getJobMapUrl(jobsSummary.active)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center space-x-1.5 rounded-custom border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 py-3.5 text-xs font-bold transition-colors"
+                      onClick={(e) => openJobLocationInMaps(jobsSummary.active, e)}
+                      className="flex-1 flex items-center justify-center space-x-1.5 rounded-custom border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 py-3.5 text-xs font-bold transition-colors cursor-pointer"
                     >
                       <MapPin className="h-3.5 w-3.5 text-amber-500" />
                       <span>Directions</span>
