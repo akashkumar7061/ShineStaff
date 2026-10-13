@@ -204,14 +204,14 @@ const WorkerHome: React.FC = () => {
   return (
     <div className="relative pb-20 max-w-full">
         {/* Main Container */}
-        <main className="relative px-4 md:px-6 lg:px-8 py-6 pt-24 max-w-7xl mx-auto space-y-6 z-10">
+        <main className="relative px-3 sm:px-6 lg:px-8 py-5 pt-20 sm:pt-24 max-w-7xl mx-auto space-y-4 sm:space-y-6 z-10">
 
         {/* Welcome Banner */}
-        <div className="flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-white/20 dark:border-white/5 shadow-sm">
+        <div className="flex justify-between items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-white/5 shadow-sm">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center space-x-2">
               <span>Welcome, {user.name.split(' ')[0]}</span>
-              <Sparkles className="h-5 w-5 text-violet-500 animate-pulse" />
+              <Sparkles className="h-4 sm:h-5 w-4 sm:w-5 text-violet-500 animate-pulse" />
             </h2>
             <p className="text-xs text-slate-400 mt-1">Let's check in and check off today's assigned cleans.</p>
           </div>
@@ -224,7 +224,7 @@ const WorkerHome: React.FC = () => {
             <img
               src={user.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`}
               alt={user.name}
-              className="h-12 w-12 rounded-full object-cover border-2 border-violet-500 shadow-md group-hover:scale-105 transition-transform"
+              className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover border-2 border-violet-500 shadow-md group-hover:scale-105 transition-transform"
             />
             <div className="hidden sm:block">
               <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-violet-500 transition-colors">My Profile</span>
@@ -234,12 +234,12 @@ const WorkerHome: React.FC = () => {
         </div>
 
         {/* RESPONSIVE LAYOUT COLS GRID */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           
           {/* Row 1: Active Cleanup Tracker */}
           <div className="grid grid-cols-1 gap-6 items-stretch">
             {/* Active Cleanup with visual step mapping */}
-            <div className="glass-card p-6 border-t-4 border-t-amber-500 shadow-xl flex flex-col justify-between h-full space-y-5">
+            <div className="glass-card p-4 sm:p-6 border-t-4 border-t-amber-500 shadow-xl flex flex-col justify-between h-full space-y-4 sm:space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest">Active Cleanup Tracker</h3>
                 <Link to="/worker/jobs" className="text-xs font-bold text-secondary hover:underline">

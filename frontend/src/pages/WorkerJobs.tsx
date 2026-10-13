@@ -21,7 +21,8 @@ import {
   Calendar,
   Phone,
   QrCode,
-  Copy
+  Copy,
+  ChevronRight
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -458,21 +459,21 @@ const WorkerJobs: React.FC = () => {
       </div>
 
       {/* Main Grid Container */}
-      <main className="px-4 md:px-6 lg:px-8 py-6 pt-24 max-w-7xl mx-auto space-y-6 z-10 relative">
+      <main className="px-3 sm:px-6 lg:px-8 py-5 pt-20 sm:pt-24 max-w-7xl mx-auto space-y-4 sm:space-y-6 z-10 relative">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
           {/* Left Columns: Tabs and jobs list */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
             {/* Filter Tabs & Search Bar */}
-            <div className="space-y-4">
-              <div className="flex space-x-1 rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-1 border border-slate-200/20">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex space-x-1.5 rounded-xl bg-slate-200/50 dark:bg-slate-900/50 p-1 border border-slate-200/20 overflow-x-auto no-scrollbar">
                 {['all', 'pending', 'accepted', 'started', 'completed'].map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter as any)}
-                    className={`flex-1 rounded-lg py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
+                    className={`flex-1 min-w-[70px] whitespace-nowrap rounded-lg py-2 px-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
                       activeFilter === filter
                         ? 'bg-gradient-to-r from-secondary to-blue-500 text-white shadow-sm'
                         : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-350'
@@ -484,10 +485,10 @@ const WorkerJobs: React.FC = () => {
               </div>
 
               {/* Search and Date Filters bar */}
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs">
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm text-xs">
+                <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
                   {/* Job/Client Search */}
-                  <div className="relative min-w-[200px] w-full md:w-auto">
+                  <div className="relative w-full sm:min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <input
                       type="text"
@@ -500,8 +501,8 @@ const WorkerJobs: React.FC = () => {
                 </div>
 
                 {/* Single Date Selector */}
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                  <span className="text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                  <span className="text-[10px] font-bold text-slate-455 dark:text-slate-400 uppercase tracking-wider flex items-center space-x-1.5 shrink-0">
                     <Calendar className="h-3.5 w-3.5 text-slate-400" />
                     <span>Clean Date:</span>
                   </span>
@@ -516,7 +517,7 @@ const WorkerJobs: React.FC = () => {
                   {filterDate && (
                     <button
                       onClick={() => setFilterDate('')}
-                      className="text-xs text-danger font-semibold hover:underline px-2 cursor-pointer"
+                      className="text-xs text-danger font-semibold hover:underline px-2 cursor-pointer shrink-0"
                     >
                       Clear
                     </button>
@@ -525,12 +526,12 @@ const WorkerJobs: React.FC = () => {
               </div>
             </div>
 
-            {/* Jobs Table Dashboard */}
-            <div className="glass-card p-6">
+            {/* Jobs Dashboard Container */}
+            <div className="glass-card p-3 sm:p-6">
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((n) => (
-                    <div key={n} className="animate-shimmer h-12 w-full rounded-lg" />
+                    <div key={n} className="animate-shimmer h-36 md:h-12 w-full rounded-2xl md:rounded-lg" />
                   ))}
                 </div>
               ) : filteredJobs.length === 0 ? (
@@ -538,144 +539,307 @@ const WorkerJobs: React.FC = () => {
                   No cleaning jobs found under this status.
                 </div>
               ) : (
-                <div className="overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
-                      <tr>
-                        <th className="px-6 py-4">Job Details</th>
-                        <th className="px-6 py-4">Client Info</th>
-                        <th className="px-6 py-4">Clean Date & Time</th>
-                        <th className="px-6 py-4">Amount</th>
-                        <th className="px-6 py-4">Address / Location</th>
-                        <th className="px-6 py-4 text-center">Status</th>
-                        <th className="px-6 py-4 text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-855">
-                      {filteredJobs.map((job) => (
-                        <tr
+                <>
+                  {/* MOBILE PHONE VIEW (< md): Modern, Touch-Friendly Job Cards */}
+                  <div className="block md:hidden space-y-3.5">
+                    {filteredJobs.map((job) => {
+                      const isCompleted = job.status === 'completed';
+                      const isStarted = job.status === 'started';
+                      const isCancelled = job.status === 'cancelled' || job.status === 'rejected';
+                      const isPending = job.status === 'pending';
+
+                      return (
+                        <div
                           key={job._id}
                           onClick={() => openWorkSheet(job)}
-                          className="hover:bg-slate-55/30 dark:hover:bg-slate-900/30 transition-colors cursor-pointer"
+                          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer space-y-3 relative overflow-hidden"
                         >
-                          {/* Job Details */}
-                          <td className="px-6 py-5">
-                            <div className="space-y-2">
-                              <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
-                              
-                              <div className="flex flex-col gap-1.5 items-start">
-                                <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
-                                  {job.company}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
+                          {/* Accent status indicator bar */}
+                          <div className={`absolute top-0 left-0 right-0 h-1 ${
+                            isCompleted ? 'bg-emerald-500' :
+                            isStarted ? 'bg-secondary animate-pulse' :
+                            isCancelled ? 'bg-rose-500' :
+                            'bg-amber-500'
+                          }`} />
 
+                          {/* Top Row: Company Pill & Status Badge */}
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
+                            <span className="inline-block text-[10px] font-black bg-secondary/15 text-secondary px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+                              {job.company}
+                            </span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${
+                              isCompleted ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+                              isStarted ? 'bg-secondary/15 text-secondary' :
+                              isCancelled ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' :
+                              'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${
+                                isCompleted ? 'bg-emerald-500' :
+                                isStarted ? 'bg-secondary animate-ping' :
+                                isCancelled ? 'bg-rose-500' :
+                                'bg-amber-500'
+                              }`} />
+                              <span>{isStarted ? 'In Progress' : job.status}</span>
+                            </span>
+                          </div>
 
-                          <td className="px-6 py-5">
+                          {/* Job Title */}
+                          <div>
+                            <h4 className="font-extrabold text-sm text-slate-850 dark:text-white leading-snug">
+                              {job.title}
+                            </h4>
+                          </div>
+
+                          {/* Schedule & Price Box */}
+                          <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                            {/* Date & Time */}
                             <div className="space-y-1">
-                              <span className="block font-semibold text-slate-750 dark:text-slate-205">{job.clientName}</span>
-                              {job.clientPhone ? (
-                                <a
-                                  href={`tel:${job.clientPhone}`}
-                                  className="block text-[10px] text-secondary hover:underline font-bold mt-0.5 inline-flex items-center space-x-0.5"
-                                >
-                                  <Phone className="h-2.5 w-2.5 inline" />
-                                  <span>{job.clientPhone}</span>
-                                </a>
-                              ) : (
-                                <span className="block text-[10px] text-slate-400 mt-0.5">—</span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Clean Date & Time */}
-                          <td className="px-6 py-5 font-medium whitespace-nowrap">
-                            <div className="space-y-2">
                               <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-200">
-                                <Calendar className="h-3.5 w-3.5 text-secondary" />
-                                <span className="font-bold text-xs">{job.date || 'N/A'}</span>
+                                <Calendar className="h-3.5 w-3.5 text-secondary shrink-0" />
+                                <span className="font-bold text-xs">{job.date || 'Today'}</span>
                               </div>
                               <div className="flex items-center space-x-1.5 text-slate-400">
-                                <Clock className="h-3.5 w-3.5" />
-                                <span className="text-[10px] font-bold uppercase tracking-wider">{job.timeSlot || 'N/A'}</span>
+                                <Clock className="h-3 w-3 shrink-0" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">{job.timeSlot || 'Anytime'}</span>
                               </div>
                             </div>
-                          </td>
 
-                          {/* Amount & Payment Status */}
-                          <td className="px-6 py-5 whitespace-nowrap text-left">
-                            <div className="font-extrabold text-emerald-500 dark:text-emerald-450 text-sm">
-                              {job.price !== undefined ? `₹${job.price}` : '—'}
+                            {/* Amount & Payment */}
+                            <div className="text-right flex flex-col justify-center items-end">
+                              <div className="font-extrabold text-emerald-500 dark:text-emerald-450 text-sm sm:text-base">
+                                {job.price !== undefined ? `₹${job.price}` : '—'}
+                              </div>
+                              <div className="mt-0.5">
+                                {getPaymentBadge(job.paymentStatus, job.paymentMode)}
+                              </div>
                             </div>
-                            <div className="mt-1">
-                              {getPaymentBadge(job.paymentStatus, job.paymentMode)}
-                            </div>
-                          </td>
+                          </div>
 
-                          {/* Address / Location */}
-                          <td className="px-6 py-5 max-w-[200px]">
-                            <div className="space-y-1">
+                          {/* Client Row with 1-Tap Direct Call */}
+                          <div className="flex items-center justify-between bg-slate-50/70 dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                            <div className="min-w-0 pr-2">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Client</span>
+                              <span className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate block">
+                                {job.clientName || 'Valued Client'}
+                              </span>
+                            </div>
+                            {job.clientPhone ? (
                               <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                href={`tel:${job.clientPhone}`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium"
-                                title="Click to view on Google Maps"
+                                className="shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-all active:scale-95"
                               >
-                                📍 {job.address}
+                                <Phone className="h-3 w-3" />
+                                <span>Call</span>
                               </a>
-                              {job.locationName && (
-                                job.locationName.startsWith('http://') || job.locationName.startsWith('https://') ? (
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-medium">No Phone</span>
+                            )}
+                          </div>
+
+                          {/* Address & GPS */}
+                          <div className="space-y-1 text-xs">
+                            <div className="flex items-start gap-1.5 text-slate-650 dark:text-slate-300">
+                              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
+                              <p className="line-clamp-2 text-xs font-medium leading-relaxed">
+                                {job.address}
+                              </p>
+                            </div>
+                            {job.locationName && (
+                              <div className="pl-5 text-[10px] font-bold text-violet-500 dark:text-violet-400 truncate">
+                                {job.locationName.startsWith('http') ? (
                                   <a
                                     href={job.locationName}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
-                                    title="Click to open link"
+                                    className="hover:underline flex items-center gap-1"
                                   >
-                                    GPS Link: {job.locationName}
+                                    <span>GPS Link</span>
+                                    <Navigation className="h-2.5 w-2.5 inline" />
                                   </a>
                                 ) : (
-                                  <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
-                                    GPS: {job.locationName}
-                                  </span>
-                                )
-                              )}
-                            </div>
-                          </td>
+                                  <span>GPS / Landmark: {job.locationName}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
 
-                          {/* Status */}
-                          <td className="px-6 py-5 text-center">
-                            <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                              job.status === 'completed' ? 'bg-success/15 text-success' :
-                              job.status === 'started' ? 'bg-secondary/15 text-secondary' :
-                              job.status === 'cancelled' ? 'bg-danger/15 text-danger' :
-                              'bg-warning/15 text-warning'
-                            }`}>
-                              {job.status}
-                            </span>
-                          </td>
+                          {/* Touch-Friendly Action Buttons */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
+                            >
+                              <Navigation className="h-3.5 w-3.5 text-secondary" />
+                              <span>Maps</span>
+                            </a>
 
-                          {/* Action */}
-                          <td className="px-6 py-5 text-center">
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openWorkSheet(job);
                               }}
-                              className="rounded-lg bg-secondary text-white font-bold text-[10px] px-3 py-1.5 uppercase hover:bg-secondary/90 transition-colors shadow-sm"
+                              className="flex-[2] py-2.5 px-3 rounded-xl bg-gradient-to-r from-secondary to-blue-600 hover:from-secondary/90 hover:to-blue-600/90 text-white text-xs font-extrabold flex items-center justify-center space-x-1.5 shadow-md shadow-secondary/20 transition-all active:scale-95 cursor-pointer"
                             >
-                              Work Sheet
+                              <ClipboardList className="h-3.5 w-3.5" />
+                              <span>
+                                {isPending ? 'Review & Accept' :
+                                 isStarted ? 'Continue Clean' :
+                                 isCompleted ? 'View Work Sheet' :
+                                 'Work Sheet'}
+                              </span>
                             </button>
-                          </td>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* DESKTOP VIEW (>= md): Classic Clean Table */}
+                  <div className="hidden md:block overflow-x-auto border border-slate-100 dark:border-slate-800/80 rounded-xl">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-55 dark:bg-slate-900/50 text-[10px] font-bold text-slate-450 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                        <tr>
+                          <th className="px-6 py-4">Job Details</th>
+                          <th className="px-6 py-4">Client Info</th>
+                          <th className="px-6 py-4">Clean Date & Time</th>
+                          <th className="px-6 py-4">Amount</th>
+                          <th className="px-6 py-4">Address / Location</th>
+                          <th className="px-6 py-4 text-center">Status</th>
+                          <th className="px-6 py-4 text-center">Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-855">
+                        {filteredJobs.map((job) => (
+                          <tr
+                            key={job._id}
+                            onClick={() => openWorkSheet(job)}
+                            className="hover:bg-slate-55/30 dark:hover:bg-slate-900/30 transition-colors cursor-pointer"
+                          >
+                            {/* Job Details */}
+                            <td className="px-6 py-5">
+                              <div className="space-y-2">
+                                <span className="block font-bold text-slate-850 dark:text-white text-sm">{job.title}</span>
+                                
+                                <div className="flex flex-col gap-1.5 items-start">
+                                  <span className="inline-block text-[9px] font-extrabold bg-secondary/15 text-secondary px-2.5 py-0.5 rounded uppercase tracking-wider">
+                                    {job.company}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-5">
+                              <div className="space-y-1">
+                                <span className="block font-semibold text-slate-750 dark:text-slate-205">{job.clientName}</span>
+                                {job.clientPhone ? (
+                                  <a
+                                    href={`tel:${job.clientPhone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="block text-[10px] text-secondary hover:underline font-bold mt-0.5 inline-flex items-center space-x-0.5"
+                                  >
+                                    <Phone className="h-2.5 w-2.5 inline" />
+                                    <span>{job.clientPhone}</span>
+                                  </a>
+                                ) : (
+                                  <span className="block text-[10px] text-slate-400 mt-0.5">—</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Clean Date & Time */}
+                            <td className="px-6 py-5 font-medium whitespace-nowrap">
+                              <div className="space-y-2">
+                                <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-200">
+                                  <Calendar className="h-3.5 w-3.5 text-secondary" />
+                                  <span className="font-bold text-xs">{job.date || 'N/A'}</span>
+                                </div>
+                                <div className="flex items-center space-x-1.5 text-slate-400">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  <span className="text-[10px] font-bold uppercase tracking-wider">{job.timeSlot || 'N/A'}</span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Amount & Payment Status */}
+                            <td className="px-6 py-5 whitespace-nowrap text-left">
+                              <div className="font-extrabold text-emerald-500 dark:text-emerald-450 text-sm">
+                                {job.price !== undefined ? `₹${job.price}` : '—'}
+                              </div>
+                              <div className="mt-1">
+                                {getPaymentBadge(job.paymentStatus, job.paymentMode)}
+                              </div>
+                            </td>
+
+                            {/* Address / Location */}
+                            <td className="px-6 py-5 max-w-[200px]">
+                              <div className="space-y-1">
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="block text-slate-650 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary hover:underline truncate font-medium"
+                                  title="Click to view on Google Maps"
+                                >
+                                  📍 {job.address}
+                                </a>
+                                {job.locationName && (
+                                  job.locationName.startsWith('http://') || job.locationName.startsWith('https://') ? (
+                                    <a
+                                      href={job.locationName}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="block text-[10px] font-bold text-violet-500 hover:text-violet-750 dark:hover:text-violet-400 hover:underline truncate"
+                                      title="Click to open link"
+                                    >
+                                      GPS Link: {job.locationName}
+                                    </a>
+                                  ) : (
+                                    <span className="block text-[10px] font-bold text-violet-500 truncate" title={job.locationName}>
+                                      GPS: {job.locationName}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Status */}
+                            <td className="px-6 py-5 text-center">
+                              <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                                job.status === 'completed' ? 'bg-success/15 text-success' :
+                                job.status === 'started' ? 'bg-secondary/15 text-secondary' :
+                                job.status === 'cancelled' ? 'bg-danger/15 text-danger' :
+                                'bg-warning/15 text-warning'
+                              }`}>
+                                {job.status}
+                              </span>
+                            </td>
+
+                            {/* Action */}
+                            <td className="px-6 py-5 text-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openWorkSheet(job);
+                                }}
+                                className="rounded-lg bg-secondary text-white font-bold text-[10px] px-3 py-1.5 uppercase hover:bg-secondary/90 transition-colors shadow-sm"
+                              >
+                                Work Sheet
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -702,13 +866,13 @@ const WorkerJobs: React.FC = () => {
 
       {/* FULL-WIDTH INTERACTIVE CLEANUP WORK SHEET DRAWER MODAL */}
       {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-850 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-850 flex flex-col max-h-[94vh] sm:max-h-[90vh]">
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">Job Work Sheet</span>
                   <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
                     selectedJob.status === 'completed' ? 'bg-success/15 text-success' :
@@ -733,7 +897,7 @@ const WorkerJobs: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleCompleteWorkSheetSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+            <form onSubmit={handleCompleteWorkSheetSubmit} className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 text-xs">
               
               {selectedJob.adminCompleted && (
                 <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-extrabold rounded-2xl p-3.5 text-center text-[10px]">
@@ -949,7 +1113,7 @@ const WorkerJobs: React.FC = () => {
                             <img
                               src={mappedQR.qrImage}
                               alt={mappedQR.name}
-                              className="h-56 w-56 object-contain mx-auto"
+                              className="h-44 w-44 sm:h-56 sm:w-56 object-contain mx-auto"
                             />
                           </div>
 
