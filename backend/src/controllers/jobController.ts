@@ -133,16 +133,22 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
     const { status, company, workerId, date, startDate, endDate, search, limit } = req.query;
     const filter: any = {};
 
-    // Worker only gets their own jobs
+    // Worker only gets their own active jobs (excluding cancelled and rejected)
     if (req.user.role === 'worker') {
       filter.workerId = req.user.id;
       filter.notificationSentAt = { $exists: true, $ne: null };
-    } else if (workerId) {
-      filter.workerId = workerId;
-    }
-
-    if (status) {
-      filter.status = status;
+      if (status && status !== 'cancelled' && status !== 'rejected') {
+        filter.status = status;
+      } else {
+        filter.status = { $nin: ['cancelled', 'rejected'] };
+      }
+    } else {
+      if (workerId) {
+        filter.workerId = workerId;
+      }
+      if (status) {
+        filter.status = status;
+      }
     }
     if (company && company !== 'All') {
       filter.company = company;
@@ -202,6 +208,9 @@ export const getJobById = async (req: AuthRequest, res: Response) => {
       }
       if (!job.notificationSentAt) {
         return res.status(403).json({ message: 'Tomorrow\'s work is not accessible before 7:00 PM today.' });
+      }
+      if (job.status === 'cancelled' || job.status === 'rejected') {
+        return res.status(404).json({ message: 'This job has been cancelled and is no longer available.' });
       }
     }
     res.status(200).json(job);

@@ -105,7 +105,7 @@ const WorkerHome: React.FC = () => {
 
       setSalaryToday(salRes.data.earnings.todayEarnings);
 
-      const jobs = jobsRes.data;
+      const jobs = (jobsRes.data || []).filter((j: any) => j.status !== 'cancelled' && j.status !== 'rejected');
       const pendingJobs = jobs.filter((j: any) => j.status === 'pending' || j.status === 'accepted');
       const completedJobs = jobs.filter((j: any) => j.status === 'completed');
       const activeJob = jobs.find((j: any) => j.status === 'started');
@@ -127,7 +127,16 @@ const WorkerHome: React.FC = () => {
 
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.type === 'NEW_JOB' || customEvent.detail?.type === 'TRAVEL_LOG_APPROVED') {
+      const type = customEvent.detail?.type;
+      if (
+        type === 'NEW_JOB' ||
+        type === 'TRAVEL_LOG_APPROVED' ||
+        type === 'JOB_CANCELLED' ||
+        type === 'JOB_REJECTED' ||
+        type === 'JOB_STARTED' ||
+        type === 'JOB_COMPLETED' ||
+        type === 'JOB_DELETED'
+      ) {
         fetchData(true);
       }
     };
