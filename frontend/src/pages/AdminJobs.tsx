@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import api from '../utils/api';
 import { handleDownloadInvoice, handleShareInvoice } from '../utils/invoiceGenerator';
 import { exportJobScheduleToExcel, exportCustomersToExcel, exportWorkerDailyRegisterToExcel } from '../utils/exportCustomerData';
@@ -331,6 +331,9 @@ const getJobTimeline = (job: any): Array<{ status: string; timestamp: string | D
 const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
+  const activeWorkers = useMemo(() => {
+    return workers.filter((w: any) => w.status !== 'inactive');
+  }, [workers]);
   const [loading, setLoading] = useState(true);
 
   // Date and grid navigation states (Matching user screenshots)
@@ -592,7 +595,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       ]);
 
       exportJobs = res.data || [];
-      const currentWorkers = workersRes.data || workers || [];
+      const currentWorkers = (workersRes.data || workers || []).filter((w: any) => w.status !== 'inactive');
 
       if (exportJobs.length === 0) {
         alert(`No jobs found for date range (${sDate} to ${eDate}).`);
@@ -672,7 +675,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       ]);
 
       const exportJobs = jobsRes.data || [];
-      const currentWorkers = workersRes.data || workers || [];
+      const currentWorkers = (workersRes.data || workers || []).filter((w: any) => w.status !== 'inactive');
       const travelLogs = travelRes.data || [];
       const attendanceLogs = attRes.data || [];
       const leaveRecords = leavesRes.data || [];
@@ -701,7 +704,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       const type = customEvent.detail?.type;
-      if (['JOB_COMPLETED', 'JOB_STARTED', 'JOB_CREATED', 'JOB_CANCELLED', 'JOB_DELETED'].includes(type)) {
+      if (['JOB_COMPLETED', 'JOB_STARTED', 'JOB_CREATED', 'JOB_CANCELLED', 'JOB_DELETED', 'WORKER_STATUS_CHANGED', 'WORKER_UPDATED'].includes(type)) {
         fetchJobsAndWorkers();
         fetchWorkerRecommendations();
       }
@@ -2179,7 +2182,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                     <span>Time Slot</span>
                   </div>
                 </th>
-                {workers.map((w: any) => {
+                {activeWorkers.map((w: any) => {
                   const onHoliday = isWorkerOnHoliday(w, selectedDate);
                   return (
                     <th key={w._id} className="px-3 py-3 w-[180px] border-l border-slate-700 bg-[#1e293b] text-white text-left">
@@ -2239,8 +2242,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </td>
 
                   {/* Worker Cells */}
-                  {workers.map((w: any) => {
-                    const cellJobs = dayJobs.filter(j => j.workerId?._id === w._id && j.timeSlot === slot);
+                  {activeWorkers.map((w: any) => {
+                    const cellJobs = dayJobs.filter(j => (j.workerId?._id || j.workerId) === w._id && j.timeSlot === slot);
                     return (
                       <td key={w._id} className="px-2 py-2.5 border-l border-slate-200 dark:border-slate-800 align-top">
                         {cellJobs.length > 0 ? (
@@ -2326,9 +2329,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
                   {/* Unassigned Cell */}
                   <td className="px-2 py-2.5 border-l border-slate-200 dark:border-slate-800 align-top">
-                    {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).length > 0 ? (
+                    {dayJobs.filter(j => (!j.workerId || !activeWorkers.some(w => w._id === (j.workerId?._id || j.workerId))) && j.timeSlot === slot).length > 0 ? (
                       <div className="space-y-2">
-                        {dayJobs.filter(j => !j.workerId && j.timeSlot === slot).map((j) => (
+                        {dayJobs.filter(j => (!j.workerId || !activeWorkers.some(w => w._id === (j.workerId?._id || j.workerId))) && j.timeSlot === slot).map((j) => {
+                          const isAssignedToInactive = j.workerId && !activeWorkers.some(w => w._id === (j.workerId?._id || j.workerId));
+                          return (
                           <div
                             key={j._id}
                             onClick={() => handleOpenJobDrawer(j)}
@@ -2336,6 +2341,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           >
                             {getJobBadge(j.status)}
                             {getPaymentBadge(j.paymentStatus, j.paymentMode)}
+                            {isAssignedToInactive && (
+                              <div className="mb-1 text-[8.5px] font-bold px-1.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded">
+                                Inactive Worker ({j.workerId?.name || 'Reassign'})
+                              </div>
+                            )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                               className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
@@ -2375,7 +2385,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               </div>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div
@@ -2395,7 +2406,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={workers.length + 2} className="px-6 py-12 text-center text-slate-400 font-extrabold text-xs bg-slate-50/50 dark:bg-slate-900/10">
+                  <td colSpan={activeWorkers.length + 2} className="px-6 py-12 text-center text-slate-400 font-extrabold text-xs bg-slate-50/50 dark:bg-slate-900/10">
                     No bookings scheduled for this date. Click "+ New Booking" to schedule.
                   </td>
                 </tr>
@@ -2922,8 +2933,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
             </div>
 
             <div className="my-4 space-y-4 max-h-[300px] overflow-y-auto">
-              {workers.map((w: any) => {
-                const count = dayJobs.filter(j => j.workerId?._id === w._id).length;
+              {activeWorkers.map((w: any) => {
+                const count = dayJobs.filter(j => (j.workerId?._id || j.workerId) === w._id).length;
                 const onHoliday = isWorkerOnHoliday(w, selectedDate);
                 return (
                   <div key={w._id} className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-200/40">

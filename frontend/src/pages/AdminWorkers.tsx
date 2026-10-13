@@ -150,6 +150,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
       setEditModalOpen(false);
       resetForm();
       fetchWorkers();
+      window.dispatchEvent(new CustomEvent('socket-update', {
+        detail: { type: 'WORKER_UPDATED', workerId: editingWorkerId }
+      }));
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to edit worker');
     }
@@ -159,6 +162,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     try {
       await api.put(`/workers/${workerId}`, { weeklyHoliday: newHoliday });
       setWorkers(prev => prev.map(w => w._id === workerId ? { ...w, weeklyHoliday: newHoliday } : w));
+      window.dispatchEvent(new CustomEvent('socket-update', {
+        detail: { type: 'WORKER_UPDATED', workerId, weeklyHoliday: newHoliday }
+      }));
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update weekly holiday');
       fetchWorkers();
@@ -171,6 +177,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
       await api.delete(`/workers/${id}`);
       alert('Worker deleted successfully');
       fetchWorkers();
+      window.dispatchEvent(new CustomEvent('socket-update', {
+        detail: { type: 'WORKER_STATUS_CHANGED', workerId: id, status: 'deleted' }
+      }));
     } catch (err: any) {
       alert('Failed to delete worker');
     }
@@ -180,6 +189,9 @@ const AdminWorkers: React.FC<AdminWorkersProps> = ({ companyFilter }) => {
     const nextStatus = worker.status === 'active' ? 'inactive' : 'active';
     try {
       await api.put(`/workers/${worker._id}`, { status: nextStatus });
+      window.dispatchEvent(new CustomEvent('socket-update', {
+        detail: { type: 'WORKER_STATUS_CHANGED', workerId: worker._id, status: nextStatus }
+      }));
       fetchWorkers();
     } catch (err) {
       alert('Failed to update worker status');

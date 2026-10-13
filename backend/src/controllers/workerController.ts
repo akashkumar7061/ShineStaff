@@ -12,6 +12,7 @@ import { AuthRequest } from '../middleware/auth';
 import { logAudit } from '../utils/auditLog';
 import Settings from '../models/Settings';
 import { resolveLocationInput, isValidIndiaCoord } from '../services/googleMapsService';
+import { getIO } from '../index';
 
 export const getWorkers = async (req: Request, res: Response) => {
   try {
@@ -21,7 +22,9 @@ export const getWorkers = async (req: Request, res: Response) => {
     if (company && company !== 'All') {
       filter.company = { $in: [company, 'Both'] };
     }
-    if (status) {
+    if (status === 'active') {
+      filter.status = { $ne: 'inactive' };
+    } else if (status) {
       filter.status = status;
     }
 
@@ -247,6 +250,17 @@ export const addWorker = async (req: Request, res: Response) => {
       summary: `Edited worker profile for ${worker.name}`
     });
 
+    try {
+      getIO()?.emit('adminNotification', {
+        type: 'WORKER_STATUS_CHANGED',
+        workerId: worker._id,
+        status: worker.status,
+        name: worker.name
+      });
+    } catch (socketErr) {
+      console.error('Failed to emit worker update socket notification:', socketErr);
+    }
+
     res.status(200).json({ message: 'Worker updated successfully', worker });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -271,6 +285,16 @@ export const deleteWorker = async (req: AuthRequest, res: Response) => {
       entityId: id,
       summary: `Deleted worker profile for ${worker.name}`
     });
+
+    try {
+      getIO()?.emit('adminNotification', {
+        type: 'WORKER_STATUS_CHANGED',
+        workerId: id,
+        status: 'deleted'
+      });
+    } catch (socketErr) {
+      console.error('Failed to emit worker delete socket notification:', socketErr);
+    }
 
     res.status(200).json({ message: 'Worker deleted successfully' });
   } catch (error: any) {
@@ -350,7 +374,7 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
   }
 
   try {
-    const workerFilter: any = { role: 'worker', status: 'active' };
+    const workerFilter: any = { role: 'worker', status: { $ne: 'inactive' } };
     if (company && company !== 'All') {
       workerFilter.company = { $in: [company, 'Both'] };
     }
