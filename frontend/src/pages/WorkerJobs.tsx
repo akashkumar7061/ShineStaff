@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CameraCapture from '../components/CameraCapture';
 import GPSAddress from '../components/GPSAddress';
+import { Link } from 'react-router-dom';
 import {
   Camera,
   CheckCircle,
@@ -23,7 +24,10 @@ import {
   QrCode,
   Copy,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Package,
+  Send,
+  Sparkles
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -104,6 +108,59 @@ const WorkerJobs: React.FC = () => {
   const [cancelRemarks, setCancelRemarks] = useState('');
   const [cancelError, setCancelError] = useState('');
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  // Quick Material Request modal state
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [materialItemName, setMaterialItemName] = useState('');
+  const [materialQty, setMaterialQty] = useState('1 Unit');
+  const [materialUrgency, setMaterialUrgency] = useState<'Normal' | 'Urgent' | 'Critical'>('Normal');
+  const [materialReason, setMaterialReason] = useState('');
+  const [submittingMaterial, setSubmittingMaterial] = useState(false);
+
+  const QUICK_MATERIAL_PRESETS = [
+    { label: '🧴 Sofa Shampoo (5L)', name: 'Fabric & Sofa Shampoo (5L)', defaultQty: '1 Can' },
+    { label: '✨ Stain Remover', name: 'Stain Remover Liquid', defaultQty: '1 Bottle' },
+    { label: '🧽 Microfiber Cloths', name: 'Microfiber Cleaning Cloths (Pack of 5)', defaultQty: '1 Pack' },
+    { label: '🧹 Scrubbing Brush', name: 'Heavy Duty Scrubbing Brush', defaultQty: '1 Pc' },
+    { label: '🧤 Safety Gloves', name: 'Rubber Safety Gloves', defaultQty: '1 Pair' },
+    { label: '⚡ Foam Booster', name: 'Foam Cleaning Booster', defaultQty: '1 Bottle' },
+    { label: '🌪️ Vacuum Filter', name: 'Vacuum Extraction Filter', defaultQty: '1 Pc' },
+    { label: '🌸 Fragrance Mist', name: 'Disinfectant & Fragrance Mist', defaultQty: '1 Can' }
+  ];
+
+  const handleQuickMaterialSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!materialItemName.trim()) {
+      alert('Please select or enter the material/chemical name.');
+      return;
+    }
+
+    setSubmittingMaterial(true);
+    try {
+      const res = await api.post('/material-requests/request', {
+        items: [{ itemName: materialItemName.trim(), quantity: materialQty }],
+        urgency: materialUrgency,
+        reason: materialReason.trim()
+      });
+
+      alert('Material request submitted to Admin successfully!');
+      setMaterialModalOpen(false);
+      setMaterialItemName('');
+      setMaterialQty('1 Unit');
+      setMaterialUrgency('Normal');
+      setMaterialReason('');
+
+      if (res.data?.directWaUrl) {
+        if (window.confirm('Request logged! Would you like to also open WhatsApp to notify Admin instantly?')) {
+          window.open(res.data.directWaUrl, '_blank');
+        }
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to submit material request');
+    } finally {
+      setSubmittingMaterial(false);
+    }
+  };
 
   const handleConfirmWorkerCancel = async () => {
     if (!cancelRemarks.trim()) {
@@ -538,6 +595,47 @@ const WorkerJobs: React.FC = () => {
               </div>
             </div>
 
+            {/* MATERIAL REQUEST BANNER / QUICK ACTION */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-500/15 dark:via-orange-500/15 dark:to-amber-500/10 border border-amber-500/30 p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/25 shrink-0">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-md">
+                      📦 Material Request
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400">Chemicals & Tools</span>
+                  </div>
+                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-850 dark:text-white mt-0.5">
+                    Chemical ya Cleaning Saman ki Jarurat Hai?
+                  </h3>
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-tight">
+                    Shampoo, cloths, brush, or gloves khatam ho rahe hain? Yaha se direct request karein.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0 pt-0.5 sm:pt-0">
+                <button
+                  type="button"
+                  onClick={() => setMaterialModalOpen(true)}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Package className="h-4 w-4" />
+                  <span>+ Request Material</span>
+                </button>
+                <Link
+                  to="/worker/materials"
+                  className="px-3 py-2.5 rounded-xl border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-xs font-extrabold transition-colors whitespace-nowrap"
+                  title="View Material History"
+                >
+                  History →
+                </Link>
+              </div>
+            </div>
+
             {/* Jobs Dashboard Container */}
             <div className="glass-card p-3 sm:p-6">
               {loading ? (
@@ -858,6 +956,25 @@ const WorkerJobs: React.FC = () => {
 
           {/* Right Column: Instructions Sidebar */}
           <div className="hidden lg:block lg:col-span-1 space-y-6">
+            {/* Quick Material Request Widget */}
+            <div className="glass-card p-5 space-y-3 border-amber-500/25 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
+              <div className="flex items-center space-x-2 text-amber-500">
+                <Package className="h-5 w-5" />
+                <h3 className="font-extrabold text-xs uppercase tracking-wider">Need Materials?</h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Shampoo, microfiber cloths, brush ya gloves kam pad rahe hain? Direct request karein.
+              </p>
+              <button
+                type="button"
+                onClick={() => setMaterialModalOpen(true)}
+                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 cursor-pointer flex items-center justify-center space-x-2"
+              >
+                <Package className="h-4 w-4" />
+                <span>+ Request Material</span>
+              </button>
+            </div>
+
             <div className="glass-card p-6 space-y-4">
               <div className="flex items-center space-x-2 text-secondary">
                 <ClipboardList className="h-5 w-5" />
@@ -879,12 +996,12 @@ const WorkerJobs: React.FC = () => {
       {/* FULL-WIDTH INTERACTIVE CLEANUP WORK SHEET DRAWER MODAL */}
       {selectedJob && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-3 sm:p-4 pt-10 sm:pt-12 pb-4 animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedJob(null);
           }}
         >
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-850 flex flex-col max-h-[94vh] sm:max-h-[90vh]">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[86vh] sm:max-h-[86vh]">
             
             {/* Modal Header with Back Button */}
             <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
@@ -989,6 +1106,21 @@ const WorkerJobs: React.FC = () => {
                   )}
                 </div>
                 {selectedJob.description && <div>📝 Client Instructions: <span className="text-slate-455">{selectedJob.description}</span></div>}
+
+                {/* Quick Material Request reminder inside job */}
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-semibold">Chemical ya saman kam pad raha hai?</span>
+                  <button
+                    type="button"
+                    onClick={() => setMaterialModalOpen(true)}
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 font-extrabold text-[10px] border border-amber-500/30 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Package className="h-3 w-3" />
+                    <span>+ Request Material</span>
+                  </button>
+                </div>
+              </div>
+
                 {/* Before Photo Box */}
               <div className="space-y-2">
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Before Cleaning Photo</span>
@@ -1093,7 +1225,7 @@ const WorkerJobs: React.FC = () => {
                     );
                   })}
                 </div>
-              </div>              </div>
+              </div>
 
               {/* Form Input fields (Visible only when in started/pending state for modifications) */}
               {selectedJob.status !== 'completed' && selectedJob.status !== 'cancelled' ? (
@@ -1386,6 +1518,181 @@ const WorkerJobs: React.FC = () => {
                 <span>{isSubmittingCancel ? 'Submitting...' : 'Confirm'}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK MATERIAL REQUEST MODAL FOR WORKERS */}
+      {materialModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-3 sm:p-4 pt-8 sm:pt-10 pb-4 animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMaterialModalOpen(false);
+          }}
+        >
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-amber-500/30 flex flex-col max-h-[88vh] animate-scale-up">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-amber-500/10 dark:bg-amber-500/5">
+              <div className="flex items-center space-x-2.5">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-slate-850 dark:text-white">
+                    Request Cleaning Material
+                  </h3>
+                  <p className="text-[10px] text-slate-400">Chemicals, cloths, gloves ya tools ki requirement bhejein</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMaterialModalOpen(false)}
+                className="text-slate-400 hover:text-slate-650 dark:hover:text-white rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleQuickMaterialSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
+              {/* Preset Chips */}
+              <div className="space-y-1.5 text-left">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  Quick Select Material (1-Tap):
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_MATERIAL_PRESETS.map((preset) => {
+                    const isSelected = materialItemName === preset.name;
+                    return (
+                      <button
+                        type="button"
+                        key={preset.name}
+                        onClick={() => {
+                          setMaterialItemName(preset.name);
+                          setMaterialQty(preset.defaultQty);
+                        }}
+                        className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-amber-500/50'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Material Item Name Input */}
+              <div className="space-y-1 text-left">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  Material / Chemical Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Fabric & Sofa Shampoo, Microfiber Cloths..."
+                  value={materialItemName}
+                  onChange={(e) => setMaterialItemName(e.target.value)}
+                  className="w-full text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                />
+              </div>
+
+              {/* Quantity Selection */}
+              <div className="space-y-1.5 text-left">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  Quantity
+                </label>
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  {['1 Unit', '2 Units', '5L Can', '1 Pack (5 Pcs)', '2 Packs'].map((q) => (
+                    <button
+                      type="button"
+                      key={q}
+                      onClick={() => setMaterialQty(q)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                        materialQty === q
+                          ? 'bg-secondary text-white border-secondary'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Or custom quantity..."
+                  value={materialQty}
+                  onChange={(e) => setMaterialQty(e.target.value)}
+                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 text-slate-800 dark:text-white"
+                />
+              </div>
+
+              {/* Urgency Selection */}
+              <div className="space-y-1 text-left">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  Urgency Level
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Normal', 'Urgent', 'Critical'] as const).map((level) => (
+                    <button
+                      type="button"
+                      key={level}
+                      onClick={() => setMaterialUrgency(level)}
+                      className={`py-2 px-2 rounded-xl text-xs font-extrabold border transition-all active:scale-95 cursor-pointer ${
+                        materialUrgency === level
+                          ? level === 'Critical'
+                            ? 'bg-rose-500 text-white border-rose-600 shadow'
+                            : level === 'Urgent'
+                            ? 'bg-amber-500 text-white border-amber-600 shadow'
+                            : 'bg-teal-500 text-white border-teal-600 shadow'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {level === 'Critical' ? '🚨 Critical' : level === 'Urgent' ? '⚡ Urgent' : '🟢 Normal'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Optional Reason / Notes */}
+              <div className="space-y-1 text-left">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  Reason / Notes (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Kal subah ke cleanup ke liye shampoo kam pad raha hai..."
+                  value={materialReason}
+                  onChange={(e) => setMaterialReason(e.target.value)}
+                  className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-amber-500 resize-none text-slate-800 dark:text-white"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 space-y-2">
+                <button
+                  type="submit"
+                  disabled={submittingMaterial}
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center space-x-2"
+                >
+                  <Send className="h-4 w-4" />
+                  <span>{submittingMaterial ? 'Submitting Request...' : 'Submit Material Request to Admin'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMaterialModalOpen(false)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}

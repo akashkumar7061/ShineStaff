@@ -200,7 +200,7 @@ const WorkerLayout: React.FC<WorkerLayoutProps> = ({ children }) => {
       )}
 
       {/* Main Content Wrapper */}
-      <div className="relative z-10 transition-all duration-300 px-4 sm:px-6">
+      <div className="relative transition-all duration-300 px-3 sm:px-6">
         {children}
       </div>
 
