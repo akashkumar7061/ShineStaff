@@ -273,7 +273,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
         const overlappingJobs = await Job.find({
           workerId: worker._id,
           date,
-          status: { $ne: 'cancelled' }
+          status: { $nin: ['cancelled', 'postponed'] }
         });
         
         for (const job of overlappingJobs) {
@@ -855,7 +855,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
           _id: { $ne: job._id },
           workerId: targetWorkerId,
           date: targetDate,
-          status: { $ne: 'cancelled' }
+          status: { $nin: ['cancelled', 'postponed'] }
         });
         
         for (const oJob of overlappingJobs) {
@@ -887,7 +887,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
             _id: { $ne: job._id },
             workerId: job.workerId,
             date: targetDate,
-            status: { $ne: 'cancelled' }
+            status: { $nin: ['cancelled', 'postponed'] }
           });
           
           for (const oJob of overlappingJobs) {

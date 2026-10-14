@@ -116,7 +116,7 @@ const WorkerHome: React.FC = () => {
       const salaryEarned = salRes?.data?.earnings?.todayEarnings || 0;
       setSalaryToday(salaryEarned);
 
-      const jobs = (jobsRes.data || []).filter((j: any) => j.status !== 'cancelled' && j.status !== 'rejected');
+      const jobs = (jobsRes.data || []).filter((j: any) => j.status !== 'cancelled' && j.status !== 'rejected' && j.status !== 'postponed');
       const pendingJobs = jobs.filter((j: any) => j.status === 'pending' || j.status === 'accepted');
       const completedJobs = jobs.filter((j: any) => j.status === 'completed');
       const activeJob = jobs.find((j: any) => j.status === 'started');

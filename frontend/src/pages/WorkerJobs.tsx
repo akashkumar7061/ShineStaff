@@ -262,7 +262,7 @@ const WorkerJobs: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.get('/jobs');
-      const activeJobs = (res.data || []).filter((j: any) => j.status !== 'cancelled' && j.status !== 'rejected');
+      const activeJobs = (res.data || []).filter((j: any) => j.status !== 'cancelled' && j.status !== 'rejected' && j.status !== 'postponed');
       setJobs(activeJobs);
     } catch (err) {
       console.error('Failed to fetch worker jobs:', err);
@@ -499,8 +499,8 @@ const WorkerJobs: React.FC = () => {
   };
 
   const filteredJobs = jobs.filter((job) => {
-    // Exclude cancelled and rejected jobs for workers
-    if (job.status === 'cancelled' || job.status === 'rejected') {
+    // Exclude cancelled, rejected, and postponed jobs for workers
+    if (job.status === 'cancelled' || job.status === 'rejected' || job.status === 'postponed') {
       return false;
     }
 

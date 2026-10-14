@@ -1870,7 +1870,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
   // Helper to trigger Whatsapp link pre-filled
   const getWhatsAppWorkerScheduleUrl = (worker: any) => {
-    const workerJobs = dayJobs.filter(j => j.workerId?._id === worker._id);
+    const workerJobs = dayJobs.filter(j => (j.workerId?._id || j.workerId) === worker._id && j.status !== 'cancelled' && j.status !== 'postponed');
     let text = `Hello ${worker.name},\nHere is your cleaning job schedule for today (${selectedDate}):\n\n`;
     if (workerJobs.length === 0) {
       text += `No cleanings assigned today. Relax & stay active!`;
@@ -2363,6 +2363,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   {/* Worker Cells */}
                   {activeWorkers.map((w: any) => {
                     const cellJobs = dayJobs.filter(j => (j.workerId?._id || j.workerId) === w._id && j.timeSlot === slot);
+                    const hasActiveJob = cellJobs.some(j => j.status !== 'cancelled' && j.status !== 'postponed');
                     return (
                       <td key={w._id} className="px-2 py-2.5 border-l border-slate-200 dark:border-slate-800 align-top">
                         {cellJobs.length > 0 ? (
@@ -2416,6 +2417,32 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                                 </div>
                               </div>
                             ))}
+                            {!hasActiveJob && (
+                              <div
+                                onClick={() => {
+                                  resetForm();
+                                  setWorkerId(w._id);
+                                  setTimeSlot(slot);
+                                  const parts = slot.split(' - ');
+                                  if (parts.length === 2) {
+                                    const convertTo24Hour = (time12: string) => {
+                                      const [time, modifier] = time12.split(' ');
+                                      let [hours, minutes] = time.split(':');
+                                      if (hours === '12') hours = '00';
+                                      if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12);
+                                      return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+                                    };
+                                    setStartTime(convertTo24Hour(parts[0]));
+                                    setEndTime(convertTo24Hour(parts[1]));
+                                  }
+                                  setCreateModalOpen(true);
+                                }}
+                                className="h-8 border border-dashed border-emerald-400 dark:border-emerald-700/60 hover:border-emerald-500 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-100/60 cursor-pointer transition-colors text-[10px] space-x-1"
+                                title="Slot is available. Click to schedule new clean booking!"
+                              >
+                                <span>+ Add Booking (Slot Available)</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div
@@ -3068,7 +3095,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
             <div className="my-4 space-y-4 max-h-[300px] overflow-y-auto">
               {activeWorkers.map((w: any) => {
-                const count = dayJobs.filter(j => (j.workerId?._id || j.workerId) === w._id).length;
+                const count = dayJobs.filter(j => (j.workerId?._id || j.workerId) === w._id && j.status !== 'cancelled' && j.status !== 'postponed').length;
                 const onHoliday = isWorkerOnHoliday(w, selectedDate);
                 return (
                   <div key={w._id} className="flex justify-between items-center bg-slate-50/70 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-200/40">

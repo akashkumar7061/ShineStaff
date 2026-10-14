@@ -391,7 +391,7 @@ export const getWorkerRecommendations = async (req: Request, res: Response) => {
       Attendance.find({ date }),
       Job.find({
         date,
-        status: { $ne: 'cancelled' }
+        status: { $nin: ['cancelled', 'postponed'] }
       })
     ]);
 
