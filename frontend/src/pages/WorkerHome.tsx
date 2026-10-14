@@ -92,19 +92,29 @@ const WorkerHome: React.FC = () => {
       setLoading(true);
     }
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       const [attRes, salRes, jobsRes] = await Promise.all([
-        api.get(`/attendance/worker/${user.id}`),
-        api.get(`/salary/dashboard?workerId=${user.id}`),
-        api.get('/jobs')
+        api.get(`/attendance/worker/${user.id}`).catch(err => {
+          console.warn('WorkerHome: Failed to fetch attendance:', err);
+          return { data: [] };
+        }),
+        api.get(`/salary/dashboard?workerId=${user.id}`).catch(err => {
+          console.warn('WorkerHome: Failed to fetch salary:', err);
+          return { data: { earnings: { todayEarnings: 0 } } };
+        }),
+        api.get('/jobs').catch(err => {
+          console.warn('WorkerHome: Failed to fetch jobs:', err);
+          return { data: [] };
+        })
       ]);
 
-      const attToday = attRes.data;
+      const attToday = Array.isArray(attRes?.data) ? attRes.data : [];
       const todayAtt = attToday.find((a: any) => a.date === todayStr);
-      setAttendanceToday(todayAtt);
+      setAttendanceToday(todayAtt || null);
       setAttendanceHistory(attToday);
 
-      setSalaryToday(salRes.data.earnings.todayEarnings);
+      const salaryEarned = salRes?.data?.earnings?.todayEarnings || 0;
+      setSalaryToday(salaryEarned);
 
       const jobs = (jobsRes.data || []).filter((j: any) => j.status !== 'cancelled' && j.status !== 'rejected');
       const pendingJobs = jobs.filter((j: any) => j.status === 'pending' || j.status === 'accepted');

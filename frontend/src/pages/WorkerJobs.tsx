@@ -492,6 +492,8 @@ const WorkerJobs: React.FC = () => {
   };
 
   const triggerAfterCapture = () => {
+    const emptyIndex = tempAfterPhotos.findIndex(p => !p || p.trim().length === 0);
+    setActiveAfterPhotoIndex(emptyIndex !== -1 ? emptyIndex : 0);
     setCameraType('after');
     setCameraActive(true);
   };
@@ -1272,7 +1274,7 @@ const WorkerJobs: React.FC = () => {
 
               {/* After Photos (5 Distinct Slots) */}
               <div className="space-y-3 pt-2">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">After Cleaning Photos (5 Required)</span>
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">After Cleaning Photos (At least 1 required)</span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[0, 1, 2, 3, 4].map((idx) => {
                     const photoUrl = tempAfterPhotos[idx];
@@ -1420,7 +1422,7 @@ const WorkerJobs: React.FC = () => {
                   {/* Submission */}
                   <button
                     type="submit"
-                    disabled={!tempBeforePhoto || tempAfterPhotos.some(p => !p) || submittingReport}
+                    disabled={!tempBeforePhoto || !tempAfterPhotos.some(p => !!p && p.trim().length > 50) || submittingReport}
                     className="w-full bg-gradient-to-r from-success to-emerald-600 text-white rounded-custom py-3.5 text-xs font-bold shadow transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {submittingReport ? 'Submitting Work...' : 'Submit Completed Cleanup'}

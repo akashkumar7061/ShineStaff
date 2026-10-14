@@ -24,33 +24,49 @@ if (!isMock) {
   }
 }
 
-export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, folder: string): Promise<string> => {
-  if (isMock) {
-    // Save locally and return server relative URL
-    const filename = `${folder}_${Date.now()}_${Math.round(Math.random() * 1E9)}.jpg`;
-    const uploadDir = path.join(__dirname, '../../uploads');
-    const filePath = path.join(uploadDir, filename);
+const saveLocally = (data: string | Buffer, folder: string): string => {
+  const filename = `${folder}_${Date.now()}_${Math.round(Math.random() * 1E9)}.jpg`;
+  const uploadDir = path.join(__dirname, '../../uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  const filePath = path.join(uploadDir, filename);
 
-    if (typeof fileBufferOrDataUrl === 'string' && fileBufferOrDataUrl.startsWith('data:')) {
-      // Decode dataurl
-      const base64Data = fileBufferOrDataUrl.split(',')[1];
-      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-    } else if (Buffer.isBuffer(fileBufferOrDataUrl)) {
-      fs.writeFileSync(filePath, fileBufferOrDataUrl);
-    } else if (typeof fileBufferOrDataUrl === 'string') {
-      // Treat as path or buffer
-      fs.copyFileSync(fileBufferOrDataUrl, filePath);
+  let buffer: Buffer;
+  if (Buffer.isBuffer(data)) {
+    buffer = data;
+  } else if (typeof data === 'string') {
+    if (data.includes(',')) {
+      buffer = Buffer.from(data.split(',')[1], 'base64');
+    } else {
+      buffer = Buffer.from(data, 'base64');
     }
-
-    // Return mock url (which will serve static files from /uploads)
-    const baseUrl = process.env.BACKEND_URL || 'https://shinestaff-backend.onrender.com';
-    return `${baseUrl}/uploads/${filename}`;
   } else {
-    // Actual Cloudinary upload with automatic local storage fallback
+    buffer = Buffer.from('');
+  }
+
+  fs.writeFileSync(filePath, buffer);
+  const baseUrl = process.env.BACKEND_URL || 'https://shinestaff-backend.onrender.com';
+  return `${baseUrl}/uploads/${filename}`;
+};
+
+export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, folder: string): Promise<string> => {
+  if (!fileBufferOrDataUrl) return '';
+
+  // Already uploaded web URL - preserve directly
+  if (typeof fileBufferOrDataUrl === 'string' && (fileBufferOrDataUrl.startsWith('http://') || fileBufferOrDataUrl.startsWith('https://'))) {
+    return fileBufferOrDataUrl;
+  }
+
+  if (isMock) {
+    return saveLocally(fileBufferOrDataUrl, folder);
+  } else {
     try {
       let content = '';
       if (typeof fileBufferOrDataUrl === 'string') {
-        content = fileBufferOrDataUrl;
+        content = fileBufferOrDataUrl.startsWith('data:') 
+          ? fileBufferOrDataUrl 
+          : `data:image/jpeg;base64,${fileBufferOrDataUrl}`;
       } else {
         content = `data:image/jpeg;base64,${fileBufferOrDataUrl.toString('base64')}`;
       }
@@ -58,28 +74,12 @@ export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, f
       const response = await cloudinary.uploader.upload(content, {
         folder: `shinestaff/${folder}`,
         resource_type: 'image',
-        timeout: 15000
+        timeout: 20000
       });
       return response.secure_url;
     } catch (error) {
       console.warn('[Cloudinary] Upload failed, falling back to secure local storage:', error);
-      // Resilient fallback: Save locally so worker never gets blocked
-      const filename = `${folder}_${Date.now()}_${Math.round(Math.random() * 1E9)}.jpg`;
-      const uploadDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      const filePath = path.join(uploadDir, filename);
-
-      if (typeof fileBufferOrDataUrl === 'string' && fileBufferOrDataUrl.startsWith('data:')) {
-        const base64Data = fileBufferOrDataUrl.split(',')[1];
-        fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-      } else if (Buffer.isBuffer(fileBufferOrDataUrl)) {
-        fs.writeFileSync(filePath, fileBufferOrDataUrl);
-      }
-
-      const baseUrl = process.env.BACKEND_URL || 'https://shinestaff-backend.onrender.com';
-      return `${baseUrl}/uploads/${filename}`;
+      return saveLocally(fileBufferOrDataUrl, folder);
     }
   }
 };

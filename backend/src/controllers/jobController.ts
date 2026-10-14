@@ -136,7 +136,11 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
     // Worker only gets their own active jobs (excluding cancelled and rejected)
     if (req.user.role === 'worker') {
       filter.workerId = req.user.id;
-      filter.notificationSentAt = { $exists: true, $ne: null };
+      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      filter.$or = [
+        { notificationSentAt: { $exists: true, $ne: null } },
+        { date: { $lte: todayStr } }
+      ];
       if (status && status !== 'cancelled' && status !== 'rejected') {
         filter.status = status;
       } else {
@@ -823,7 +827,11 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     paymentMode,
     rating,
     status,
-    cancelReason
+    cancelReason,
+    postponeReason,
+    rescheduleReason,
+    originalDate,
+    originalTimeSlot
   } = req.body;
 
   try {
@@ -960,6 +968,16 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
         if (status === 'cancelled') {
           job.cancelReason = cancelReason.trim();
         }
+        if (status === 'postponed') {
+          job.postponeReason = postponeReason ? postponeReason.trim() : (job.postponeReason || '');
+        }
+        if (status === 'rescheduled') {
+          job.rescheduleReason = rescheduleReason ? rescheduleReason.trim() : (job.rescheduleReason || '');
+          if (!job.originalDate) {
+            job.originalDate = originalDate || job.date;
+            job.originalTimeSlot = originalTimeSlot || job.timeSlot;
+          }
+        }
         if (status === 'completed') {
           job.adminCompleted = true;
           job.adminCompletedBy = req.user ? new mongoose.Types.ObjectId(req.user.id) : undefined;
@@ -969,13 +987,21 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
           job.adminCompletionIP = req.ip || 'unknown';
           job.adminCompletionWorkerConfirmed = true;
         }
+
+        let remarks = `Status updated by Admin to ${status}`;
+        if (status === 'cancelled') {
+          remarks = `Job cancelled. Reason: ${cancelReason.trim()}`;
+        } else if (status === 'postponed') {
+          remarks = `Job postponed by Admin${postponeReason ? `. Reason: ${postponeReason.trim()}` : ''}`;
+        } else if (status === 'rescheduled') {
+          remarks = `Job rescheduled to ${job.date} (${job.timeSlot || 'Anytime'})${rescheduleReason ? `. Reason: ${rescheduleReason.trim()}` : ''}`;
+        }
+
         if (!job.timeline) job.timeline = [];
         job.timeline.push({
           status: status as any,
           timestamp: new Date(),
-          remarks: status === 'cancelled'
-            ? `Job cancelled. Reason: ${cancelReason.trim()}`
-            : `Status updated by Admin to ${status}`,
+          remarks,
           updatedBy: 'Admin'
         });
 

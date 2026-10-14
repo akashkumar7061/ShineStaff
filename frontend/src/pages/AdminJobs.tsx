@@ -172,6 +172,14 @@ const getJobCardStyles = (status: string, isSelected: boolean): string => {
       return isSelected
         ? 'bg-indigo-100 border-indigo-300 shadow-sm text-indigo-850'
         : 'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900 text-indigo-755';
+    case 'postponed':
+      return isSelected
+        ? 'bg-purple-100 border-purple-300 shadow-sm text-purple-800'
+        : 'bg-purple-50 border-purple-200 dark:bg-purple-950/20 dark:border-purple-900 text-purple-700';
+    case 'rescheduled':
+      return isSelected
+        ? 'bg-cyan-100 border-cyan-300 shadow-sm text-cyan-800'
+        : 'bg-cyan-50 border-cyan-200 dark:bg-cyan-950/20 dark:border-cyan-900 text-cyan-700';
     case 'rejected':
       return isSelected
         ? 'bg-slate-200 border-slate-350 shadow-sm text-slate-800'
@@ -208,6 +216,18 @@ const getJobBadge = (status: string) => {
       return (
         <span className="inline-block bg-indigo-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
           Accepted
+        </span>
+      );
+    case 'postponed':
+      return (
+        <span className="inline-block bg-purple-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Postponed
+        </span>
+      );
+    case 'rescheduled':
+      return (
+        <span className="inline-block bg-cyan-600 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1">
+          Rescheduled
         </span>
       );
     case 'rejected':
@@ -415,6 +435,23 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [cancelRemarks, setCancelRemarks] = useState('');
   const [cancelModalError, setCancelModalError] = useState('');
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  // Reschedule modal state
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [rescheduleTargetJob, setRescheduleTargetJob] = useState<any | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<string>('');
+  const [rescheduleTimeSlot, setRescheduleTimeSlot] = useState<string>('');
+  const [rescheduleWorkerId, setRescheduleWorkerId] = useState<string>('unassigned');
+  const [rescheduleReason, setRescheduleReason] = useState<string>('');
+  const [isSubmittingReschedule, setIsSubmittingReschedule] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string>('');
+
+  // Postpone modal state
+  const [postponeModalOpen, setPostponeModalOpen] = useState(false);
+  const [postponeTargetJob, setPostponeTargetJob] = useState<any | null>(null);
+  const [postponeReason, setPostponeReason] = useState<string>('');
+  const [isSubmittingPostpone, setIsSubmittingPostpone] = useState(false);
+  const [postponeError, setPostponeError] = useState<string>('');
 
   // Form inputs state
   const [title, setTitle] = useState('');
@@ -1218,10 +1255,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   };
 
   const handleUpdateStatus = async (jobId: string, status: string) => {
+    const targetJob = (selectedJobForDrawer && selectedJobForDrawer._id === jobId)
+      ? selectedJobForDrawer
+      : jobs.find((j: any) => j._id === jobId);
+
     if (status === 'cancelled') {
-      const targetJob = (selectedJobForDrawer && selectedJobForDrawer._id === jobId)
-        ? selectedJobForDrawer
-        : jobs.find((j: any) => j._id === jobId);
       setCancelModalJob(targetJob || { _id: jobId });
       setCancelRemarks('');
       setCancelModalError('');
@@ -1229,6 +1267,32 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setCancelModalOpen(true);
       return;
     }
+
+    if (status === 'rescheduled') {
+      if (targetJob) {
+        setRescheduleTargetJob(targetJob);
+        setRescheduleDate(targetJob.date || getTodayString());
+        setRescheduleTimeSlot(targetJob.timeSlot || '08:00 AM - 02:00 PM');
+        setRescheduleWorkerId(targetJob.workerId?._id || targetJob.workerId || 'unassigned');
+        setRescheduleReason('');
+        setRescheduleError('');
+        setSelectedJobForDrawer(null);
+        setRescheduleModalOpen(true);
+      }
+      return;
+    }
+
+    if (status === 'postponed') {
+      if (targetJob) {
+        setPostponeTargetJob(targetJob);
+        setPostponeReason('');
+        setPostponeError('');
+        setSelectedJobForDrawer(null);
+        setPostponeModalOpen(true);
+      }
+      return;
+    }
+
     try {
       const res = await api.put(`/jobs/${jobId}`, { status });
       if (selectedJobForDrawer && selectedJobForDrawer._id === jobId) {
@@ -1237,6 +1301,60 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       fetchJobsAndWorkers();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update job status');
+    }
+  };
+
+  const handleConfirmReschedule = async () => {
+    if (!rescheduleTargetJob?._id) return;
+    if (!rescheduleDate) {
+      setRescheduleError('Please select a valid reschedule date.');
+      return;
+    }
+
+    setIsSubmittingReschedule(true);
+    setRescheduleError('');
+    try {
+      await api.put(`/jobs/${rescheduleTargetJob._id}`, {
+        status: 'rescheduled',
+        date: rescheduleDate,
+        timeSlot: rescheduleTimeSlot,
+        workerId: rescheduleWorkerId,
+        rescheduleReason: rescheduleReason.trim(),
+        originalDate: rescheduleTargetJob.date,
+        originalTimeSlot: rescheduleTargetJob.timeSlot
+      });
+
+      alert('Job successfully rescheduled!');
+      setRescheduleModalOpen(false);
+      setRescheduleTargetJob(null);
+      setRescheduleReason('');
+      fetchJobsAndWorkers();
+    } catch (err: any) {
+      setRescheduleError(err.response?.data?.message || 'Failed to reschedule job. Please check for scheduling conflicts.');
+    } finally {
+      setIsSubmittingReschedule(false);
+    }
+  };
+
+  const handleConfirmPostpone = async () => {
+    if (!postponeTargetJob?._id) return;
+    setIsSubmittingPostpone(true);
+    setPostponeError('');
+    try {
+      await api.put(`/jobs/${postponeTargetJob._id}`, {
+        status: 'postponed',
+        postponeReason: postponeReason.trim()
+      });
+
+      alert('Job marked as Postponed successfully.');
+      setPostponeModalOpen(false);
+      setPostponeTargetJob(null);
+      setPostponeReason('');
+      fetchJobsAndWorkers();
+    } catch (err: any) {
+      setPostponeError(err.response?.data?.message || 'Failed to postpone job.');
+    } finally {
+      setIsSubmittingPostpone(false);
     }
   };
 
@@ -1743,7 +1861,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     .filter((j) => j.date === selectedDate)
     .sort((a, b) => getJobStartTimeMinutes(a.timeSlot) - getJobStartTimeMinutes(b.timeSlot));
   const totalBookings = dayJobs.length;
-  const confirmedBookings = dayJobs.filter((j) => ['completed', 'started', 'pending'].includes(j.status)).length;
+  const confirmedBookings = dayJobs.filter((j) => ['completed', 'started', 'pending', 'rescheduled'].includes(j.status)).length;
 
   // Gather unique time slots from current day's jobs strictly (no hardcoded defaults)
   const timeSlots = Array.from(
@@ -2436,7 +2554,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       {selectedJobForDrawer._id?.slice(-12).toUpperCase() || 'CLEANUP DETAILS'}
                     </span>
                     <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 mt-1.5 rounded-full ${
-                      selectedJobForDrawer.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'
+                      selectedJobForDrawer.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' :
+                      selectedJobForDrawer.status === 'started' ? 'bg-amber-500/10 text-amber-500' :
+                      selectedJobForDrawer.status === 'postponed' ? 'bg-purple-500/10 text-purple-500' :
+                      selectedJobForDrawer.status === 'rescheduled' ? 'bg-cyan-500/10 text-cyan-500' :
+                      selectedJobForDrawer.status === 'cancelled' ? 'bg-rose-500/10 text-rose-500' :
+                      'bg-indigo-500/10 text-indigo-500'
                     }`}>
                       {selectedJobForDrawer.status || 'confirmed'}
                     </span>
@@ -2798,6 +2921,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           dotColor = 'bg-cyan-500 ring-cyan-100 dark:ring-cyan-950';
                           badgeBg = 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20';
                           label = 'Worker Accepted';
+                        } else if (event.status === 'postponed') {
+                          dotColor = 'bg-purple-500 ring-purple-100 dark:ring-purple-950';
+                          badgeBg = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+                          label = 'Postponed';
+                        } else if (event.status === 'rescheduled') {
+                          dotColor = 'bg-cyan-500 ring-cyan-100 dark:ring-cyan-950';
+                          badgeBg = 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20';
+                          label = 'Rescheduled';
                         } else if (event.status === 'cancelled') {
                           dotColor = 'bg-rose-500 ring-rose-100 dark:ring-rose-950';
                           badgeBg = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
@@ -2869,12 +3000,14 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 {/* Update Status Buttons Grid */}
                 <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-3">
                   <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Update Status</span>
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] font-bold">
                     {[
-                      { id: 'pending', label: 'confirmed', bg: 'bg-indigo-50 border-indigo-400 text-indigo-650' },
-                      { id: 'started', label: 'in progress', bg: 'bg-amber-50 border-amber-400 text-amber-650' },
-                      { id: 'completed', label: 'completed', bg: 'bg-emerald-50 border-emerald-400 text-emerald-650' },
-                      { id: 'cancelled', label: 'cancelled', bg: 'bg-rose-50 border-rose-400 text-rose-650' }
+                      { id: 'pending', label: 'Confirmed', bg: 'bg-indigo-50 border-indigo-400 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400' },
+                      { id: 'started', label: 'In Progress', bg: 'bg-amber-50 border-amber-400 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' },
+                      { id: 'completed', label: 'Completed', bg: 'bg-emerald-50 border-emerald-400 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' },
+                      { id: 'postponed', label: 'Postponed', bg: 'bg-purple-50 border-purple-400 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' },
+                      { id: 'rescheduled', label: 'Reschedule', bg: 'bg-cyan-50 border-cyan-400 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400' },
+                      { id: 'cancelled', label: 'Cancelled', bg: 'bg-rose-50 border-rose-400 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400' }
                     ].map((s) => (
                       <button
                         key={s.id}
@@ -4112,6 +4245,349 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <span>{isSubmittingCancel ? 'Cancelling...' : 'Confirm Cancellation'}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Booking Modal */}
+      {rescheduleModalOpen && rescheduleTargetJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-cyan-200 dark:border-cyan-900/40 p-6 max-w-lg w-full shadow-2xl space-y-4 animate-scale-up max-h-[92vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-cyan-600 dark:text-cyan-400">
+                <div className="h-9 w-9 rounded-2xl bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center font-bold text-base">
+                  <RefreshCw className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">Reschedule Clean Booking</h3>
+                  <p className="text-[10px] text-slate-400">Change date, time slot, or allot to another worker</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isSubmittingReschedule) {
+                    setRescheduleModalOpen(false);
+                    if (rescheduleTargetJob) setSelectedJobForDrawer(rescheduleTargetJob);
+                    setRescheduleTargetJob(null);
+                    setRescheduleError('');
+                  }
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Current Booking Summary Card */}
+            <div className="bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3 border border-slate-200/60 dark:border-slate-800 space-y-1.5 text-left text-xs">
+              <div className="flex justify-between items-start">
+                <span className="font-black text-slate-800 dark:text-slate-200">{rescheduleTargetJob.title}</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 text-[10px]">
+                  ₹{rescheduleTargetJob.price || 0}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                👤 Client: <span className="font-bold text-slate-700 dark:text-slate-300">{rescheduleTargetJob.clientName}</span> ({rescheduleTargetJob.clientPhone})
+              </p>
+              <p className="text-[11px] text-slate-500 font-medium truncate">
+                📍 Address: <span className="text-slate-700 dark:text-slate-300">{rescheduleTargetJob.address || 'N/A'}</span>
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-bold text-slate-400">
+                <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  Current Date: {rescheduleTargetJob.date}
+                </span>
+                <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  Current Slot: {rescheduleTargetJob.timeSlot || 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            {/* Reschedule Edit Form */}
+            <div className="space-y-3.5 text-left">
+              
+              {/* 1. Reschedule Date */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Reschedule Date *</span>
+                  <span className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold">Select Clean Date</span>
+                </label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  min={getTodayString()}
+                  onChange={(e) => {
+                    setRescheduleDate(e.target.value);
+                    if (rescheduleError) setRescheduleError('');
+                  }}
+                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 shadow-sm"
+                />
+                {/* Quick Date Pills */}
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[
+                    { label: 'Today', days: 0 },
+                    { label: 'Tomorrow', days: 1 },
+                    { label: '+2 Days', days: 2 },
+                    { label: '+3 Days', days: 3 }
+                  ].map(d => {
+                    const target = getPastDateString(-d.days);
+                    return (
+                      <button
+                        key={d.label}
+                        type="button"
+                        onClick={() => {
+                          setRescheduleDate(target);
+                          if (rescheduleError) setRescheduleError('');
+                        }}
+                        className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          rescheduleDate === target
+                            ? 'bg-cyan-500 text-white border-cyan-500 shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Allot to Worker */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Allot to Worker *</span>
+                  <span className="text-[9px] text-slate-400 font-bold">Assign Staff</span>
+                </label>
+                <select
+                  value={rescheduleWorkerId}
+                  onChange={(e) => {
+                    setRescheduleWorkerId(e.target.value);
+                    if (rescheduleError) setRescheduleError('');
+                  }}
+                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 shadow-sm cursor-pointer"
+                >
+                  <option value="unassigned">-- Unassigned (Keep In Unassigned Pool) --</option>
+                  {activeWorkers.map((w: any) => {
+                    const onHoliday = isWorkerOnHoliday(w, rescheduleDate);
+                    return (
+                      <option key={w._id} value={w._id}>
+                        {w.name} ({w.company || 'Both'}) {onHoliday ? '🌴 [On Holiday]' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* 3. Time Slot */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Time Slot *</span>
+                  <span className="text-[9px] text-slate-400 font-bold">Service Hours</span>
+                </label>
+                <input
+                  type="text"
+                  value={rescheduleTimeSlot}
+                  onChange={(e) => {
+                    setRescheduleTimeSlot(e.target.value);
+                    if (rescheduleError) setRescheduleError('');
+                  }}
+                  placeholder="e.g. 08:00 AM - 02:00 PM"
+                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 shadow-sm"
+                />
+                {/* Quick Slot Pills */}
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[
+                    '08:00 AM - 02:00 PM',
+                    '09:00 AM - 11:00 AM',
+                    '11:00 AM - 01:00 PM',
+                    '01:00 PM - 03:00 PM',
+                    '03:00 PM - 05:00 PM',
+                    '05:00 PM - 07:00 PM'
+                  ].map(slot => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => {
+                        setRescheduleTimeSlot(slot);
+                        if (rescheduleError) setRescheduleError('');
+                      }}
+                      className={`text-[9px] font-bold px-2 py-0.8 rounded-lg border transition-all cursor-pointer ${
+                        rescheduleTimeSlot === slot
+                          ? 'bg-cyan-500 text-white border-cyan-500 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Reason / Remarks */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Reschedule Reason / Remarks</span>
+                  <span className="text-[9px] text-slate-400 font-bold">Optional</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="Enter reason for rescheduling (e.g. Customer requested next day service, rain delay, worker reallocated)..."
+                  className="w-full text-xs font-medium p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 resize-none shadow-sm"
+                />
+              </div>
+
+              {/* Edit All details link */}
+              <div className="pt-1 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Need to edit customer phone, address, or price?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRescheduleModalOpen(false);
+                    handleOpenEditModal(rescheduleTargetJob);
+                  }}
+                  className="text-secondary hover:underline font-bold cursor-pointer"
+                >
+                  Open Full Edit Form →
+                </button>
+              </div>
+
+              {rescheduleError && (
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/40">
+                  ⚠️ {rescheduleError}
+                </p>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex justify-end space-x-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isSubmittingReschedule}
+                onClick={() => {
+                  setRescheduleModalOpen(false);
+                  if (rescheduleTargetJob) setSelectedJobForDrawer(rescheduleTargetJob);
+                  setRescheduleTargetJob(null);
+                  setRescheduleError('');
+                }}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingReschedule || !rescheduleDate}
+                onClick={handleConfirmReschedule}
+                className="px-5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 cursor-pointer"
+              >
+                <span>{isSubmittingReschedule ? 'Rescheduling...' : 'Confirm Reschedule'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Postpone Booking Modal */}
+      {postponeModalOpen && postponeTargetJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-purple-200 dark:border-purple-900/40 p-6 max-w-md w-full shadow-2xl space-y-4 animate-scale-up">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-purple-600 dark:text-purple-400">
+                <div className="h-9 w-9 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center font-bold text-base">
+                  ⏳
+                </div>
+                <div className="text-left">
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">Postpone Clean Booking</h3>
+                  <p className="text-[10px] text-slate-400">Put booking on hold until customer confirms new schedule</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isSubmittingPostpone) {
+                    setPostponeModalOpen(false);
+                    if (postponeTargetJob) setSelectedJobForDrawer(postponeTargetJob);
+                    setPostponeTargetJob(null);
+                    setPostponeReason('');
+                    setPostponeError('');
+                  }
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Booking Summary */}
+            <div className="bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3 border border-slate-200/60 dark:border-slate-800 text-left text-xs space-y-1">
+              <div className="flex justify-between items-start font-black text-slate-850 dark:text-slate-200">
+                <span>{postponeTargetJob.title}</span>
+                <span className="text-purple-600 dark:text-purple-400 font-bold">₹{postponeTargetJob.price || 0}</span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                👤 Client: <span className="font-bold text-slate-700 dark:text-slate-300">{postponeTargetJob.clientName}</span> ({postponeTargetJob.clientPhone})
+              </p>
+            </div>
+
+            {/* Reason Textarea */}
+            <div className="space-y-1.5 text-left">
+              <label className="block text-[11px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Postpone Reason / Remarks</span>
+                <span className="text-[9px] text-purple-500 uppercase">Optional</span>
+              </label>
+              <textarea
+                rows={3}
+                value={postponeReason}
+                onChange={(e) => {
+                  setPostponeReason(e.target.value);
+                  if (postponeError) setPostponeError('');
+                }}
+                placeholder="Enter reason why this booking is postponed (e.g. Customer out of town, Client requested temporary hold, Awaiting payment confirmation)..."
+                className="w-full text-xs font-medium p-3 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/20 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                autoFocus
+              />
+              {postponeError && (
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                  ⚠️ {postponeError}
+                </p>
+              )}
+              <p className="text-[10px] text-slate-400">
+                This booking will remain saved and can be rescheduled or reactivated at any time.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isSubmittingPostpone}
+                onClick={() => {
+                  setPostponeModalOpen(false);
+                  if (postponeTargetJob) setSelectedJobForDrawer(postponeTargetJob);
+                  setPostponeTargetJob(null);
+                  setPostponeReason('');
+                  setPostponeError('');
+                }}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingPostpone}
+                onClick={handleConfirmPostpone}
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 cursor-pointer"
+              >
+                <span>{isSubmittingPostpone ? 'Postponing...' : 'Confirm Postpone'}</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}

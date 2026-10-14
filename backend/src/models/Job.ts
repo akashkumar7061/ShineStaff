@@ -16,7 +16,11 @@ export interface IJob extends Document {
     lat: number;
     lng: number;
   };
-  status: 'pending' | 'accepted' | 'rejected' | 'started' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'started' | 'completed' | 'cancelled' | 'postponed' | 'rescheduled';
+  postponeReason?: string;
+  rescheduleReason?: string;
+  originalDate?: string;
+  originalTimeSlot?: string;
   beforePhoto?: string;
   beforePhotoTime?: Date;
   beforePhotoGPS?: {
@@ -92,7 +96,11 @@ const JobSchema = new Schema<IJob>({
     lat: { type: Number },
     lng: { type: Number }
   },
-  status: { type: String, enum: ['pending', 'accepted', 'rejected', 'started', 'completed', 'cancelled'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'accepted', 'rejected', 'started', 'completed', 'cancelled', 'postponed', 'rescheduled'], default: 'pending' },
+  postponeReason: { type: String, default: '' },
+  rescheduleReason: { type: String, default: '' },
+  originalDate: { type: String, default: '' },
+  originalTimeSlot: { type: String, default: '' },
   beforePhoto: { type: String, default: '' },
   beforePhotoTime: { type: Date },
   beforePhotoGPS: {
