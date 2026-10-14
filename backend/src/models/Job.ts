@@ -16,9 +16,15 @@ export interface IJob extends Document {
     lat: number;
     lng: number;
   };
-  status: 'pending' | 'accepted' | 'rejected' | 'started' | 'completed' | 'cancelled' | 'postponed' | 'rescheduled';
+  status: 'pending' | 'accepted' | 'rejected' | 'started' | 'completed' | 'cancelled' | 'postponed' | 'rescheduled' | 'pending_reschedule' | 'waitlist';
   postponeReason?: string;
   rescheduleReason?: string;
+  rescheduleCategory?: 'rain' | 'vehicle_breakdown' | 'worker_unavailable' | 'customer_rescheduled' | 'job_overrun' | 'other';
+  timeFlexibility?: 'fixed' | 'flexible';
+  preferredDate?: string;
+  preferredTimeSlot?: string;
+  contactStatus?: 'pending' | 'called' | 'agreed' | 'unreachable';
+  isRecoverySlot?: boolean;
   originalDate?: string;
   originalTimeSlot?: string;
   beforePhoto?: string;
@@ -96,9 +102,15 @@ const JobSchema = new Schema<IJob>({
     lat: { type: Number },
     lng: { type: Number }
   },
-  status: { type: String, enum: ['pending', 'accepted', 'rejected', 'started', 'completed', 'cancelled', 'postponed', 'rescheduled'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'accepted', 'rejected', 'started', 'completed', 'cancelled', 'postponed', 'rescheduled', 'pending_reschedule', 'waitlist'], default: 'pending' },
   postponeReason: { type: String, default: '' },
   rescheduleReason: { type: String, default: '' },
+  rescheduleCategory: { type: String, default: '' },
+  timeFlexibility: { type: String, enum: ['fixed', 'flexible'], default: 'fixed' },
+  preferredDate: { type: String, default: '' },
+  preferredTimeSlot: { type: String, default: '' },
+  contactStatus: { type: String, enum: ['pending', 'called', 'agreed', 'unreachable'], default: 'pending' },
+  isRecoverySlot: { type: Boolean, default: false },
   originalDate: { type: String, default: '' },
   originalTimeSlot: { type: String, default: '' },
   beforePhoto: { type: String, default: '' },

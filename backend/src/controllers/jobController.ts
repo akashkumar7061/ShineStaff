@@ -60,6 +60,38 @@ const calculateDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(d * 100) / 100; // round to 2 decimals
 };
 
+export const checkAndBroadcastFreedSlot = async (job: any) => {
+  try {
+    const io = getIO();
+    if (!io || !job.date || !job.timeSlot) return;
+
+    // Find any waitlisted or pending_reschedule or postponed jobs that could backfill this slot
+    const candidates = await Job.find({
+      _id: { $ne: job._id },
+      company: job.company,
+      status: { $in: ['waitlist', 'pending_reschedule', 'postponed'] },
+      $or: [
+        { preferredDate: job.date, preferredTimeSlot: job.timeSlot },
+        { preferredDate: job.date, timeFlexibility: 'flexible' },
+        { date: job.date, timeSlot: job.timeSlot },
+        { date: job.date, timeFlexibility: 'flexible' }
+      ]
+    }).limit(6);
+
+    io.emit('adminNotification', {
+      type: 'SLOT_OPENED',
+      message: `⚡ Slot Available: ${job.timeSlot} on ${job.date} (${job.company})!`,
+      date: job.date,
+      timeSlot: job.timeSlot,
+      company: job.company,
+      freedJobId: job._id,
+      candidateWaitlistJobs: candidates
+    });
+  } catch (err) {
+    console.error('Error broadcasting freed slot:', err);
+  }
+};
+
 export const shouldDelayNotification = (jobDateStr: string): boolean => {
   if (!jobDateStr) return false;
   
@@ -144,7 +176,7 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
       if (status && status !== 'cancelled' && status !== 'rejected') {
         filter.status = status;
       } else {
-        filter.status = { $nin: ['cancelled', 'rejected'] };
+        filter.status = { $nin: ['cancelled', 'rejected', 'postponed', 'pending_reschedule', 'waitlist'] };
       }
     } else {
       if (workerId) {
@@ -253,7 +285,15 @@ export const createJob = async (req: AuthRequest, res: Response) => {
     pincode,
     notes,
     specialInstructions,
-    attachments
+    attachments,
+
+    status,
+    timeFlexibility,
+    preferredDate,
+    preferredTimeSlot,
+    rescheduleCategory,
+    contactStatus,
+    isRecoverySlot
   } = req.body;
 
   try {
@@ -273,7 +313,7 @@ export const createJob = async (req: AuthRequest, res: Response) => {
         const overlappingJobs = await Job.find({
           workerId: worker._id,
           date,
-          status: { $nin: ['cancelled', 'postponed'] }
+          status: { $nin: ['cancelled', 'postponed', 'waitlist'] }
         });
         
         for (const job of overlappingJobs) {
@@ -283,6 +323,28 @@ export const createJob = async (req: AuthRequest, res: Response) => {
             });
           }
         }
+      }
+    } else if (status !== 'waitlist' && date && timeSlot) {
+      // Fleet Capacity verification for unassigned bookings:
+      // Prevent infinite unassigned bookings when all workers are already occupied for that slot!
+      const workerFilter: any = { role: 'worker', status: 'active' };
+      if (company && company !== 'All') {
+        workerFilter.$or = [{ company: company }, { company: 'Both' }, { company: { $exists: false } }];
+      }
+      const activeWorkersCount = await User.countDocuments(workerFilter);
+
+      const activeJobsInSlot = await Job.countDocuments({
+        date,
+        ...(company && company !== 'All' ? { company } : {}),
+        status: { $nin: ['cancelled', 'postponed', 'waitlist'] },
+        timeSlot: timeSlot
+      });
+
+      if (activeWorkersCount > 0 && activeJobsInSlot >= activeWorkersCount) {
+        return res.status(400).json({
+          message: `Fleet Capacity Full! All ${activeWorkersCount} field staff are already booked during ${timeSlot} on ${date}. Please choose another time or save as Waitlist.`,
+          isCapacityFull: true
+        });
       }
     }
 
@@ -340,7 +402,13 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       fuelAllowance: calculatedFuelAllowance,
       fromLocation: fromLocation || '',
       toLocation: toLocation || '',
-      status: 'pending',
+      status: (status === 'waitlist' || status === 'pending_reschedule') ? status : 'pending',
+      timeFlexibility: timeFlexibility || 'fixed',
+      preferredDate: preferredDate || '',
+      preferredTimeSlot: preferredTimeSlot || '',
+      rescheduleCategory: rescheduleCategory || '',
+      contactStatus: contactStatus || 'pending',
+      isRecoverySlot: isRecoverySlot || false,
       notificationSentAt: shouldDelayNotification(date || '') ? undefined : new Date(),
 
       visitId: generatedVisitId,
@@ -358,9 +426,9 @@ export const createJob = async (req: AuthRequest, res: Response) => {
       createdBy: req.user ? req.user.id : undefined,
       attachments: uploadedAttachments,
       timeline: [{
-        status: 'pending',
+        status: (status === 'waitlist' || status === 'pending_reschedule') ? status : 'pending',
         timestamp: new Date(),
-        remarks: worker ? `Job created and assigned to ${worker.name}` : 'Job created (unassigned)',
+        remarks: worker ? `Job created and assigned to ${worker.name}` : `Job created (${status === 'waitlist' ? 'Waitlist' : 'unassigned'})`,
         updatedBy: req.user ? 'Admin' : 'System'
       }]
     });
@@ -753,6 +821,8 @@ export const cancelJob = async (req: AuthRequest, res: Response) => {
       console.error('Failed to emit job cancelled socket notification:', err);
     }
 
+    checkAndBroadcastFreedSlot(job).catch(err => console.error('Error broadcasting freed slot:', err));
+
     return res.status(200).json({ message: 'Job cancelled successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -831,7 +901,14 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     postponeReason,
     rescheduleReason,
     originalDate,
-    originalTimeSlot
+    originalTimeSlot,
+
+    rescheduleCategory,
+    timeFlexibility,
+    preferredDate,
+    preferredTimeSlot,
+    contactStatus,
+    isRecoverySlot
   } = req.body;
 
   try {
@@ -855,7 +932,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
           _id: { $ne: job._id },
           workerId: targetWorkerId,
           date: targetDate,
-          status: { $nin: ['cancelled', 'postponed'] }
+          status: { $nin: ['cancelled', 'postponed', 'waitlist'] }
         });
         
         for (const oJob of overlappingJobs) {
@@ -887,7 +964,7 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
             _id: { $ne: job._id },
             workerId: job.workerId,
             date: targetDate,
-            status: { $nin: ['cancelled', 'postponed'] }
+            status: { $nin: ['cancelled', 'postponed', 'waitlist'] }
           });
           
           for (const oJob of overlappingJobs) {
@@ -911,6 +988,13 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     job.price = price !== undefined ? Number(price) : job.price;
     job.date = date !== undefined ? date : job.date;
     job.timeSlot = timeSlot !== undefined ? timeSlot : job.timeSlot;
+
+    if (rescheduleCategory !== undefined) job.rescheduleCategory = rescheduleCategory;
+    if (timeFlexibility !== undefined) job.timeFlexibility = timeFlexibility;
+    if (preferredDate !== undefined) job.preferredDate = preferredDate;
+    if (preferredTimeSlot !== undefined) job.preferredTimeSlot = preferredTimeSlot;
+    if (contactStatus !== undefined) job.contactStatus = contactStatus;
+    if (isRecoverySlot !== undefined) job.isRecoverySlot = isRecoverySlot;
 
     // Auto-resolve GPS coordinates if locationName, address, or location is provided
     const settings = await Settings.findOne({ settingsId: 'global' });
@@ -1022,6 +1106,10 @@ export const updateJob = async (req: AuthRequest, res: Response) => {
     }
 
     await job.save();
+
+    if (status === 'cancelled' || status === 'postponed') {
+      checkAndBroadcastFreedSlot(job).catch(err => console.error('Error broadcasting freed slot:', err));
+    }
 
     // Sync customer and reschedule reminder if status changes to completed
     await syncCustomerAndScheduleReminder(job);
@@ -1407,5 +1495,108 @@ export const resolveJobLocation = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     return res.status(500).json({ message: 'Failed to resolve location', error: error.message });
+  }
+};
+
+export const getSlotAvailability = async (req: AuthRequest, res: Response) => {
+  try {
+    const { date, company } = req.query;
+    if (!date) {
+      return res.status(400).json({ message: 'Date is required' });
+    }
+
+    const dateStr = String(date);
+    const companyStr = company ? String(company) : 'All';
+
+    // 1. Fetch settings for buffer
+    let settings = await Settings.findOne({ settingsId: 'global' });
+    const enableEmergencyBuffer = settings ? settings.enableEmergencyBuffer !== false : true;
+    const emergencyBufferSlots = settings ? (settings.emergencyBufferSlots || 1) : 1;
+
+    // 2. Fetch active workers eligible for this company
+    const workerFilter: any = { role: 'worker', status: 'active' };
+    if (companyStr && companyStr !== 'All') {
+      workerFilter.$or = [{ company: companyStr }, { company: 'Both' }, { company: { $exists: false } }];
+    }
+    const allWorkers = await User.find(workerFilter).select('_id name weeklyHoliday company');
+
+    // Filter out workers whose weekly holiday is this day
+    const parts = dateStr.split('-');
+    const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    let dayName = '';
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      dayName = dayOfWeekNames[d.getDay()];
+    }
+    const availableWorkers = allWorkers.filter(w => !w.weeklyHoliday || w.weeklyHoliday === 'None' || w.weeklyHoliday.toLowerCase() !== dayName.toLowerCase());
+    const totalWorkersCount = availableWorkers.length;
+
+    // 3. Standard slot windows
+    const standardSlots = [
+      '08:00 AM - 11:00 AM',
+      '11:00 AM - 02:00 PM',
+      '02:00 PM - 05:00 PM',
+      '05:00 PM - 08:00 PM'
+    ];
+
+    const jobsFilter: any = {
+      date: dateStr,
+      status: { $nin: ['cancelled', 'postponed', 'waitlist'] }
+    };
+    if (companyStr && companyStr !== 'All') {
+      jobsFilter.company = companyStr;
+    }
+    const activeJobs = await Job.find(jobsFilter).select('timeSlot workerId status timeFlexibility');
+
+    const waitlistJobs = await Job.find({
+      $or: [
+        { date: dateStr, status: { $in: ['waitlist', 'pending_reschedule', 'postponed'] } },
+        { preferredDate: dateStr, status: { $in: ['waitlist', 'pending_reschedule', 'postponed'] } }
+      ],
+      ...(companyStr && companyStr !== 'All' ? { company: companyStr } : {})
+    }).select('timeSlot preferredTimeSlot status clientName clientPhone');
+
+    const allSlots: string[] = Array.from(new Set([...standardSlots, ...activeJobs.map(j => j.timeSlot).filter((s): s is string => Boolean(s))]));
+
+    const slotStats = allSlots.map(slot => {
+      const bookedJobsInSlot = activeJobs.filter(j => !!j.timeSlot && slotsOverlap(j.timeSlot, slot));
+      const bookedCount = bookedJobsInSlot.length;
+      const waitlistInSlot = waitlistJobs.filter(j => 
+        (!!j.timeSlot && slotsOverlap(j.timeSlot, slot)) || 
+        (!!j.preferredTimeSlot && slotsOverlap(j.preferredTimeSlot, slot))
+      );
+
+      const freeCount = Math.max(0, totalWorkersCount - bookedCount);
+      let slotStatus = 'available'; // 'available' | 'low' | 'emergency_only' | 'full'
+      if (freeCount === 0) {
+        slotStatus = 'full';
+      } else if (enableEmergencyBuffer && freeCount <= emergencyBufferSlots) {
+        slotStatus = 'emergency_only';
+      } else if (freeCount === 1) {
+        slotStatus = 'low';
+      }
+
+      return {
+        timeSlot: slot,
+        totalCapacity: totalWorkersCount,
+        bookedCount,
+        freeCount,
+        emergencyBufferCount: enableEmergencyBuffer ? emergencyBufferSlots : 0,
+        waitlistCount: waitlistInSlot.length,
+        waitlistJobs: waitlistInSlot,
+        status: slotStatus
+      };
+    });
+
+    return res.status(200).json({
+      date: dateStr,
+      company: companyStr,
+      totalActiveWorkers: totalWorkersCount,
+      enableEmergencyBuffer,
+      emergencyBufferSlots,
+      slotStats
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to compute slot availability', error: error.message });
   }
 };

@@ -98,6 +98,28 @@ export const getClientWhatsAppFeedbackUrl = (job: any): string => {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 };
 
+export const getCategoryIcon = (cat?: string) => {
+  switch (cat) {
+    case 'rain': return '🌧️';
+    case 'vehicle_breakdown': return '🛵';
+    case 'worker_unavailable': return '🤒';
+    case 'customer_rescheduled': return '🚪';
+    case 'job_overrun': return '⏱️';
+    default: return '⏳';
+  }
+};
+
+export const getCategoryLabel = (cat?: string, fallbackReason?: string) => {
+  switch (cat) {
+    case 'rain': return 'Weather / Rain';
+    case 'vehicle_breakdown': return 'Scooty Breakdown';
+    case 'worker_unavailable': return 'Worker Sick / Absent';
+    case 'customer_rescheduled': return 'Customer Unavailable';
+    case 'job_overrun': return 'Delay / Overrun';
+    default: return fallbackReason || 'Postponed / On Hold';
+  }
+};
+
 export const parseCoordsFromInput = (text: string): { lat: number; lng: number } | null => {
   if (!text || typeof text !== 'string') return null;
   const trimmed = text.trim();
@@ -450,8 +472,34 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [postponeModalOpen, setPostponeModalOpen] = useState(false);
   const [postponeTargetJob, setPostponeTargetJob] = useState<any | null>(null);
   const [postponeReason, setPostponeReason] = useState<string>('');
+  const [postponeCategory, setPostponeCategory] = useState<'rain' | 'vehicle_breakdown' | 'worker_unavailable' | 'customer_rescheduled' | 'job_overrun' | 'other'>('vehicle_breakdown');
+  const [postponePreferredDate, setPostponePreferredDate] = useState<string>('');
+  const [postponePreferredTimeSlot, setPostponePreferredTimeSlot] = useState<string>('');
+  const [postponeFlexibility, setPostponeFlexibility] = useState<'fixed' | 'flexible'>('fixed');
   const [isSubmittingPostpone, setIsSubmittingPostpone] = useState(false);
   const [postponeError, setPostponeError] = useState<string>('');
+
+  // Operational Navigation Tabs (Calendar, Reschedule Queue, Waitlist)
+  const [activeBoardTab, setActiveBoardTab] = useState<'calendar' | 'reschedule_queue' | 'waitlist'>('calendar');
+  const [slotAvailabilityData, setSlotAvailabilityData] = useState<any>(null);
+  const [rescheduleQueueJobs, setRescheduleQueueJobs] = useState<any[]>([]);
+  const [waitlistJobs, setWaitlistJobs] = useState<any[]>([]);
+
+  // Auto-Backfill freed slot alert banner & modal
+  const [openedSlotAlert, setOpenedSlotAlert] = useState<{
+    date: string;
+    timeSlot: string;
+    company: string;
+    candidateWaitlistJobs: any[];
+    freedByJobTitle?: string;
+  } | null>(null);
+  const [backfillModalOpen, setBackfillModalOpen] = useState(false);
+
+  // Time Flexibility & Waitlist for Job Creation/Edit
+  const [timeFlexibility, setTimeFlexibility] = useState<'fixed' | 'flexible'>('fixed');
+  const [preferredDate, setPreferredDate] = useState<string>('');
+  const [preferredTimeSlot, setPreferredTimeSlot] = useState<string>('');
+  const [bookingAsWaitlist, setBookingAsWaitlist] = useState<boolean>(false);
 
   // Form inputs state
   const [title, setTitle] = useState('');
@@ -567,12 +615,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const fetchJobsAndWorkers = async () => {
     setLoading(true);
     try {
-      const [jobsRes, workersRes] = await Promise.all([
+      const [jobsRes, workersRes, slotRes, queueRes, waitlistRes] = await Promise.all([
         api.get(`/jobs?company=${companyFilter}&date=${selectedDate}`),
-        api.get(`/workers?company=${companyFilter}`)
+        api.get(`/workers?company=${companyFilter}`),
+        api.get(`/jobs/slot-availability?company=${companyFilter}&date=${selectedDate}`).catch(() => ({ data: null })),
+        api.get(`/jobs?company=${companyFilter}&status=postponed`).catch(() => ({ data: [] })),
+        api.get(`/jobs?company=${companyFilter}&status=waitlist`).catch(() => ({ data: [] }))
       ]);
       setJobs(jobsRes.data);
       setWorkers(workersRes.data);
+      if (slotRes.data) {
+        setSlotAvailabilityData(slotRes.data);
+      }
+      setRescheduleQueueJobs(queueRes.data || []);
+      setWaitlistJobs(waitlistRes.data || []);
     } catch (err) {
       console.error('Failed to load jobs/workers:', err);
     } finally {
@@ -741,7 +797,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     const handleSocketUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       const type = customEvent.detail?.type;
-      if (['JOB_COMPLETED', 'JOB_STARTED', 'JOB_CREATED', 'JOB_CANCELLED', 'JOB_DELETED', 'WORKER_STATUS_CHANGED', 'WORKER_UPDATED'].includes(type)) {
+      if (type === 'SLOT_OPENED') {
+        setOpenedSlotAlert(customEvent.detail);
+        fetchJobsAndWorkers();
+      } else if (['JOB_COMPLETED', 'JOB_STARTED', 'JOB_CREATED', 'JOB_CANCELLED', 'JOB_DELETED', 'WORKER_STATUS_CHANGED', 'WORKER_UPDATED', 'JOB_UPDATED'].includes(type)) {
         fetchJobsAndWorkers();
         fetchWorkerRecommendations();
       }
@@ -1132,11 +1191,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
 
     setSavingJob(true);
     try {
-      const payload = {
+      const payload: any = {
         title,
         description,
         company,
-        workerId,
+        workerId: bookingAsWaitlist ? 'unassigned' : workerId,
         clientName,
         clientPhone,
         address,
@@ -1150,7 +1209,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         fromLocation: fromLocation || '',
         toLocation: toLocation || '',
         paymentStatus,
-        paymentMode
+        paymentMode,
+        timeFlexibility,
+        preferredDate: preferredDate || date,
+        preferredTimeSlot: preferredTimeSlot || `${formatTimeTo12Hour(startTime)} - ${formatTimeTo12Hour(endTime)}`,
+        status: bookingAsWaitlist ? 'waitlist' : undefined
       };
 
       if (isEditMode && editingJobId) {
@@ -1204,6 +1267,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setDate(job.date || '');
     setPaymentStatus(job.paymentStatus || 'pending');
     setPaymentMode(job.paymentMode || 'not_selected');
+    setTimeFlexibility(job.timeFlexibility || 'fixed');
+    setPreferredDate(job.preferredDate || '');
+    setPreferredTimeSlot(job.preferredTimeSlot || '');
+    setBookingAsWaitlist(job.status === 'waitlist');
     
     if (job.timeSlot) {
       const parts = job.timeSlot.split(' - ');
@@ -1343,18 +1410,43 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     try {
       await api.put(`/jobs/${postponeTargetJob._id}`, {
         status: 'postponed',
-        postponeReason: postponeReason.trim()
+        postponeReason: postponeReason.trim(),
+        rescheduleCategory: postponeCategory,
+        preferredDate: postponePreferredDate || undefined,
+        preferredTimeSlot: postponePreferredTimeSlot || undefined,
+        timeFlexibility: postponeFlexibility
       });
 
-      alert('Job marked as Postponed successfully.');
+      alert('Job moved to "Reschedule Needed" Queue successfully.');
       setPostponeModalOpen(false);
       setPostponeTargetJob(null);
       setPostponeReason('');
+      setPostponePreferredDate('');
+      setPostponePreferredTimeSlot('');
       fetchJobsAndWorkers();
     } catch (err: any) {
       setPostponeError(err.response?.data?.message || 'Failed to postpone job.');
     } finally {
       setIsSubmittingPostpone(false);
+    }
+  };
+
+  const handleAssignBackfill = async (candidateJob: any) => {
+    if (!openedSlotAlert) return;
+    try {
+      await api.put(`/jobs/${candidateJob._id}`, {
+        status: 'pending',
+        date: openedSlotAlert.date,
+        timeSlot: openedSlotAlert.timeSlot,
+        workerId: 'unassigned',
+        contactStatus: 'confirmed'
+      });
+      alert(`Customer ${candidateJob.clientName} successfully assigned to ${openedSlotAlert.date} (${openedSlotAlert.timeSlot})!`);
+      setBackfillModalOpen(false);
+      setOpenedSlotAlert(null);
+      fetchJobsAndWorkers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to allot freed slot to candidate.');
     }
   };
 
@@ -1511,6 +1603,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
     setToLocation('');
     setCommuteKms('');
     setFuelAllowance('');
+    setTimeFlexibility('fixed');
+    setPreferredDate('');
+    setPreferredTimeSlot('');
+    setBookingAsWaitlist(false);
     setIsEditMode(false);
     setEditingJobId(null);
   };
@@ -2134,23 +2230,173 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         </div>
       </div>
 
-      {/* 2. Top Summary Bar (Calendar Schedule & Bookings Summary) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-black text-blue-600 dark:text-blue-400 shadow-sm">
-            <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span>Job Scheduling Calendar</span>
+      {/* Auto-Backfill Alert Banner when a slot is freed by cancellation/postpone */}
+      {openedSlotAlert && (
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white p-3 rounded-2xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center space-x-3">
+            <span className="text-xl">⚡</span>
+            <div>
+              <span className="font-black text-xs block">
+                Slot Available Alert: {openedSlotAlert.timeSlot} on {openedSlotAlert.date} ({openedSlotAlert.company})
+              </span>
+              <span className="text-[11px] opacity-90 block">
+                {openedSlotAlert.candidateWaitlistJobs?.length || 0} customer(s) waiting for this slot window. Backfill now to prevent revenue loss!
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {openedSlotAlert.candidateWaitlistJobs?.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setBackfillModalOpen(true)}
+                className="bg-white text-orange-600 hover:bg-orange-50 font-black text-xs px-3 py-1.5 rounded-xl shadow-sm transition-all cursor-pointer"
+              >
+                View & Offer Slot ({openedSlotAlert.candidateWaitlistJobs.length}) ↗
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setOpenedSlotAlert(null)}
+              className="text-white/80 hover:text-white p-1 cursor-pointer font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Operations Navigation Tabs & Live Slot Availability Ribbon */}
+      <div className="flex flex-col space-y-3 border-b border-slate-200/80 dark:border-slate-800 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          
+          {/* Operations View Tabs */}
+          <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setActiveBoardTab('calendar')}
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                activeBoardTab === 'calendar'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+              }`}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Dispatch Matrix</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBoardTab('reschedule_queue')}
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                activeBoardTab === 'reschedule_queue'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-rose-600'
+              }`}
+            >
+              <span>🚨 Reschedule Queue</span>
+              {rescheduleQueueJobs.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${activeBoardTab === 'reschedule_queue' ? 'bg-white text-rose-600' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300'}`}>
+                  {rescheduleQueueJobs.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBoardTab('waitlist')}
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                activeBoardTab === 'waitlist'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-amber-600'
+              }`}
+            >
+              <span>⏳ Priority Waitlist</span>
+              {waitlistJobs.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${activeBoardTab === 'waitlist' ? 'bg-white text-amber-600' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300'}`}>
+                  {waitlistJobs.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2 text-[11px] font-bold shrink-0">
+            <span className="bg-[#e2e8f0] text-[#475569] dark:bg-slate-800 dark:text-slate-300 px-3 py-1 rounded-full">
+              {totalBookings} bookings on {selectedDate}
+            </span>
+            <span className="bg-[#dbeafe] text-[#1e40af] dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1 rounded-full">
+              {confirmedBookings} confirmed
+            </span>
           </div>
         </div>
 
-        <div className="flex space-x-2 text-[11px] font-bold shrink-0">
-          <span className="bg-[#e2e8f0] text-[#475569] dark:bg-slate-800 dark:text-slate-300 px-3.5 py-1 rounded-full">
-            {totalBookings} bookings
-          </span>
-          <span className="bg-[#dbeafe] text-[#1e40af] dark:bg-blue-900/40 dark:text-blue-300 px-3.5 py-1 rounded-full">
-            {confirmedBookings} confirmed
-          </span>
-        </div>
+        {/* Live Slot Barometer (Real-Time Availability for 3 Salesmen) */}
+        {slotAvailabilityData?.slotStats && slotAvailabilityData.slotStats.length > 0 && (
+          <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+            <div className="flex items-center space-x-2 shrink-0">
+              <span className="text-sm">⚡</span>
+              <span className="font-extrabold text-[11px] text-slate-700 dark:text-slate-300">
+                Live Slot Availability ({slotAvailabilityData.totalActiveWorkers} Active Staff):
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {slotAvailabilityData.slotStats.map((stat: any) => {
+                let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300';
+                let statusLabel = `${stat.freeCount} Free`;
+                let icon = '🟢';
+
+                if (stat.status === 'full') {
+                  badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-300';
+                  statusLabel = 'FULL (Waitlist)';
+                  icon = '🔴';
+                } else if (stat.status === 'emergency_only') {
+                  badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300';
+                  statusLabel = 'Buffer Reserved';
+                  icon = '🛡️';
+                } else if (stat.status === 'low') {
+                  badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800 dark:text-yellow-300';
+                  statusLabel = 'Only 1 Left';
+                  icon = '🟡';
+                }
+
+                return (
+                  <button
+                    key={stat.timeSlot}
+                    type="button"
+                    onClick={() => {
+                      resetForm();
+                      setTimeSlot(stat.timeSlot);
+                      const parts = stat.timeSlot.split(' - ');
+                      if (parts.length === 2) {
+                        const convertTo24Hour = (time12: string) => {
+                          const [time, modifier] = time12.split(' ');
+                          let [hours, minutes] = time.split(':');
+                          if (hours === '12') hours = '00';
+                          if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12);
+                          return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+                        };
+                        setStartTime(convertTo24Hour(parts[0]));
+                        setEndTime(convertTo24Hour(parts[1]));
+                      }
+                      if (stat.status === 'full') {
+                        setBookingAsWaitlist(true);
+                      }
+                      setCreateModalOpen(true);
+                    }}
+                    className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl border text-[10.5px] font-extrabold cursor-pointer transition-all hover:scale-102 ${badgeClass}`}
+                    title={`Click to book or waitlist slot ${stat.timeSlot}`}
+                  >
+                    <span>{icon}</span>
+                    <span className="font-bold">{stat.timeSlot}</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-md bg-white/70 dark:bg-black/20 font-black">
+                      {statusLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 2.5 Dedicated Date Range Excel Export Bar (Worker-Wise Separate Sheets) */}
@@ -2287,8 +2533,9 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         </div>
       </div>
 
-      {/* 3. Main Split Panel Container: Grid + Drawer */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 w-full">
+      {/* 3. Main Split Panel Container: Grid + Drawer (Visible when on 'calendar' tab) */}
+      {activeBoardTab === 'calendar' && (
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 w-full">
         
         {/* Left Side: Dynamic Horizontal Scrollable Grid */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all xl:col-span-4 overflow-x-auto scrollbar-thin">
@@ -3074,6 +3321,242 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </div>
         )}
       </div>
+      )}
+
+      {/* Reschedule Needed Queue View */}
+      {activeBoardTab === 'reschedule_queue' && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 space-y-4 text-left">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-800 dark:text-white flex items-center space-x-2">
+                <span>🚨 Reschedule Needed Queue</span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 text-xs font-black">
+                  {rescheduleQueueJobs.length} Cases
+                </span>
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Stalled jobs (Rain, Scooty breakdown, Customer unavailable). Call customer and assign a clean slot.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchJobsAndWorkers}
+              className="self-start sm:self-auto flex items-center space-x-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Refresh Queue</span>
+            </button>
+          </div>
+
+          {rescheduleQueueJobs.length === 0 ? (
+            <div className="py-14 text-center space-y-2">
+              <span className="text-4xl">🎉</span>
+              <p className="font-extrabold text-sm text-slate-700 dark:text-slate-200">
+                Queue is clear! No stalled or postponed jobs.
+              </p>
+              <p className="text-xs text-slate-400">
+                Whenever a job is postponed due to weather, transport breakdown, or client delay, it lands here for recovery.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
+                    <th className="p-3">Customer & Phone</th>
+                    <th className="p-3">Service & Price</th>
+                    <th className="p-3">Failure Reason</th>
+                    <th className="p-3">Original Schedule</th>
+                    <th className="p-3">Preferred Reschedule</th>
+                    <th className="p-3">Flexibility</th>
+                    <th className="p-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {rescheduleQueueJobs.map((j) => (
+                    <tr key={j._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-3">
+                        <span className="font-extrabold text-slate-800 dark:text-white block">{j.clientName}</span>
+                        <a href={`tel:${j.clientPhone}`} className="text-blue-600 hover:underline text-[11px] font-bold block">
+                          📞 {j.clientPhone}
+                        </a>
+                        <span className="text-slate-400 text-[10px] truncate max-w-[220px] block">{j.address || 'No Address'}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-bold text-slate-700 dark:text-slate-200 block">{j.title}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{j.price || 0}</span>
+                      </td>
+                      <td className="p-3">
+                        <div className="space-y-1">
+                          <span className="px-2 py-0.5 rounded-lg text-[9.5px] font-black uppercase inline-flex items-center space-x-1 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300">
+                            <span>{getCategoryIcon(j.rescheduleCategory)}</span>
+                            <span>{getCategoryLabel(j.rescheduleCategory, j.postponeReason)}</span>
+                          </span>
+                          {j.postponeReason && (
+                            <p className="text-[10px] text-slate-500 italic max-w-[200px] truncate">
+                              "{j.postponeReason}"
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-bold text-slate-700 dark:text-slate-300 block">{j.originalDate || j.date || 'N/A'}</span>
+                        <span className="text-slate-400 text-[10px] block">{j.originalTimeSlot || j.timeSlot || 'Anytime'}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400 block">{j.preferredDate || 'Not specified'}</span>
+                        <span className="text-slate-500 text-[10px] block">{j.preferredTimeSlot || 'Flexible'}</span>
+                      </td>
+                      <td className="p-3">
+                        {j.timeFlexibility === 'flexible' ? (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300 rounded text-[9.5px] font-bold">
+                            🔄 Flexible
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 rounded text-[9.5px] font-bold">
+                            🔒 Fixed
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                        <a
+                          href={`https://wa.me/${cleanPhoneNumber(j.clientPhone)}?text=${encodeURIComponent(`Namaste ${j.clientName}, hum ShineStaff se call kar rahe hain aapki service reschedule ke regarding. Kya hum baat kar sakte hain?`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs font-bold inline-flex items-center space-x-1 cursor-pointer"
+                        >
+                          <span>💬 WhatsApp</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRescheduleTargetJob(j);
+                            setRescheduleDate(j.preferredDate || getTodayString());
+                            setRescheduleTimeSlot(j.preferredTimeSlot || '08:00 AM - 02:00 PM');
+                            setRescheduleWorkerId('unassigned');
+                            setRescheduleReason(j.postponeReason || '');
+                            setRescheduleModalOpen(true);
+                          }}
+                          className="px-3 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg text-xs font-black shadow-xs inline-flex items-center space-x-1 cursor-pointer"
+                        >
+                          <span>🔁 Reschedule</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Priority Waitlist View */}
+      {activeBoardTab === 'waitlist' && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 space-y-4 text-left">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-800 dark:text-white flex items-center space-x-2">
+                <span>⏳ Priority Waitlist Customers</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-black">
+                  {waitlistJobs.length} Waiting
+                </span>
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Customers waiting for slot openings. When a booking is cancelled, match and assign immediately.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchJobsAndWorkers}
+              className="self-start sm:self-auto flex items-center space-x-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Refresh Waitlist</span>
+            </button>
+          </div>
+
+          {waitlistJobs.length === 0 ? (
+            <div className="py-14 text-center space-y-2">
+              <span className="text-4xl">✨</span>
+              <p className="font-extrabold text-sm text-slate-700 dark:text-slate-200">
+                No customers currently on waitlist.
+              </p>
+              <p className="text-xs text-slate-400">
+                When slots are full, salesmen can save customer requests to Waitlist instead of rejecting them.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
+                    <th className="p-3">Customer & Contact</th>
+                    <th className="p-3">Service & Value</th>
+                    <th className="p-3">Requested Date & Slot</th>
+                    <th className="p-3">Flexibility</th>
+                    <th className="p-3 text-right">Assign / Lock Slot</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {waitlistJobs.map((j) => (
+                    <tr key={j._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-3">
+                        <span className="font-extrabold text-slate-800 dark:text-white block">{j.clientName}</span>
+                        <a href={`tel:${j.clientPhone}`} className="text-blue-600 hover:underline text-[11px] font-bold block">
+                          📞 {j.clientPhone}
+                        </a>
+                        <span className="text-slate-400 text-[10px] truncate max-w-[200px] block">{j.address || 'N/A'}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-bold text-slate-700 dark:text-slate-200 block">{j.title}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{j.price || 0}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-bold text-blue-600 dark:text-blue-400 block">{j.preferredDate || j.date || 'Any Date'}</span>
+                        <span className="text-slate-500 text-[10px] block">{j.preferredTimeSlot || j.timeSlot || 'Anytime'}</span>
+                      </td>
+                      <td className="p-3">
+                        {j.timeFlexibility === 'flexible' ? (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300 rounded text-[9.5px] font-bold">
+                            🔄 Flexible
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 rounded text-[9.5px] font-bold">
+                            🔒 Fixed
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                        <a
+                          href={`tel:${j.clientPhone}`}
+                          className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold inline-flex items-center space-x-1"
+                        >
+                          <span>📞 Call</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRescheduleTargetJob(j);
+                            setRescheduleDate(j.preferredDate || j.date || getTodayString());
+                            setRescheduleTimeSlot(j.preferredTimeSlot || j.timeSlot || '08:00 AM - 02:00 PM');
+                            setRescheduleWorkerId('unassigned');
+                            setRescheduleReason('Confirmed from Priority Waitlist');
+                            setRescheduleModalOpen(true);
+                          }}
+                          className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-black shadow-xs inline-flex items-center space-x-1 cursor-pointer"
+                        >
+                          <span>⚡ Assign Slot</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 4. Center Dialog: Send Schedules Modal (Matching Screenshot) */}
       {sendSchedulesOpen && (
@@ -3687,6 +4170,60 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
               </div>
 
+              {/* Operational Dispatch Controls: Time Flexibility & Priority Waitlist */}
+              <div className="bg-slate-100/70 dark:bg-slate-950/50 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2.5 text-left">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                      Time Flexibility
+                    </span>
+                    <span className="block text-[9.5px] text-slate-400">
+                      {timeFlexibility === 'fixed'
+                        ? '🔒 Fixed: Customer strictly insists on this exact slot'
+                        : '🔄 Flexible: Customer is open to morning/afternoon shift'}
+                    </span>
+                  </div>
+                  <div className="flex bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded-lg text-[10.5px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setTimeFlexibility('fixed')}
+                      className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                        timeFlexibility === 'fixed'
+                          ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs font-black'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      🔒 Fixed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTimeFlexibility('flexible')}
+                      className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                        timeFlexibility === 'flexible'
+                          ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs font-black'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      🔄 Flexible
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/50 dark:border-slate-800">
+                  <input
+                    type="checkbox"
+                    id="waitlistModeCheck"
+                    checked={bookingAsWaitlist}
+                    onChange={(e) => setBookingAsWaitlist(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded text-amber-500 focus:ring-amber-400 cursor-pointer"
+                  />
+                  <label htmlFor="waitlistModeCheck" className="text-[10.5px] font-bold text-amber-700 dark:text-amber-400 cursor-pointer flex items-center space-x-1">
+                    <span>⏳</span>
+                    <span>Save to Priority Waitlist (Do not lock worker — slot pending confirmation)</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-[9px] uppercase tracking-wider text-slate-400 mb-1.5">Payment Method & Status</label>
@@ -3825,9 +4362,19 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               <button
                 type="submit"
                 disabled={savingJob}
-                className="w-full bg-secondary hover:bg-secondary-dark disabled:opacity-50 text-white font-extrabold p-3 rounded-xl transition-all cursor-pointer shadow-md"
+                className={`w-full ${
+                  bookingAsWaitlist
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'bg-secondary hover:bg-secondary-dark'
+                } disabled:opacity-50 text-white font-extrabold p-3 rounded-xl transition-all cursor-pointer shadow-md`}
               >
-                {savingJob ? 'Saving Booking...' : isEditMode ? 'Apply Modified Settings' : 'Create & Assign Booking'}
+                {savingJob
+                  ? 'Saving Booking...'
+                  : bookingAsWaitlist
+                  ? '⏳ Save to Priority Waitlist (Pending)'
+                  : isEditMode
+                  ? 'Apply Modified Settings'
+                  : 'Create & Assign Booking'}
               </button>
             </form>
           </div>
@@ -4521,7 +5068,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       {/* Postpone Booking Modal */}
       {postponeModalOpen && postponeTargetJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-purple-200 dark:border-purple-900/40 p-6 max-w-md w-full shadow-2xl space-y-4 animate-scale-up">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-purple-200 dark:border-purple-900/40 p-6 max-w-lg w-full shadow-2xl space-y-4 animate-scale-up max-h-[92vh] overflow-y-auto">
             
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -4531,7 +5078,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 </div>
                 <div className="text-left">
                   <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">Postpone Clean Booking</h3>
-                  <p className="text-[10px] text-slate-400">Put booking on hold until customer confirms new schedule</p>
+                  <p className="text-[10px] text-slate-400">Move booking to "Reschedule Needed" queue & free up current slot</p>
                 </div>
               </div>
               <button
@@ -4560,32 +5107,173 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               <p className="text-[11px] text-slate-500 font-medium">
                 👤 Client: <span className="font-bold text-slate-700 dark:text-slate-300">{postponeTargetJob.clientName}</span> ({postponeTargetJob.clientPhone})
               </p>
+              <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-bold text-slate-400">
+                <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  Current: {postponeTargetJob.date} ({postponeTargetJob.timeSlot || 'Anytime'})
+                </span>
+                <span className="bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 px-2 py-0.5 rounded">
+                  Slot will be unlocked immediately
+                </span>
+              </div>
             </div>
 
-            {/* Reason Textarea */}
-            <div className="space-y-1.5 text-left">
-              <label className="block text-[11px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Postpone Reason / Remarks</span>
-                <span className="text-[9px] text-purple-500 uppercase">Optional</span>
-              </label>
-              <textarea
-                rows={3}
-                value={postponeReason}
-                onChange={(e) => {
-                  setPostponeReason(e.target.value);
-                  if (postponeError) setPostponeError('');
-                }}
-                placeholder="Enter reason why this booking is postponed (e.g. Customer out of town, Client requested temporary hold, Awaiting payment confirmation)..."
-                className="w-full text-xs font-medium p-3 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/20 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                autoFocus
-              />
+            {/* Postpone Form Controls */}
+            <div className="space-y-3.5 text-left">
+              {/* Failure / Reschedule Reason Category */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Ground Reason / Failure Category *</span>
+                  <span className="text-[9px] text-purple-500 font-bold">Mandatory</span>
+                </label>
+                <select
+                  value={postponeCategory}
+                  onChange={(e) => setPostponeCategory(e.target.value as any)}
+                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-purple-500 shadow-sm cursor-pointer"
+                >
+                  <option value="rain">🌧️ Rain / Weather Delay</option>
+                  <option value="vehicle_breakdown">🛵 Vehicle / Scooty Breakdown</option>
+                  <option value="worker_unavailable">🤒 Worker Sickness / Absent</option>
+                  <option value="customer_rescheduled">👤 Customer Requested Shift</option>
+                  <option value="job_overrun">⏱️ Previous Job Overrun</option>
+                  <option value="other">⚙️ Other Ground Issue</option>
+                </select>
+              </div>
+
+              {/* Preferred Reschedule Date */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Customer Preferred Date</span>
+                  <span className="text-[9px] text-slate-400 font-bold">If discussed</span>
+                </label>
+                <input
+                  type="date"
+                  value={postponePreferredDate}
+                  min={getTodayString()}
+                  onChange={(e) => setPostponePreferredDate(e.target.value)}
+                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-purple-500 shadow-sm"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[
+                    { label: 'Tomorrow', days: 1 },
+                    { label: '+2 Days', days: 2 },
+                    { label: '+3 Days', days: 3 }
+                  ].map(d => {
+                    const target = getPastDateString(-d.days);
+                    return (
+                      <button
+                        key={d.label}
+                        type="button"
+                        onClick={() => setPostponePreferredDate(target)}
+                        className={`text-[9.5px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          postponePreferredDate === target
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Preferred Time Slot */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Customer Preferred Slot</span>
+                  <span className="text-[9px] text-slate-400 font-bold">Optional</span>
+                </label>
+                <input
+                  type="text"
+                  value={postponePreferredTimeSlot}
+                  onChange={(e) => setPostponePreferredTimeSlot(e.target.value)}
+                  placeholder="e.g. 11:00 AM - 01:00 PM"
+                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-purple-500 shadow-sm"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[
+                    '08:00 AM - 02:00 PM',
+                    '09:00 AM - 11:00 AM',
+                    '11:00 AM - 01:00 PM',
+                    '01:00 PM - 03:00 PM',
+                    '03:00 PM - 05:00 PM',
+                    '05:00 PM - 07:00 PM'
+                  ].map(slot => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setPostponePreferredTimeSlot(slot)}
+                      className={`text-[9px] font-bold px-2 py-0.8 rounded-lg border transition-all cursor-pointer ${
+                        postponePreferredTimeSlot === slot
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Flexibility Toggle */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Customer Time Flexibility
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPostponeFlexibility('fixed')}
+                    className={`p-2.5 rounded-xl border text-xs font-extrabold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                      postponeFlexibility === 'fixed'
+                        ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-400 text-purple-700 dark:text-purple-300 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>🔒</span>
+                    <span>Strict / Fixed Time</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostponeFlexibility('flexible')}
+                    className={`p-2.5 rounded-xl border text-xs font-extrabold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                      postponeFlexibility === 'flexible'
+                        ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-400 text-purple-700 dark:text-purple-300 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>🔄</span>
+                    <span>Flexible Window</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Remarks Textarea */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Additional Ground Remarks</span>
+                  <span className="text-[9px] text-slate-400 font-bold">Optional</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={postponeReason}
+                  onChange={(e) => {
+                    setPostponeReason(e.target.value);
+                    if (postponeError) setPostponeError('');
+                  }}
+                  placeholder="Notes for operations manager or salesman calling back..."
+                  className="w-full text-xs font-medium p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-purple-500 resize-none shadow-sm"
+                />
+              </div>
+
               {postponeError && (
-                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/40">
                   ⚠️ {postponeError}
                 </p>
               )}
-              <p className="text-[10px] text-slate-400">
-                This booking will remain saved and can be rescheduled or reactivated at any time.
+
+              <p className="text-[10px] text-slate-400 bg-purple-50/50 dark:bg-purple-950/20 p-2 rounded-lg border border-purple-100 dark:border-purple-900/30">
+                💡 <b>Rule:</b> The booking will enter the <b>Reschedule Needed Queue</b> as <i>Needs Call</i>. It will NOT count as confirmed until an operations manager or salesman assigns a free slot.
               </p>
             </div>
 
@@ -4611,10 +5299,130 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 onClick={handleConfirmPostpone}
                 className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 cursor-pointer"
               >
-                <span>{isSubmittingPostpone ? 'Postponing...' : 'Confirm Postpone'}</span>
+                <span>{isSubmittingPostpone ? 'Postponing...' : 'Move to Reschedule Queue'}</span>
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Backfill Opportunity Modal */}
+      {backfillModalOpen && openedSlotAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-emerald-200 dark:border-emerald-900/40 p-6 max-w-lg w-full shadow-2xl space-y-4 animate-scale-up max-h-[92vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400">
+                <div className="h-9 w-9 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center font-bold text-base">
+                  ⚡
+                </div>
+                <div className="text-left">
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">Auto-Backfill Opened Slot</h3>
+                  <p className="text-[10px] text-slate-400">Backfill opened capacity with waiting or stalled customers</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBackfillModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Opened Slot Banner */}
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-left text-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-emerald-800 dark:text-emerald-200">
+                  📅 {openedSlotAlert.date} &nbsp;•&nbsp; 🕒 {openedSlotAlert.timeSlot}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase bg-emerald-600 text-white">
+                  Available Now
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Slot was just released by: <b>{openedSlotAlert.freedByJobTitle || 'Cancelled Booking'}</b>
+              </p>
+            </div>
+
+            {/* Candidate List */}
+            <div className="space-y-2 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Matching Candidates ({openedSlotAlert.candidateWaitlistJobs?.length || 0})
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold">
+                  Sorted by Waitlist Priority
+                </span>
+              </div>
+
+              {(!openedSlotAlert.candidateWaitlistJobs || openedSlotAlert.candidateWaitlistJobs.length === 0) ? (
+                <div className="py-8 text-center space-y-1.5 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    No customers in waitlist are currently waiting for this specific time window.
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    The slot is now visible and available for booking on the shared matrix.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+                  {openedSlotAlert.candidateWaitlistJobs.map((candidate: any) => (
+                    <div
+                      key={candidate._id}
+                      className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 bg-white dark:bg-slate-950 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-extrabold text-xs text-slate-800 dark:text-white">
+                            {candidate.clientName}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {candidate.timeFlexibility === 'flexible' ? '🔄 Flexible' : '🔒 Strict'}
+                          </span>
+                        </div>
+                        <a href={`tel:${candidate.clientPhone}`} className="text-blue-600 text-[11px] font-bold block hover:underline">
+                          📞 {candidate.clientPhone}
+                        </a>
+                        <p className="text-[10px] text-slate-400 truncate max-w-[240px]">
+                          {candidate.title} • ₹{candidate.price || 0} • {candidate.address || 'No Address'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2 self-end sm:self-center shrink-0">
+                        <a
+                          href={`https://wa.me/${cleanPhoneNumber(candidate.clientPhone)}?text=${encodeURIComponent(`Namaste ${candidate.clientName}, ShineStaff par aapke liye ${openedSlotAlert.date} (${openedSlotAlert.timeSlot}) ka slot confirm karne ke liye available ho gaya hai! Kya hum confirm kar dein?`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold inline-flex items-center space-x-1 cursor-pointer"
+                        >
+                          <span>💬 WhatsApp</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleAssignBackfill(candidate)}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center space-x-1"
+                        >
+                          <span>⚡ Allot Slot</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setBackfillModalOpen(false)}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

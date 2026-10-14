@@ -11,6 +11,8 @@ export interface ISettings extends Document {
   adminAlertPhone?: string; // WhatsApp number to receive material & emergency alerts
   qrSecurityPassword?: string;
   googleMapsApiKey?: string;
+  enableEmergencyBuffer?: boolean;
+  emergencyBufferSlots?: number;
 }
 
 const SettingsSchema = new Schema<ISettings>({
@@ -23,7 +25,9 @@ const SettingsSchema = new Schema<ISettings>({
   adminEmailForAlerts: { type: String, default: '' },
   adminAlertPhone: { type: String, default: '' },
   qrSecurityPassword: { type: String, default: 'admin123' },
-  googleMapsApiKey: { type: String, default: '' }
+  googleMapsApiKey: { type: String, default: '' },
+  enableEmergencyBuffer: { type: Boolean, default: true },
+  emergencyBufferSlots: { type: Number, default: 1 }
 }, {
   timestamps: true
 });
