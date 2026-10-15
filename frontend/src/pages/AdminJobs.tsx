@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import api from '../utils/api';
 import { handleDownloadInvoice, handleShareInvoice } from '../utils/invoiceGenerator';
-import { exportJobScheduleToExcel, exportCustomersToExcel, exportWorkerDailyRegisterToExcel } from '../utils/exportCustomerData';
+import { exportJobScheduleToExcel, exportCustomersToExcel, exportWorkerDailyRegisterToExcel, exportCancelledBookingsToExcel } from '../utils/exportCustomerData';
 import MapView from '../components/MapView';
 import GPSAddress from '../components/GPSAddress';
 import {
@@ -435,7 +435,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [exportDateMode, setExportDateMode] = useState<'selected_date' | 'today' | 'yesterday' | 'last_7' | 'this_month' | 'custom'>('selected_date');
   const [exportStartDate, setExportStartDate] = useState(getPastDateString(7));
   const [exportEndDate, setExportEndDate] = useState(getTodayString());
-  const [exportFormat, setExportFormat] = useState<'daily_register' | 'detailed_schedule'>('daily_register');
+  const [exportFormat, setExportFormat] = useState<'daily_register' | 'detailed_schedule' | 'cancelled_bookings'>('daily_register');
   const [isExportingSchedule, setIsExportingSchedule] = useState(false);
 
   // Form modals state
@@ -787,6 +787,74 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
       setExportModalOpen(false);
     } catch (err: any) {
       alert('Failed to export daily register: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsExportingSchedule(false);
+    }
+  };
+
+  const handleExportCancelledBookings = async (startDateOverride?: string, endDateOverride?: string, labelOverride?: string) => {
+    setIsExportingSchedule(true);
+    try {
+      let fileDateLabel = labelOverride || '';
+      let sDate = startDateOverride || exportStartDate;
+      let eDate = endDateOverride || exportEndDate;
+
+      if (!startDateOverride && !endDateOverride) {
+        if (exportDateMode === 'selected_date') {
+          sDate = selectedDate;
+          eDate = selectedDate;
+          fileDateLabel = selectedDate;
+        } else if (exportDateMode === 'today') {
+          const today = getTodayString();
+          sDate = today;
+          eDate = today;
+          fileDateLabel = today;
+        } else if (exportDateMode === 'yesterday') {
+          const yesterday = getPastDateString(1);
+          sDate = yesterday;
+          eDate = yesterday;
+          fileDateLabel = yesterday;
+        } else if (exportDateMode === 'last_7') {
+          sDate = getPastDateString(7);
+          eDate = getTodayString();
+          fileDateLabel = `${sDate}_to_${eDate}`;
+        } else if (exportDateMode === 'this_month') {
+          const d = new Date();
+          sDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+          eDate = getTodayString();
+          fileDateLabel = `${sDate}_to_${eDate}`;
+        } else {
+          fileDateLabel = sDate === eDate ? sDate : `${sDate}_to_${eDate}`;
+        }
+      } else if (!fileDateLabel) {
+        fileDateLabel = sDate === eDate ? sDate : `${sDate}_to_${eDate}`;
+      }
+
+      // Fetch cancelled/postponed jobs and current active workers
+      const [jobsRes, workersRes] = await Promise.all([
+        api.get('/jobs', {
+          params: {
+            company: companyFilter,
+            status: 'cancelled,postponed,rejected',
+            startDate: sDate,
+            endDate: eDate
+          }
+        }),
+        workers.length > 0 ? Promise.resolve({ data: workers }) : api.get(`/workers?company=${companyFilter}`)
+      ]);
+
+      const cancelledJobs = jobsRes.data || [];
+      const currentWorkers = (workersRes.data || workers || []).filter((w: any) => w.status !== 'inactive');
+
+      if (cancelledJobs.length === 0) {
+        alert(`No cancelled bookings found for date range (${sDate} to ${eDate}).`);
+        return;
+      }
+
+      exportCancelledBookingsToExcel(cancelledJobs, currentWorkers, `cancelled_bookings_${fileDateLabel}`);
+      setExportModalOpen(false);
+    } catch (err: any) {
+      alert('Failed to export cancelled bookings: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsExportingSchedule(false);
     }
@@ -2210,6 +2278,16 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </button>
 
           <button
+            onClick={() => handleExportCancelledBookings(selectedDate, selectedDate, selectedDate)}
+            disabled={isExportingSchedule}
+            className="flex items-center space-x-1.5 bg-white dark:bg-slate-900 border border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 font-semibold text-xs px-3 py-2 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            title={`Export cancelled bookings for ${selectedDate} with worker-wise sheets`}
+          >
+            <span className="text-xs">🚫</span>
+            <span>Cancelled Excel</span>
+          </button>
+
+          <button
             onClick={() => {
               setExportDateMode('custom');
               setExportModalOpen(true);
@@ -2472,6 +2550,17 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               >
                 <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
                 <span>Detailed Schedule</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExportCancelledBookings(exportStartDate, exportEndDate, `${exportStartDate}_to_${exportEndDate}`)}
+                disabled={isExportingSchedule}
+                className="flex items-center space-x-1.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                title="Download cancelled bookings with separate sheets per worker (.xlsx)"
+              >
+                <span className="text-xs">🚫</span>
+                <span>Cancelled Bookings (.xlsx)</span>
               </button>
             </div>
           </div>
@@ -3571,14 +3660,26 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 Stalled jobs (Rain, Scooty breakdown, Customer unavailable). Call customer and assign a clean slot.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={fetchJobsAndWorkers}
-              className="self-start sm:self-auto flex items-center space-x-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Refresh Queue</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => handleExportCancelledBookings(exportStartDate, exportEndDate, `${exportStartDate}_to_${exportEndDate}`)}
+                disabled={isExportingSchedule}
+                className="self-start sm:self-auto flex items-center space-x-1.5 text-xs font-extrabold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 p-2 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded-xl cursor-pointer disabled:opacity-50"
+                title="Download cancelled & postponed bookings with worker-wise sheets (.xlsx)"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export Cancelled (.xlsx)</span>
+              </button>
+              <button
+                type="button"
+                onClick={fetchJobsAndWorkers}
+                className="self-start sm:self-auto flex items-center space-x-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Refresh Queue</span>
+              </button>
+            </div>
           </div>
 
           {rescheduleQueueJobs.length === 0 ? (
@@ -3941,7 +4042,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
                 Choose Excel Format:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setExportFormat('daily_register')}
@@ -3953,10 +4054,10 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 >
                   <div className="flex items-center space-x-2">
                     <span className="text-base">📊</span>
-                    <span className="font-extrabold text-xs">Daily Work & KM Register</span>
+                    <span className="font-extrabold text-xs">Daily Register</span>
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                    Date-wise rows per worker: Daily Sales (₹), KM Travelled, Attendance & Remarks.
+                    Date-wise rows per worker: Sales (₹), KM & Attendance.
                   </p>
                 </button>
 
@@ -3971,10 +4072,28 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 >
                   <div className="flex items-center space-x-2">
                     <span className="text-base">📋</span>
-                    <span className="font-extrabold text-xs">Detailed Job Schedule</span>
+                    <span className="font-extrabold text-xs">Detailed Schedule</span>
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                    Job-by-job listing: Customer Name, Phone, Service, Time, Location & Payment.
+                    Job-by-job listing: Customer, Service, Time & Location.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('cancelled_bookings')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    exportFormat === 'cancelled_bookings'
+                      ? 'border-rose-600 bg-rose-50/80 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 shadow-sm ring-2 ring-rose-500/30'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="text-base">🚫</span>
+                    <span className="font-extrabold text-xs">Cancelled Bookings</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                    Worker-wise separate sheets: All details & reasons.
                   </p>
                 </button>
               </div>
@@ -3990,27 +4109,42 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               </button>
 
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleExportDailyRegister()}
-                  disabled={isExportingSchedule}
-                  className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer"
-                  title="Download per-day sales and KM register"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>{isExportingSchedule ? 'Generating...' : 'Daily Register (.xlsx) 📊'}</span>
-                </button>
+                {exportFormat === 'cancelled_bookings' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleExportCancelledBookings()}
+                    disabled={isExportingSchedule}
+                    className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                    title="Download cancelled bookings with worker-wise sheets"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>{isExportingSchedule ? 'Generating...' : 'Download Cancelled Bookings (.xlsx) 🚫'}</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleExportDailyRegister()}
+                      disabled={isExportingSchedule}
+                      className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                      title="Download per-day sales and KM register"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>{isExportingSchedule ? 'Generating...' : 'Daily Register (.xlsx) 📊'}</span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleExportSchedule()}
-                  disabled={isExportingSchedule}
-                  className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 bg-white dark:bg-slate-800 border border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                  title="Download detailed job-by-job schedule"
-                >
-                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                  <span>Detailed Schedule 📋</span>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExportSchedule()}
+                      disabled={isExportingSchedule}
+                      className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 bg-white dark:bg-slate-800 border border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                      title="Download detailed job-by-job schedule"
+                    >
+                      <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                      <span>Detailed Schedule 📋</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

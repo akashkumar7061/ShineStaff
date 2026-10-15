@@ -183,7 +183,13 @@ export const getJobs = async (req: AuthRequest, res: Response) => {
         filter.workerId = workerId;
       }
       if (status) {
-        filter.status = status;
+        if (typeof status === 'string' && status.includes(',')) {
+          filter.status = { $in: status.split(',').map((s: string) => s.trim()) };
+        } else if (Array.isArray(status)) {
+          filter.status = { $in: status };
+        } else {
+          filter.status = status;
+        }
       }
     }
     if (company && company !== 'All') {

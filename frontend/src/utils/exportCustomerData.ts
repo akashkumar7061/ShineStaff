@@ -922,3 +922,266 @@ export const exportWorkerDailyRegisterToExcel = (
   const finalFilename = `${filenamePrefix}_${todayStr}.xlsx`;
   XLSX.writeFile(workbook, finalFilename);
 };
+
+/**
+ * Export Cancelled & Postponed Bookings to Excel (.xlsx) with Worker-wise separate sheets
+ * - Tab 1: "All Cancelled (N)" - Master summary sheet containing all cancelled bookings
+ * - Tabs 2..N: One sheet per worker with their individual cancelled bookings
+ * - Unassigned Tab: Any cancelled bookings not assigned to any specific worker
+ */
+export const exportCancelledBookingsToExcel = (
+  jobs: any[],
+  workers: any[] = [],
+  filenamePrefix = 'cancelled_bookings'
+) => {
+  const workbook = XLSX.utils.book_new();
+  const existingSheetNames = new Set<string>();
+
+  // Filter jobs to only include cancelled or postponed bookings
+  const cancelledJobs = jobs.filter((j) => {
+    const st = (j.status || '').toLowerCase();
+    return st === 'cancelled' || st === 'postponed' || st === 'rejected';
+  });
+
+  // Helper to format rows
+  const generateCancelledRows = (jobList: any[]) => {
+    const sorted = [...jobList].sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateB.localeCompare(dateA); // newest date first
+      const timeA = a.timeSlot || a.startTime || '';
+      const timeB = b.timeSlot || b.startTime || '';
+      return timeA.localeCompare(timeB);
+    });
+
+    return sorted.map((job, idx) => {
+      const dateFormatted = formatJobDate(job.date);
+      const timeSlot = job.timeSlot || (job.startTime ? `${normalizeTimeToHHMM(job.startTime)} - ${normalizeTimeToHHMM(job.endTime || '')}` : 'Anytime');
+      const customerName = job.clientName || 'N/A';
+      const mobile = job.clientPhone ? normalizePhone(job.clientPhone) : '';
+      const altPhone = job.alternatePhone ? normalizePhone(job.alternatePhone) : '';
+      const service = job.title || job.serviceCategory || job.description || 'General Service';
+      const company = job.company || 'SofaShine';
+
+      let workerName = 'Unassigned';
+      let workerPhone = '';
+      if (job.workerId) {
+        if (typeof job.workerId === 'object') {
+          workerName = job.workerId.name || job.workerId.fullName || 'Unassigned';
+          workerPhone = job.workerId.phone || '';
+        } else if (typeof job.workerId === 'string') {
+          const matchedW = workers.find((w) => String(w._id || w.id) === String(job.workerId));
+          if (matchedW) {
+            workerName = matchedW.name || matchedW.fullName || 'Worker';
+            workerPhone = matchedW.phone || '';
+          } else {
+            workerName = job.workerId;
+          }
+        }
+      }
+
+      const status = (job.status || 'cancelled').toUpperCase();
+      const cancelReason = job.cancelReason || job.postponeReason || job.rescheduleReason || 'No reason specified';
+      const reasonCategory = job.rescheduleCategory ? job.rescheduleCategory.replace(/_/g, ' ').toUpperCase() : 'CLIENT / OPERATIONAL';
+      const price = job.price !== undefined && job.price !== null ? job.price : 0;
+      const paymentStatus = formatPaymentStatus(job.paymentStatus);
+      const paymentMode = formatPaymentMode(job.paymentMode);
+
+      let location = '';
+      if (job.address && job.address.trim().length > 0) {
+        location = job.address.trim();
+      } else if (job.location?.lat && job.location?.lng) {
+        location = `${job.location.lat}, ${job.location.lng}`;
+      } else if (job.locationName) {
+        location = job.locationName;
+      }
+      const landmark = job.landmark || '';
+      const city = job.city || '';
+      const pincode = job.pincode || '';
+
+      const lat = job.location?.lat;
+      const lng = job.location?.lng;
+      const mapsUrl = getGoogleMapsUrl(lat, lng, location);
+
+      const notes = job.notes || job.specialInstructions || '';
+      const createdAt = job.createdAt ? formatJobDate(job.createdAt) : '';
+      const updatedAt = job.updatedAt ? `${formatJobDate(job.updatedAt)} ${formatTimeHHMM(job.updatedAt)}` : '';
+      const handledBy = job.adminCompletedByName || 'Admin';
+
+      return {
+        'S.No': idx + 1,
+        'Booking Date': dateFormatted,
+        'Time Slot': timeSlot,
+        'Customer Name': customerName,
+        'Customer Mobile': mobile,
+        'Alternate Phone': altPhone,
+        'Service / Title': service,
+        'Company': company,
+        'Assigned Worker': workerName,
+        'Worker Mobile': workerPhone,
+        'Status': status,
+        'Cancellation Reason': cancelReason,
+        'Reason Category': reasonCategory,
+        'Booking Amount (₹)': price,
+        'Payment Status': paymentStatus,
+        'Payment Mode': paymentMode,
+        'Complete Address': location,
+        'Landmark': landmark,
+        'City': city,
+        'Pincode': pincode,
+        'Google Maps Link': mapsUrl,
+        'Special Instructions / Notes': notes,
+        'Booking Created Date': createdAt,
+        'Cancelled / Updated Date': updatedAt,
+        'Handled By': handledBy
+      };
+    });
+  };
+
+  const colWidths = [
+    { wch: 8 },  // S.No
+    { wch: 14 }, // Booking Date
+    { wch: 22 }, // Time Slot
+    { wch: 24 }, // Customer Name
+    { wch: 16 }, // Customer Mobile
+    { wch: 16 }, // Alternate Phone
+    { wch: 32 }, // Service / Title
+    { wch: 16 }, // Company
+    { wch: 20 }, // Assigned Worker
+    { wch: 16 }, // Worker Mobile
+    { wch: 15 }, // Status
+    { wch: 38 }, // Cancellation Reason
+    { wch: 22 }, // Reason Category
+    { wch: 18 }, // Booking Amount (₹)
+    { wch: 16 }, // Payment Status
+    { wch: 16 }, // Payment Mode
+    { wch: 45 }, // Complete Address
+    { wch: 20 }, // Landmark
+    { wch: 16 }, // City
+    { wch: 12 }, // Pincode
+    { wch: 45 }, // Google Maps Link
+    { wch: 30 }, // Special Instructions / Notes
+    { wch: 20 }, // Booking Created Date
+    { wch: 22 }, // Cancelled / Updated Date
+    { wch: 16 }  // Handled By
+  ];
+
+  const emptyHeaders = [{
+    'S.No': '',
+    'Booking Date': '',
+    'Time Slot': '',
+    'Customer Name': '',
+    'Customer Mobile': '',
+    'Alternate Phone': '',
+    'Service / Title': '',
+    'Company': '',
+    'Assigned Worker': '',
+    'Worker Mobile': '',
+    'Status': '',
+    'Cancellation Reason': '',
+    'Reason Category': '',
+    'Booking Amount (₹)': '',
+    'Payment Status': '',
+    'Payment Mode': '',
+    'Complete Address': '',
+    'Landmark': '',
+    'City': '',
+    'Pincode': '',
+    'Google Maps Link': '',
+    'Special Instructions / Notes': '',
+    'Booking Created Date': '',
+    'Cancelled / Updated Date': '',
+    'Handled By': ''
+  }];
+
+  // 1. First Sheet: "All Cancelled" (Summary of all cancelled jobs)
+  const allRows = generateCancelledRows(cancelledJobs);
+  const masterWorksheet = allRows.length > 0 ? XLSX.utils.json_to_sheet(allRows) : XLSX.utils.json_to_sheet(emptyHeaders);
+  masterWorksheet['!cols'] = colWidths;
+  const masterSheetName = sanitizeSheetName(`All Cancelled (${allRows.length})`, existingSheetNames);
+  XLSX.utils.book_append_sheet(workbook, masterWorksheet, masterSheetName);
+
+  // 2. Separate Sheets for Each Worker
+  const workerJobsMap = new Map<string, { workerName: string; jobs: any[] }>();
+
+  // Register all active workers
+  if (workers && Array.isArray(workers)) {
+    workers.forEach((w) => {
+      const wName = (w.name || w.fullName || 'Worker').trim();
+      const wId = String(w._id || w.id || wName);
+      if (!workerJobsMap.has(wId)) {
+        workerJobsMap.set(wId, { workerName: wName, jobs: [] });
+      }
+    });
+  }
+
+  const unassignedCancelledJobs: any[] = [];
+
+  cancelledJobs.forEach((job) => {
+    let matchedKey: string | null = null;
+    let matchedName: string | null = null;
+
+    if (job.workerId) {
+      if (typeof job.workerId === 'object') {
+        const id = String(job.workerId._id || job.workerId.id || '');
+        const name = job.workerId.name || job.workerId.fullName || null;
+        if (id && workerJobsMap.has(id)) {
+          matchedKey = id;
+        } else if (name) {
+          matchedName = name;
+        }
+      } else if (typeof job.workerId === 'string') {
+        if (workerJobsMap.has(job.workerId)) {
+          matchedKey = job.workerId;
+        } else {
+          matchedName = job.workerId;
+        }
+      }
+    }
+
+    if (matchedKey) {
+      workerJobsMap.get(matchedKey)!.jobs.push(job);
+      return;
+    }
+
+    if (matchedName) {
+      for (const [, entry] of workerJobsMap.entries()) {
+        if (entry.workerName.toLowerCase() === matchedName.toLowerCase()) {
+          entry.jobs.push(job);
+          return;
+        }
+      }
+      const customKey = `name_${matchedName}`;
+      if (!workerJobsMap.has(customKey)) {
+        workerJobsMap.set(customKey, { workerName: matchedName, jobs: [] });
+      }
+      workerJobsMap.get(customKey)!.jobs.push(job);
+      return;
+    }
+
+    unassignedCancelledJobs.push(job);
+  });
+
+  // Append sheets for each worker
+  workerJobsMap.forEach((entry) => {
+    const rows = generateCancelledRows(entry.jobs);
+    const worksheet = rows.length > 0 ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.json_to_sheet(emptyHeaders);
+    worksheet['!cols'] = colWidths;
+    const sheetName = sanitizeSheetName(entry.workerName, existingSheetNames);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  });
+
+  // Append unassigned sheet if any
+  if (unassignedCancelledJobs.length > 0) {
+    const unassignedRows = generateCancelledRows(unassignedCancelledJobs);
+    const worksheet = XLSX.utils.json_to_sheet(unassignedRows);
+    worksheet['!cols'] = colWidths;
+    const sheetName = sanitizeSheetName('Unassigned', existingSheetNames);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const finalFilename = `${filenamePrefix}_${todayStr}.xlsx`;
+  XLSX.writeFile(workbook, finalFilename);
+};
+
