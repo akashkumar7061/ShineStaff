@@ -177,42 +177,57 @@ interface AdminJobsProps {
   companyFilter: 'All' | 'SofaShine' | 'CleanCruisers';
 }
 
-const getJobCardStyles = (status: string, isSelected: boolean): string => {
+const getJobCardStyles = (status: string, isSelected: boolean, timeFlexibility?: 'fixed' | 'flexible'): string => {
+  let base = '';
   switch (status) {
     case 'cancelled':
-      return isSelected
+      base = isSelected
         ? 'bg-rose-100 border-rose-300 shadow-sm text-rose-800'
         : 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 text-rose-700';
+      break;
     case 'completed':
-      return isSelected
+      base = isSelected
         ? 'bg-emerald-100 border-emerald-300 shadow-sm text-emerald-850'
         : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 text-emerald-750';
+      break;
     case 'started':
-      return isSelected
+      base = isSelected
         ? 'bg-amber-100 border-amber-300 shadow-sm text-amber-850'
         : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 text-amber-750';
+      break;
     case 'accepted':
-      return isSelected
+      base = isSelected
         ? 'bg-indigo-100 border-indigo-300 shadow-sm text-indigo-850'
         : 'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900 text-indigo-755';
+      break;
     case 'postponed':
-      return isSelected
+      base = isSelected
         ? 'bg-purple-100 border-purple-300 shadow-sm text-purple-800'
         : 'bg-purple-50 border-purple-200 dark:bg-purple-950/20 dark:border-purple-900 text-purple-700';
+      break;
     case 'rescheduled':
-      return isSelected
+      base = isSelected
         ? 'bg-cyan-100 border-cyan-300 shadow-sm text-cyan-800'
         : 'bg-cyan-50 border-cyan-200 dark:bg-cyan-950/20 dark:border-cyan-900 text-cyan-700';
+      break;
     case 'rejected':
-      return isSelected
+      base = isSelected
         ? 'bg-slate-200 border-slate-350 shadow-sm text-slate-800'
         : 'bg-slate-100 border-slate-250 dark:bg-slate-900 dark:border-slate-800 text-slate-600';
+      break;
     case 'pending':
     default:
-      return isSelected
+      base = isSelected
         ? 'bg-blue-100 border-blue-300 shadow-sm text-blue-800'
         : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900 text-blue-700';
+      break;
   }
+
+  // Accent left border for flexibility indicator
+  if (timeFlexibility === 'flexible') {
+    return `${base} border-l-[3.5px] border-l-cyan-500`;
+  }
+  return `${base} border-l-[3.5px] border-l-purple-500`;
 };
 
 const getJobBadge = (status: string) => {
@@ -292,6 +307,27 @@ const getPaymentBadge = (paymentStatus: string, paymentMode?: string) => {
   return (
     <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1 ml-1 ${bgClass}`}>
       {text}{modeSuffix}
+    </span>
+  );
+};
+
+const getTimeFlexibilityBadge = (timeFlexibility?: 'fixed' | 'flexible') => {
+  if (timeFlexibility === 'flexible') {
+    return (
+      <span
+        className="inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1 ml-1 bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800 shadow-2xs"
+        title="Customer is flexible with timing (open to morning/afternoon shift)"
+      >
+        🔄 Flexible
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded mb-1 ml-1 bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border border-purple-300 dark:border-purple-800 shadow-2xs"
+      title="Customer strictly requires this exact slot (do not reschedule without asking)"
+    >
+      🔒 Fixed
     </span>
   );
 };
@@ -2680,10 +2716,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                               <div
                                 key={j._id}
                                 onClick={() => handleOpenJobDrawer(j)}
-                                className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
+                                className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id, j.timeFlexibility)}`}
                               >
                                 {getJobBadge(j.status)}
                                 {getPaymentBadge(j.paymentStatus, j.paymentMode)}
+                                {getTimeFlexibilityBadge(j.timeFlexibility)}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditModal(j); }}
                                   className="absolute top-1.5 right-1.5 text-slate-405 hover:text-[#2563eb] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-900 rounded shadow-sm"
@@ -2791,10 +2828,11 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                           <div
                             key={j._id}
                             onClick={() => handleOpenJobDrawer(j)}
-                            className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id)}`}
+                            className={`relative text-left p-2.5 rounded-lg border cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group ${getJobCardStyles(j.status, selectedJobForDrawer?._id === j._id, j.timeFlexibility)}`}
                           >
                             {getJobBadge(j.status)}
                             {getPaymentBadge(j.paymentStatus, j.paymentMode)}
+                            {getTimeFlexibilityBadge(j.timeFlexibility)}
                             {isAssignedToInactive && (
                               <div className="mb-1 text-[8.5px] font-bold px-1.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded">
                                 Inactive Worker ({j.workerId?.name || 'Reassign'})
@@ -2899,6 +2937,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       {selectedJobForDrawer.status || 'confirmed'}
                     </span>
                     {getPaymentBadge(selectedJobForDrawer.paymentStatus, selectedJobForDrawer.paymentMode)}
+                    {getTimeFlexibilityBadge(selectedJobForDrawer.timeFlexibility)}
                   </div>
                 </div>
 
@@ -4542,12 +4581,12 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                      Time Flexibility
+                      Customer Time Flexibility
                     </span>
                     <span className="block text-[9.5px] text-slate-400">
                       {timeFlexibility === 'fixed'
-                        ? '🔒 Fixed: Customer strictly insists on this exact slot'
-                        : '🔄 Flexible: Customer is open to morning/afternoon shift'}
+                        ? '🔒 Fixed: Customer strictly wants this exact time (cannot shift)'
+                        : '🔄 Flexible: Customer is open to timing adjustment by ±1-2 hrs'}
                     </span>
                   </div>
                   <div className="flex bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded-lg text-[10.5px] font-bold">
@@ -4556,7 +4595,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       onClick={() => setTimeFlexibility('fixed')}
                       className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                         timeFlexibility === 'fixed'
-                          ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs font-black'
+                          ? 'bg-purple-600 text-white shadow-xs font-black'
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -4567,7 +4606,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                       onClick={() => setTimeFlexibility('flexible')}
                       className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                         timeFlexibility === 'flexible'
-                          ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs font-black'
+                          ? 'bg-cyan-600 text-white shadow-xs font-black'
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -4576,18 +4615,29 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/50 dark:border-slate-800">
-                  <input
-                    type="checkbox"
-                    id="waitlistModeCheck"
-                    checked={bookingAsWaitlist}
-                    onChange={(e) => setBookingAsWaitlist(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded text-amber-500 focus:ring-amber-400 cursor-pointer"
-                  />
-                  <label htmlFor="waitlistModeCheck" className="text-[10.5px] font-bold text-amber-700 dark:text-amber-400 cursor-pointer flex items-center space-x-1">
-                    <span>⏳</span>
-                    <span>Save to Priority Waitlist (Do not lock worker — slot pending confirmation)</span>
-                  </label>
+                <div className="pt-1.5 border-t border-slate-200/50 dark:border-slate-800 space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="waitlistModeCheck"
+                      checked={bookingAsWaitlist}
+                      onChange={(e) => setBookingAsWaitlist(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded text-amber-500 focus:ring-amber-400 cursor-pointer"
+                    />
+                    <label htmlFor="waitlistModeCheck" className="text-[10.5px] font-bold text-amber-700 dark:text-amber-400 cursor-pointer flex items-center space-x-1">
+                      <span>⏳</span>
+                      <span>Save as Priority Waitlist (Slots full / Customer waiting for opening)</span>
+                    </label>
+                  </div>
+                  {bookingAsWaitlist ? (
+                    <p className="text-[9.5px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 p-1.5 rounded-lg border border-amber-200 dark:border-amber-900/40">
+                      ⚠️ Booking will be saved in Priority Waitlist without locking a worker. It will alert you when a slot opens up.
+                    </p>
+                  ) : (
+                    <p className="text-[9px] text-slate-400 pl-5">
+                      Keep unchecked for normal confirmed bookings.
+                    </p>
+                  )}
                 </div>
               </div>
 
