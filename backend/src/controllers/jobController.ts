@@ -1546,7 +1546,9 @@ export const getSlotAvailability = async (req: AuthRequest, res: Response) => {
     if (companyStr && companyStr !== 'All') {
       jobsFilter.company = companyStr;
     }
-    const activeJobs = await Job.find(jobsFilter).select('timeSlot workerId status timeFlexibility');
+    const activeJobs = await Job.find(jobsFilter)
+      .select('timeSlot workerId status timeFlexibility clientName title address')
+      .populate('workerId', 'name phone company');
 
     const waitlistJobs = await Job.find({
       $or: [
@@ -1554,13 +1556,26 @@ export const getSlotAvailability = async (req: AuthRequest, res: Response) => {
         { preferredDate: dateStr, status: { $in: ['waitlist', 'pending_reschedule', 'postponed'] } }
       ],
       ...(companyStr && companyStr !== 'All' ? { company: companyStr } : {})
-    }).select('timeSlot preferredTimeSlot status clientName clientPhone');
+    }).select('timeSlot preferredTimeSlot status clientName clientPhone title');
 
-    const allSlots: string[] = Array.from(new Set([...standardSlots, ...activeJobs.map(j => j.timeSlot).filter((s): s is string => Boolean(s))]));
-
-    const slotStats = allSlots.map(slot => {
+    // Only use standard clean service shifts to avoid messy arbitrary overlapping buttons
+    const slotStats = standardSlots.map(slot => {
       const bookedJobsInSlot = activeJobs.filter(j => !!j.timeSlot && slotsOverlap(j.timeSlot, slot));
       const bookedCount = bookedJobsInSlot.length;
+      
+      const bookedWorkerIds = new Set(bookedJobsInSlot.map(j => (j.workerId as any)?._id?.toString() || j.workerId?.toString()).filter(Boolean));
+      const freeStaff = availableWorkers.filter(w => !bookedWorkerIds.has(w._id.toString())).map(w => ({
+        _id: w._id,
+        name: w.name,
+        company: w.company
+      }));
+      const bookedStaff = bookedJobsInSlot.map(j => ({
+        workerName: (j.workerId as any)?.name || 'Assigned Staff',
+        clientName: j.clientName || 'Booked',
+        title: j.title,
+        address: j.address
+      }));
+
       const waitlistInSlot = waitlistJobs.filter(j => 
         (!!j.timeSlot && slotsOverlap(j.timeSlot, slot)) || 
         (!!j.preferredTimeSlot && slotsOverlap(j.preferredTimeSlot, slot))
@@ -1570,10 +1585,10 @@ export const getSlotAvailability = async (req: AuthRequest, res: Response) => {
       let slotStatus = 'available'; // 'available' | 'low' | 'emergency_only' | 'full'
       if (freeCount === 0) {
         slotStatus = 'full';
-      } else if (enableEmergencyBuffer && freeCount <= emergencyBufferSlots) {
-        slotStatus = 'emergency_only';
       } else if (freeCount === 1) {
         slotStatus = 'low';
+      } else if (enableEmergencyBuffer && freeCount <= emergencyBufferSlots) {
+        slotStatus = 'emergency_only';
       }
 
       return {
@@ -1581,6 +1596,8 @@ export const getSlotAvailability = async (req: AuthRequest, res: Response) => {
         totalCapacity: totalWorkersCount,
         bookedCount,
         freeCount,
+        freeStaff,
+        bookedStaff,
         emergencyBufferCount: enableEmergencyBuffer ? emergencyBufferSlots : 0,
         waitlistCount: waitlistInSlot.length,
         waitlistJobs: waitlistInSlot,

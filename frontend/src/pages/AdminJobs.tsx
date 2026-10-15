@@ -33,7 +33,8 @@ import {
   Navigation,
   FileSpreadsheet,
   Copy,
-  Check
+  Check,
+  Activity
 } from 'lucide-react';
 
 const formatTimeTo12Hour = (timeStr: string) => {
@@ -479,8 +480,8 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
   const [isSubmittingPostpone, setIsSubmittingPostpone] = useState(false);
   const [postponeError, setPostponeError] = useState<string>('');
 
-  // Operational Navigation Tabs (Calendar, Reschedule Queue, Waitlist)
-  const [activeBoardTab, setActiveBoardTab] = useState<'calendar' | 'reschedule_queue' | 'waitlist'>('calendar');
+  // Operational Navigation Tabs (Shared Calendar, Slot Barometer, Reschedule Queue, Waitlist)
+  const [activeBoardTab, setActiveBoardTab] = useState<'calendar' | 'slot_barometer' | 'reschedule_queue' | 'waitlist'>('calendar');
   const [slotAvailabilityData, setSlotAvailabilityData] = useState<any>(null);
   const [rescheduleQueueJobs, setRescheduleQueueJobs] = useState<any[]>([]);
   const [waitlistJobs, setWaitlistJobs] = useState<any[]>([]);
@@ -2281,7 +2282,20 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
               }`}
             >
               <Calendar className="h-3.5 w-3.5" />
-              <span>Dispatch Matrix</span>
+              <span>📅 Shared Calendar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBoardTab('slot_barometer')}
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                activeBoardTab === 'slot_barometer'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5" />
+              <span>⚡ Live Slot Barometer</span>
             </button>
 
             <button
@@ -2328,75 +2342,6 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
             </span>
           </div>
         </div>
-
-        {/* Live Slot Barometer (Real-Time Availability for 3 Salesmen) */}
-        {slotAvailabilityData?.slotStats && slotAvailabilityData.slotStats.length > 0 && (
-          <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
-            <div className="flex items-center space-x-2 shrink-0">
-              <span className="text-sm">⚡</span>
-              <span className="font-extrabold text-[11px] text-slate-700 dark:text-slate-300">
-                Live Slot Availability ({slotAvailabilityData.totalActiveWorkers} Active Staff):
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {slotAvailabilityData.slotStats.map((stat: any) => {
-                let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300';
-                let statusLabel = `${stat.freeCount} Free`;
-                let icon = '🟢';
-
-                if (stat.status === 'full') {
-                  badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-300';
-                  statusLabel = 'FULL (Waitlist)';
-                  icon = '🔴';
-                } else if (stat.status === 'emergency_only') {
-                  badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300';
-                  statusLabel = 'Buffer Reserved';
-                  icon = '🛡️';
-                } else if (stat.status === 'low') {
-                  badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800 dark:text-yellow-300';
-                  statusLabel = 'Only 1 Left';
-                  icon = '🟡';
-                }
-
-                return (
-                  <button
-                    key={stat.timeSlot}
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setTimeSlot(stat.timeSlot);
-                      const parts = stat.timeSlot.split(' - ');
-                      if (parts.length === 2) {
-                        const convertTo24Hour = (time12: string) => {
-                          const [time, modifier] = time12.split(' ');
-                          let [hours, minutes] = time.split(':');
-                          if (hours === '12') hours = '00';
-                          if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12);
-                          return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-                        };
-                        setStartTime(convertTo24Hour(parts[0]));
-                        setEndTime(convertTo24Hour(parts[1]));
-                      }
-                      if (stat.status === 'full') {
-                        setBookingAsWaitlist(true);
-                      }
-                      setCreateModalOpen(true);
-                    }}
-                    className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl border text-[10.5px] font-extrabold cursor-pointer transition-all hover:scale-102 ${badgeClass}`}
-                    title={`Click to book or waitlist slot ${stat.timeSlot}`}
-                  >
-                    <span>{icon}</span>
-                    <span className="font-bold">{stat.timeSlot}</span>
-                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-md bg-white/70 dark:bg-black/20 font-black">
-                      {statusLabel}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 2.5 Dedicated Date Range Excel Export Bar (Worker-Wise Separate Sheets) */}
@@ -2593,17 +2538,44 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
                 timeSlots.map((slot) => (
                 <tr key={slot} className="hover:bg-slate-55/20 dark:hover:bg-slate-900/10">
                   
-                  {/* Row Time Slot Cell */}
-                  <td className="px-3 py-4 font-bold text-slate-800 text-[11px] leading-snug text-center">
-                    <div className="flex flex-col text-slate-700 font-bold gap-0.5">
-                      {slot.includes(' - ') ? (
-                        <>
-                          <span>{slot.split(' - ')[0]}</span>
-                          <span>{slot.split(' - ')[1]}</span>
-                        </>
-                      ) : (
-                        <span>{slot}</span>
-                      )}
+                  {/* Row Time Slot Cell with Live Availability Badge */}
+                  <td className="px-3 py-3.5 font-bold text-slate-800 text-[11px] leading-snug text-center bg-slate-50/50 dark:bg-slate-900/40">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <div className="flex flex-col text-slate-700 dark:text-slate-200 font-bold leading-tight">
+                        {slot.includes(' - ') ? (
+                          <>
+                            <span className="text-[11px]">{slot.split(' - ')[0]}</span>
+                            <span className="text-[9px] text-slate-400 font-normal">to</span>
+                            <span className="text-[11px]">{slot.split(' - ')[1]}</span>
+                          </>
+                        ) : (
+                          <span>{slot}</span>
+                        )}
+                      </div>
+                      {/* Compact Live Availability Badge inside the calendar row */}
+                      {(() => {
+                        const stat = slotAvailabilityData?.slotStats?.find((s: any) => s.timeSlot === slot);
+                        if (!stat) return null;
+                        if (stat.status === 'full') {
+                          return (
+                            <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-900 shadow-2xs">
+                              Full
+                            </span>
+                          );
+                        }
+                        if (stat.status === 'low') {
+                          return (
+                            <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-900 shadow-2xs">
+                              1 Free
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 shadow-2xs">
+                            {stat.freeCount} Free
+                          </span>
+                        );
+                      })()}
                     </div>
                   </td>
 
@@ -3321,6 +3293,267 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
           </div>
         )}
       </div>
+      )}
+
+      {/* ⚡ Dedicated Live Slot Availability & Fleet Capacity Barometer */}
+      {activeBoardTab === 'slot_barometer' && (
+        <div className="space-y-4 text-left">
+          {/* Header & Date Controls */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs">
+                    <Activity className="h-4 w-4" />
+                  </span>
+                  <h2 className="text-base font-extrabold text-slate-850 dark:text-white">
+                    Live Slot Availability & Capacity Barometer
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Real-time fleet capacity across all active ground workers for <b>{selectedDate}</b>. Shared live across all 3 salesmen via Socket.io.
+                </p>
+              </div>
+
+              {/* Date Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { label: 'Today', days: 0 },
+                  { label: 'Tomorrow', days: 1 },
+                  { label: '+2 Days', days: 2 },
+                  { label: '+3 Days', days: 3 }
+                ].map(d => {
+                  const target = getPastDateString(-d.days);
+                  return (
+                    <button
+                      key={d.label}
+                      type="button"
+                      onClick={() => setSelectedDate(target)}
+                      className={`text-xs font-black px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                        selectedDate === target
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+
+                <input
+                  type="date"
+                  value={selectedDate}
+                  min={getTodayString()}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="text-xs font-bold p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Quick Capacity Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-150 dark:border-slate-800">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Active Ground Staff</span>
+                <span className="text-lg font-black text-slate-850 dark:text-white mt-0.5 block">
+                  👥 {slotAvailabilityData?.totalActiveWorkers || activeWorkers.length} Workers
+                </span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-150 dark:border-slate-800">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Scheduled</span>
+                <span className="text-lg font-black text-blue-600 dark:text-blue-400 mt-0.5 block">
+                  📋 {totalBookings} Cleanings
+                </span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-150 dark:border-slate-800">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Emergency Buffer</span>
+                <span className="text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5 block">
+                  🛡️ {slotAvailabilityData?.emergencyBufferSlots || 1} Reserved
+                </span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-150 dark:border-slate-800">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Priority Waitlist</span>
+                <span className="text-lg font-black text-rose-600 dark:text-rose-400 mt-0.5 block">
+                  ⏳ {waitlistJobs.length} Waiting
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Shift Capacity Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(slotAvailabilityData?.slotStats || [
+              { timeSlot: '08:00 AM - 11:00 AM', status: 'available', freeCount: activeWorkers.length, bookedCount: 0 },
+              { timeSlot: '11:00 AM - 02:00 PM', status: 'available', freeCount: activeWorkers.length, bookedCount: 0 },
+              { timeSlot: '02:00 PM - 05:00 PM', status: 'available', freeCount: activeWorkers.length, bookedCount: 0 },
+              { timeSlot: '05:00 PM - 08:00 PM', status: 'available', freeCount: activeWorkers.length, bookedCount: 0 }
+            ]).map((stat: any, idx: number) => {
+              const shiftNames = ['🌅 Morning Shift', '☀️ Mid-Day Shift', '🌤️ Afternoon Shift', '🌆 Evening Shift'];
+              const shiftName = shiftNames[idx] || `Shift ${idx + 1}`;
+              const totalCap = stat.totalCapacity || slotAvailabilityData?.totalActiveWorkers || activeWorkers.length || 1;
+              const bookedPct = Math.min(100, Math.round((stat.bookedCount / totalCap) * 100));
+
+              let statusBadge = (
+                <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                  🟢 {stat.freeCount} Slots Available
+                </span>
+              );
+              let cardBorder = 'border-slate-200 dark:border-slate-800 hover:border-emerald-400';
+
+              if (stat.status === 'full') {
+                statusBadge = (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 animate-pulse">
+                    🔴 FULL (0 Slots Free)
+                  </span>
+                );
+                cardBorder = 'border-rose-200 dark:border-rose-900/60 bg-rose-50/20';
+              } else if (stat.status === 'low') {
+                statusBadge = (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                    🟡 Only 1 Slot Left!
+                  </span>
+                );
+                cardBorder = 'border-amber-200 dark:border-amber-900/60';
+              } else if (stat.status === 'emergency_only') {
+                statusBadge = (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase bg-orange-100 text-orange-700 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 dark:border-orange-800">
+                    🛡️ Emergency Buffer Only
+                  </span>
+                );
+              }
+
+              return (
+                <div
+                  key={stat.timeSlot}
+                  className={`bg-white dark:bg-slate-900 rounded-3xl border p-5 shadow-sm space-y-4 transition-all ${cardBorder}`}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-400 block">{shiftName}</span>
+                      <h3 className="text-base font-extrabold text-slate-850 dark:text-white mt-0.5">
+                        {stat.timeSlot}
+                      </h3>
+                    </div>
+                    {statusBadge}
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-xs font-bold">
+                      <span className="text-slate-500">Fleet Occupancy:</span>
+                      <span className="text-slate-700 dark:text-slate-200">
+                        {stat.bookedCount} / {totalCap} Staff Booked ({bookedPct}%)
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          stat.status === 'full'
+                            ? 'bg-rose-500'
+                            : stat.status === 'low'
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${bookedPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Staff Breakdown */}
+                  <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    {/* Free Staff */}
+                    {stat.freeStaff && stat.freeStaff.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                          Available Staff (Ready for Booking):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {stat.freeStaff.map((staff: any) => (
+                            <span
+                              key={staff._id}
+                              className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-extrabold inline-flex items-center space-x-1"
+                            >
+                              <span>✓</span>
+                              <span>{staff.name}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Booked Staff */}
+                    {stat.bookedStaff && stat.bookedStaff.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                          Booked Staff in this Slot:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {stat.bookedStaff.map((b: any, bIdx: number) => (
+                            <span
+                              key={bIdx}
+                              className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10.5px] font-semibold"
+                            >
+                              <span>• {b.workerName}</span>
+                              <span className="opacity-75 font-normal ml-1">({b.title})</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Waitlist Alert for this shift */}
+                    {stat.waitlistCount > 0 && (
+                      <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                        <span>⏳ {stat.waitlistCount} customer(s) waiting for this shift</span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveBoardTab('waitlist')}
+                          className="text-amber-700 dark:text-amber-300 hover:underline font-black cursor-pointer"
+                        >
+                          View Waitlist →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions for this slot */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2">
+                    {stat.status === 'full' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetForm();
+                          setDate(selectedDate);
+                          setTimeSlot(stat.timeSlot);
+                          setBookingAsWaitlist(true);
+                          setCreateModalOpen(true);
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-sm transition-all cursor-pointer flex items-center justify-center space-x-1"
+                      >
+                        <span>⏳ Save Customer to Priority Waitlist</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetForm();
+                          setDate(selectedDate);
+                          setTimeSlot(stat.timeSlot);
+                          setBookingAsWaitlist(false);
+                          setCreateModalOpen(true);
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center space-x-1"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Book This Slot ({stat.freeCount} Free)</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Reschedule Needed Queue View */}
