@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import api from '../utils/api';
+import PendingMaterialAlertModal, { type PendingMaterialRequest } from './PendingMaterialAlertModal';
 import {
   LayoutDashboard,
   Users,
@@ -51,6 +53,65 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const isItemActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  // Pending Material Requests State & Auto-Alert
+  const [pendingMaterialRequests, setPendingMaterialRequests] = useState<PendingMaterialRequest[]>([]);
+  const [materialAlertOpen, setMaterialAlertOpen] = useState(false);
+  const [snoozedUntil, setSnoozedUntil] = useState<number>(() => {
+    const saved = sessionStorage.getItem('shinestaff_material_alert_snoozed_until');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const fetchPendingMaterials = async () => {
+    try {
+      const res = await api.get('/material-requests?status=pending');
+      const list: PendingMaterialRequest[] = res.data || [];
+      setPendingMaterialRequests(list);
+
+      // If pending requests exist and snooze time has passed, auto-open dialog!
+      const currentSnooze = sessionStorage.getItem('shinestaff_material_alert_snoozed_until');
+      const snoozeTime = currentSnooze ? parseInt(currentSnooze, 10) : 0;
+      if (list.length > 0 && Date.now() > snoozeTime) {
+        setMaterialAlertOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending material requests in AdminLayout:', err);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Check immediately whenever ShineStaff admin layout mounts
+    fetchPendingMaterials();
+
+    // 2. Poll every 3 minutes as background backup
+    const interval = setInterval(fetchPendingMaterials, 180000);
+
+    // 3. Real-time instant reactive wakeup on Socket event
+    const handleSocketUpdate = (e: any) => {
+      const detail = e.detail;
+      if (detail && (detail.type === 'MATERIAL_REQUEST_SUBMITTED' || detail.type === 'MATERIAL_REQUEST_UPDATED')) {
+        // Reset snooze because a fresh request arrived or status changed
+        sessionStorage.removeItem('shinestaff_material_alert_snoozed_until');
+        setSnoozedUntil(0);
+        fetchPendingMaterials().then(() => {
+          setMaterialAlertOpen(true);
+        });
+      }
+    };
+
+    window.addEventListener('socket-update', handleSocketUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('socket-update', handleSocketUpdate);
+    };
+  }, []);
+
+  const handleSnooze = (minutes = 30) => {
+    const until = Date.now() + minutes * 60 * 1000;
+    sessionStorage.setItem('shinestaff_material_alert_snoozed_until', String(until));
+    setSnoozedUntil(until);
+    setMaterialAlertOpen(false);
   };
 
   const menuItems = [
@@ -120,7 +181,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-md" />
                 )}
                 <Icon className={`h-4 w-4 transition-transform ${active ? 'text-white' : `${item.color} group-hover:scale-110`}`} />
-                <span>{item.name}</span>
+                <span className="flex-1 text-left">{item.name}</span>
+                {item.path === '/admin/materials' && pendingMaterialRequests.length > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
+                    {pendingMaterialRequests.length}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -174,7 +240,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-md" />
                 )}
                 <Icon className={`h-4.5 w-4.5 transition-transform ${active ? 'text-white' : `${item.color} group-hover:scale-110`}`} />
-                <span>{item.name}</span>
+                <span className="flex-1 text-left">{item.name}</span>
+                {item.path === '/admin/materials' && pendingMaterialRequests.length > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
+                    {pendingMaterialRequests.length}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -242,7 +313,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
 
           {/* Quick HUD controls */}
-          <div className="flex items-center space-x-3 md:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+            {pendingMaterialRequests.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMaterialAlertOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-rose-500/15 hover:from-amber-500/25 hover:to-rose-500/25 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-black transition-all cursor-pointer shadow-xs animate-pulse"
+                title="Pending Material Requests from workers. Click to view & dispatch!"
+              >
+                <Package className="h-4 w-4 text-orange-500 animate-bounce" />
+                <span className="hidden sm:inline">Material Request:</span>
+                <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black shadow-2xs">
+                  {pendingMaterialRequests.length}
+                </span>
+                <span className="hidden md:inline">Action Needed</span>
+              </button>
+            )}
+
             <button
               onClick={toggleTheme}
               className="rounded-full p-2 text-slate-555 hover:bg-slate-105 dark:hover:bg-slate-900 transition-colors"
@@ -285,6 +372,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           {children}
         </main>
       </div>
+
+      {/* Auto-Alert Dialog for Pending Material Requests */}
+      <PendingMaterialAlertModal
+        isOpen={materialAlertOpen}
+        onClose={() => setMaterialAlertOpen(false)}
+        requests={pendingMaterialRequests}
+        onStatusUpdated={fetchPendingMaterials}
+        onSnooze={handleSnooze}
+      />
 
     </div>
   );

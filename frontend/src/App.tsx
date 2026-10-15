@@ -248,6 +248,12 @@ const SocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) =
               playNote(830.61, now + 0.08, 0.25);
               playNote(987.77, now + 0.16, 0.25);
               playNote(1318.51, now + 0.24, 0.5);
+            } else if (eventType === 'MATERIAL_REQUEST_SUBMITTED') {
+              // Special double-harmonic chime for urgent material requests
+              playNote(523.25, now, 0.25); // C5
+              playNote(659.25, now + 0.08, 0.25); // E5
+              playNote(783.99, now + 0.16, 0.3); // G5
+              playNote(1046.50, now + 0.24, 0.6); // C6
             } else {
               // Standard alert arpeggio
               playNote(587.33, now, 0.3);

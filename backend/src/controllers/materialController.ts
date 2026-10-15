@@ -226,7 +226,17 @@ export const createMaterialRequest = async (req: AuthRequest, res: Response) => 
     if (io) {
       io.emit('adminNotification', {
         type: 'MATERIAL_REQUEST_SUBMITTED',
-        message: `📦 Material Request (${materialRequest.urgency}): ${worker.name} requested ${materialRequest.items.length} item(s).`
+        message: `📦 Material Request (${materialRequest.urgency}): ${worker.name} requested ${materialRequest.items.length} item(s).`,
+        requestId: materialRequest._id,
+        workerName: worker.name,
+        workerPhone: worker.phone,
+        company: worker.company,
+        urgency: materialRequest.urgency,
+        itemsCount: materialRequest.items.length,
+        items: cleanItems,
+        reason: materialRequest.reason,
+        neededByDate: materialRequest.neededByDate,
+        createdAt: materialRequest.createdAt
       });
     }
 
@@ -311,6 +321,14 @@ export const updateMaterialRequestStatus = async (req: AuthRequest, res: Respons
       io.to(workerIdStr).emit('notification', {
         type: 'MATERIAL_REQUEST_STATUS',
         message: `Your material request has been updated to "${status.toUpperCase()}" by Admin.`
+      });
+    }
+
+    if (io) {
+      io.emit('adminNotification', {
+        type: 'MATERIAL_REQUEST_UPDATED',
+        requestId: materialRequest._id,
+        status
       });
     }
 

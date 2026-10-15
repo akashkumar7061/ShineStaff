@@ -18,6 +18,8 @@ export interface IMaterialRequest extends Document {
   adminRemarks?: string;
   resolvedAt?: Date;
   resolvedBy?: mongoose.Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const MaterialRequestSchema = new Schema<IMaterialRequest>({
