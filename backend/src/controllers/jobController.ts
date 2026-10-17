@@ -5,7 +5,7 @@ import User from '../models/User';
 import Settings from '../models/Settings';
 import TravelLog from '../models/TravelLog';
 import Commission from '../models/Commission';
-import { uploadToCloudinary } from '../config/cloudinary';
+import { uploadToCloudinary, saveLocally } from '../config/cloudinary';
 import { sendWhatsAppAlert } from '../utils/whatsapp';
 import { syncCustomerAndScheduleReminder } from '../utils/whatsappHelper';
 import { sendMail } from '../config/mailer';
@@ -518,8 +518,8 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     const worker = await User.findById(req.user.id);
     const workerName = worker ? worker.name : 'Worker';
 
-    if (job.status !== 'pending' && job.status !== 'accepted') {
-      return res.status(400).json({ message: 'Job has already been started or processed' });
+    if (job.status !== 'pending' && job.status !== 'accepted' && job.status !== 'started') {
+      return res.status(400).json({ message: 'Job has already been processed or completed' });
     }
 
     if (!beforePhotoDataUrl) {
@@ -529,6 +529,7 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     // Upload before photo
     const beforePhotoUrl = await uploadToCloudinary(beforePhotoDataUrl, 'job_before_photos');
 
+    const isAlreadyStarted = job.status === 'started';
     job.status = 'started';
     job.beforePhoto = beforePhotoUrl;
     job.beforePhotoTime = new Date();
@@ -538,13 +539,15 @@ export const startJob = async (req: AuthRequest, res: Response) => {
         lng: Number(location.lng)
       };
     }
-    job.startedAt = new Date();
+    if (!isAlreadyStarted) {
+      job.startedAt = new Date();
+    }
 
     if (!job.timeline) job.timeline = [];
     job.timeline.push({
       status: 'started',
       timestamp: new Date(),
-      remarks: 'Job started by worker',
+      remarks: isAlreadyStarted ? 'Before photo updated by worker' : 'Job started by worker',
       updatedBy: `Worker (${workerName})`
     });
 
@@ -553,11 +556,13 @@ export const startJob = async (req: AuthRequest, res: Response) => {
     const startedTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
     // Send detailed push notification to admins matching specification layout
-    sendPushToAdmins(
-      '🟢 Job Started',
-      `Worker: ${workerName}\nCompany: ${job.company} Services\nCustomer: ${job.clientName}\nService: ${job.title}\nStarted: ${startedTime}`,
-      '/admin'
-    );
+    if (!isAlreadyStarted) {
+      sendPushToAdmins(
+        '🟢 Job Started',
+        `Worker: ${workerName}\nCompany: ${job.company} Services\nCustomer: ${job.clientName}\nService: ${job.title}\nStarted: ${startedTime}`,
+        '/admin'
+      );
+    }
 
     // Send real-time notifications (async)
     Job.findById(job._id).populate('workerId').then(populatedJob => {
@@ -566,21 +571,21 @@ export const startJob = async (req: AuthRequest, res: Response) => {
         // Notify admin
         io.emit('adminNotification', {
           type: 'JOB_STARTED',
-          message: `${workerName} started job "${job.title}" for ${job.company}.`,
+          message: `${workerName} ${isAlreadyStarted ? 'updated photo for' : 'started'} job "${job.title}" for ${job.company}.`,
           jobId: job._id,
           job: populatedJob
         });
         // Notify worker room
         io.to(job.workerId.toString()).emit('notification', {
           type: 'JOB_STARTED',
-          message: `Job "${job.title}" has been successfully started.`,
+          message: `Job "${job.title}" before photo saved successfully.`,
           jobId: job._id,
           job: populatedJob
         });
       }
     }).catch(err => console.error('Failed to send job started socket notification:', err));
 
-    return res.status(200).json({ message: 'Job started successfully', job });
+    return res.status(200).json({ message: isAlreadyStarted ? 'Before photo updated successfully' : 'Job started successfully', job });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -615,21 +620,34 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     }
 
     if (job.status !== 'started') {
-      return res.status(400).json({ message: 'Job cannot be completed in its current state (Must be Started)' });
+      // Auto-transition if before photo exists
+      if ((job.status === 'pending' || job.status === 'accepted') && job.beforePhoto) {
+        job.status = 'started';
+      } else {
+        return res.status(400).json({ message: 'Job cannot be completed in its current state (Must be Started)' });
+      }
     }
 
-    // Filter non-empty valid photo strings
-    const validPhotoDataUrls = (Array.isArray(afterPhotoDataUrls) ? afterPhotoDataUrls : [afterPhotoDataUrls])
-      .filter((url: any) => typeof url === 'string' && url.trim().length > 50);
+    // Support both afterPhotoDataUrls (array) and afterPhotoDataUrl (singular)
+    const rawPhotos = afterPhotoDataUrls !== undefined ? afterPhotoDataUrls : afterPhotoDataUrl;
+    const validPhotoDataUrls = (Array.isArray(rawPhotos) ? rawPhotos : [rawPhotos])
+      .filter((url: any) => typeof url === 'string' && url.trim().length > 20);
 
     if (validPhotoDataUrls.length === 0) {
       return res.status(400).json({ message: 'Live After Cleaning Photos are mandatory to complete the job.' });
     }
 
-    // Upload after photos concurrently
-    const afterPhotoUrls = await Promise.all(
+    // Upload after photos concurrently with fallback safety
+    const uploadResults = await Promise.allSettled(
       validPhotoDataUrls.map((dataUrl: string) => uploadToCloudinary(dataUrl, 'job_after_photos'))
     );
+    const afterPhotoUrls = uploadResults.map((result, idx) => {
+      if (result.status === 'fulfilled' && result.value) {
+        return result.value;
+      }
+      console.warn(`[Job Completion] Photo upload index ${idx} failed, saving locally:`, (result as any).reason);
+      return saveLocally(validPhotoDataUrls[idx], 'job_after_photos');
+    });
     const afterPhotoUrl = afterPhotoUrls[0] || '';
 
     // Fetch settings for fuel allowance rate

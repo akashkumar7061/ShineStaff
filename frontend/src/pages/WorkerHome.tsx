@@ -194,7 +194,7 @@ const WorkerHome: React.FC = () => {
         alert('Job started successfully! Do work.');
       } else if (cameraType === 'after' && selectedJobId) {
         await api.put(`/jobs/${selectedJobId}/complete`, {
-          afterPhotoDataUrls: dataUrl, // list of 5 photos
+          afterPhotoDataUrls: Array.isArray(dataUrl) ? dataUrl : [dataUrl], // list of photos
           location: coords
         });
         alert('Job completed successfully! Admin notified.');

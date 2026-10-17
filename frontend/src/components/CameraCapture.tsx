@@ -17,6 +17,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>(facingMode);
@@ -171,7 +172,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const handleCapture = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      alert('Camera video is still loading. Please wait 1 second or tap "Device Camera" / "Gallery" below.');
+      return;
+    }
 
     const dataUrl = processImageToCompressedDataUrl(
       video,
@@ -180,7 +184,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       currentFacingMode === 'user'
     );
 
-    if (!dataUrl) return;
+    if (!dataUrl) {
+      alert('Failed to capture frame from video. Please try again or use Device Camera.');
+      return;
+    }
 
     if (multiCaptureCount > 1) {
       const newList = [...capturedList, dataUrl];
@@ -201,18 +208,30 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     }
   };
 
-  // Fallback: Handle Native Camera / File Input Upload
+  // Fallback: Handle Native Camera / File Input Upload with zero memory leak
   const handleNativeFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setProcessingFile(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const compressedDataUrl = processImageToCompressedDataUrl(img, img.width, img.height, false);
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
+        const compressedDataUrl = processImageToCompressedDataUrl(
+          img,
+          img.naturalWidth || img.width,
+          img.naturalHeight || img.height,
+          false
+        );
         setProcessingFile(false);
+
+        if (!compressedDataUrl) {
+          alert('Failed to process photo. Please try again.');
+          return;
+        }
 
         if (multiCaptureCount > 1) {
           const newList = [...capturedList, compressedDataUrl];
@@ -231,10 +250,23 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           }
           onCapture(compressedDataUrl, coords);
         }
-      };
-      img.src = event.target?.result as string;
+      } catch (err) {
+        console.error('Error processing image:', err);
+        setProcessingFile(false);
+        alert('Could not compress photo. Please try another photo.');
+      }
     };
-    reader.readAsDataURL(file);
+
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objectUrl);
+      console.error('Image load error:', err);
+      setProcessingFile(false);
+      alert('Failed to load selected photo. Please try again.');
+    };
+
+    img.src = objectUrl;
+    // Reset file input so picking the same or next file triggers onChange
+    e.target.value = '';
   };
 
   return (
@@ -269,15 +301,25 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
               <p className="text-xs text-slate-300 leading-relaxed max-w-xs">{error}</p>
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow transition-transform active:scale-95 flex items-center justify-center space-x-1.5"
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
                 >
                   <Camera className="h-4 w-4" />
-                  <span>Use Device Camera</span>
+                  <span>Device Camera</span>
                 </button>
                 <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-full bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  <span>Choose Photo</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => startCamera(currentFacingMode)}
-                  className="rounded-full bg-slate-800 hover:bg-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-300 transition-colors"
+                  className="rounded-full bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
                 >
                   Retry Stream
                 </button>
@@ -304,12 +346,19 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Hidden File Input for Native Camera fallback */}
+          {/* Hidden Inputs for Direct Native Camera and Gallery fallback */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleNativeFileInput}
+          />
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={handleNativeFileInput}
           />
@@ -349,18 +398,29 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
             <Calendar className="h-3.5 w-3.5 text-secondary shrink-0" />
             <span className="truncate">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} • {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="text-[10px] text-secondary hover:underline font-bold flex items-center space-x-1 cursor-pointer shrink-0 ml-2"
-          >
-            <Upload className="h-3 w-3" />
-            <span>Upload from Gallery / Native Camera</span>
-          </button>
+          <div className="flex items-center space-x-2 shrink-0 ml-2">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="text-[10px] text-emerald-400 hover:underline font-bold flex items-center space-x-1 cursor-pointer"
+            >
+              <Camera className="h-3 w-3" />
+              <span>Device Camera</span>
+            </button>
+            <span className="text-slate-600">|</span>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[10px] text-secondary hover:underline font-bold flex items-center space-x-1 cursor-pointer"
+            >
+              <Upload className="h-3 w-3" />
+              <span>Gallery</span>
+            </button>
+          </div>
         </div>
 
         {/* Controls footer */}
-        <div className="flex items-center justify-around border-t border-slate-800 bg-slate-950 p-5">
+        <div className="flex items-center justify-around border-t border-slate-800 bg-slate-950 p-4">
           <button
             type="button"
             onClick={toggleFacingMode}
@@ -385,12 +445,22 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
           <button
             type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            title="Take Photo with Device Camera"
+          >
+            <Camera className="h-5 w-5 text-emerald-400" />
+            <span className="text-[10px] font-semibold">Native Cam</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
             className="flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
-            title="Upload from Device"
+            title="Upload from Device Gallery"
           >
-            <ImageIcon className="h-5 w-5 text-emerald-400" />
-            <span className="text-[10px] font-semibold">Native / Files</span>
+            <ImageIcon className="h-5 w-5 text-blue-400" />
+            <span className="text-[10px] font-semibold">Gallery</span>
           </button>
         </div>
       </div>

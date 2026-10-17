@@ -24,7 +24,7 @@ if (!isMock) {
   }
 }
 
-const saveLocally = (data: string | Buffer, folder: string): string => {
+export const saveLocally = (data: string | Buffer, folder: string): string => {
   const filename = `${folder}_${Date.now()}_${Math.round(Math.random() * 1E9)}.jpg`;
   const uploadDir = path.join(__dirname, '../../uploads');
   if (!fs.existsSync(uploadDir)) {
@@ -46,15 +46,15 @@ const saveLocally = (data: string | Buffer, folder: string): string => {
   }
 
   fs.writeFileSync(filePath, buffer);
-  const baseUrl = process.env.BACKEND_URL || 'https://shinestaff-backend.onrender.com';
-  return `${baseUrl}/uploads/${filename}`;
+  const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/+$/, '') : '';
+  return baseUrl ? `${baseUrl}/uploads/${filename}` : `/uploads/${filename}`;
 };
 
 export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, folder: string): Promise<string> => {
   if (!fileBufferOrDataUrl) return '';
 
   // Already uploaded web URL - preserve directly
-  if (typeof fileBufferOrDataUrl === 'string' && (fileBufferOrDataUrl.startsWith('http://') || fileBufferOrDataUrl.startsWith('https://'))) {
+  if (typeof fileBufferOrDataUrl === 'string' && (fileBufferOrDataUrl.startsWith('http://') || fileBufferOrDataUrl.startsWith('https://') || fileBufferOrDataUrl.startsWith('/uploads/'))) {
     return fileBufferOrDataUrl;
   }
 
@@ -74,11 +74,11 @@ export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, f
       const response = await cloudinary.uploader.upload(content, {
         folder: `shinestaff/${folder}`,
         resource_type: 'image',
-        timeout: 20000
+        timeout: 25000
       });
       return response.secure_url;
     } catch (error) {
-      console.warn('[Cloudinary] Upload failed, falling back to secure local storage:', error);
+      console.warn('[Cloudinary] Upload failed, falling back to local file storage:', error);
       return saveLocally(fileBufferOrDataUrl, folder);
     }
   }

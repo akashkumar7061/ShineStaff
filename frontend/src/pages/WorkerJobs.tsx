@@ -341,24 +341,25 @@ const WorkerJobs: React.FC = () => {
     if (!selectedJob) return;
 
     if (cameraType === 'before') {
+      const prevPhoto = tempBeforePhoto;
       setTempBeforePhoto(dataUrl);
       // Automatically send "Start Job" PUT if they just snapped the before photo
       api.put(`/jobs/${selectedJob._id}/start`, {
         beforePhotoDataUrl: dataUrl,
         location: coords
-      }).then(() => {
-        alert('Before Photo uploaded! Job started.');
+      }).then((res) => {
+        alert(selectedJob.status === 'started' ? 'Before Photo updated successfully!' : 'Before Photo uploaded! Job started.');
         // Refresh local details
         setSelectedJob({
           ...selectedJob,
           status: 'started',
-          beforePhoto: dataUrl,
+          beforePhoto: res.data?.job?.beforePhoto || dataUrl,
           beforePhotoGPS: coords
         });
         fetchJobs();
       }).catch((err) => {
-        alert(err.response?.data?.message || 'Failed to start job');
-        setTempBeforePhoto(null);
+        alert(err.response?.data?.message || 'Failed to start job / upload before photo');
+        setTempBeforePhoto(prevPhoto);
       });
     } else {
       if (activeAfterPhotoIndex !== null) {
@@ -388,7 +389,7 @@ const WorkerJobs: React.FC = () => {
       alert('Before photo is mandatory');
       return;
     }
-    const validPhotos = tempAfterPhotos.filter(photo => !!photo && photo.trim().length > 50);
+    const validPhotos = tempAfterPhotos.filter(photo => !!photo && photo.trim().length > 20);
     if (validPhotos.length === 0) {
       alert('Please snap at least 1 After Cleaning Photo to complete the job.');
       return;
@@ -403,68 +404,69 @@ const WorkerJobs: React.FC = () => {
     const targetJobId = targetJob._id;
 
     try {
-      const submitJobCompletion = async (coords?: { lat: number; lng: number }) => {
-        const reqs: Promise<any>[] = [
-          api.put(`/jobs/${targetJobId}/complete`, {
-            afterPhotoDataUrls: validPhotos,
-            location: coords,
-            manualFuelKms: Number(tempKms),
-            workerNotes: tempNotes,
-            paymentMode: tempPaymentMode
-          })
-        ];
-
-        if ((tempPaymentMode as string) !== 'not_selected') {
-          reqs.push(
-            api.post('/payments/record', {
-              jobId: targetJobId,
-              invoiceNumber: targetJob.visitId || `INV-${targetJobId.slice(-6)}`,
-              workerId: targetJob.workerId?._id || targetJob.workerId,
-              workerName: user?.name || 'Worker',
-              clientName: targetJob.clientName,
-              clientPhone: targetJob.clientPhone,
-              company: targetJob.company,
-              amount: targetJob.price || 0,
-              paymentMethod: tempPaymentMode === 'cash' ? 'cash' : 'upi_online',
-              qrId: mappedQR?._id,
-              qrName: mappedQR?.name,
-              upiId: mappedQR?.upiId,
-              collectedBy: 'Worker'
-            }).catch(e => console.error('Worker payment record error:', e))
+      // 1. Geolocation acquisition wrapped in Promise with timeout
+      const getCoordsWithTimeout = (): Promise<{ lat: number; lng: number } | undefined> => {
+        return new Promise((resolve) => {
+          if (!('geolocation' in navigator)) {
+            return resolve(undefined);
+          }
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              });
+            },
+            (error) => {
+              console.warn('Geolocation unavailable / timed out:', error);
+              resolve(undefined);
+            },
+            { timeout: 3000, maximumAge: 60000 }
           );
-        }
-
-        await Promise.all(reqs);
-
-        // Instant UI update
-        setJobs(prevJobs => prevJobs.map(j => j._id === targetJobId ? { ...j, status: 'completed' } : j));
-        setSelectedJob(null);
-        alert('Cleanup sheet submitted successfully! Job marked as completed.');
-        fetchJobs();
+        });
       };
 
       const firstValidGPS = tempAfterPhotosGPS.find(g => g !== null);
-      if (firstValidGPS) {
-        await submitJobCompletion(firstValidGPS);
-      } else if ('geolocation' in navigator) {
-        // Fast 2s geolocation with immediate fallback
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const coords = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            await submitJobCompletion(coords);
-          },
-          async (error) => {
-            console.warn('Geolocation unavailable. Completing job with site address fallback.', error);
-            await submitJobCompletion(undefined);
-          },
-          { timeout: 2000, maximumAge: 60000 }
+      const coords = firstValidGPS || await getCoordsWithTimeout();
+
+      // 2. Submit completion
+      const reqs: Promise<any>[] = [
+        api.put(`/jobs/${targetJobId}/complete`, {
+          afterPhotoDataUrls: validPhotos,
+          location: coords,
+          manualFuelKms: Number(tempKms),
+          workerNotes: tempNotes,
+          paymentMode: tempPaymentMode
+        })
+      ];
+
+      if ((tempPaymentMode as string) !== 'not_selected') {
+        reqs.push(
+          api.post('/payments/record', {
+            jobId: targetJobId,
+            invoiceNumber: targetJob.visitId || `INV-${targetJobId.slice(-6)}`,
+            workerId: targetJob.workerId?._id || targetJob.workerId,
+            workerName: user?.name || 'Worker',
+            clientName: targetJob.clientName,
+            clientPhone: targetJob.clientPhone,
+            company: targetJob.company,
+            amount: targetJob.price || 0,
+            paymentMethod: tempPaymentMode === 'cash' ? 'cash' : 'upi_online',
+            qrId: mappedQR?._id,
+            qrName: mappedQR?.name,
+            upiId: mappedQR?.upiId,
+            collectedBy: 'Worker'
+          }).catch(e => console.error('Worker payment record error:', e))
         );
-      } else {
-        await submitJobCompletion(undefined);
       }
+
+      await Promise.all(reqs);
+
+      // Instant UI update
+      setJobs(prevJobs => prevJobs.map(j => j._id === targetJobId ? { ...j, status: 'completed' } : j));
+      setSelectedJob(null);
+      alert('Cleanup sheet submitted successfully! Job marked as completed.');
+      fetchJobs();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Verification complete update failed');
     } finally {
@@ -1252,19 +1254,30 @@ const WorkerJobs: React.FC = () => {
                     </div>
                   </div>
                 ) : tempBeforePhoto ? (
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow max-w-sm mx-auto">
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow max-w-sm mx-auto group">
                     <img src={tempBeforePhoto} alt="Before snap" className="w-full h-full object-cover" />
                     {selectedJob.beforePhotoGPS?.lat && (
                       <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-slate-700/50 flex items-center">
                         <GPSAddress lat={selectedJob.beforePhotoGPS.lat} lng={selectedJob.beforePhotoGPS.lng} className="text-white/90 max-w-[110px]" />
                       </div>
                     )}
+                    {selectedJob.status === 'started' && (
+                      <button
+                        type="button"
+                        onClick={triggerBeforeCapture}
+                        className="absolute top-2 right-2 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 backdrop-blur shadow flex items-center space-x-1 cursor-pointer transition-transform active:scale-95"
+                        title="Retake Arrival Photo"
+                      >
+                        <Camera className="h-3 w-3 text-amber-400" />
+                        <span>Retake Photo</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={triggerBeforeCapture}
-                    className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 max-w-sm mx-auto"
+                    className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 max-w-sm mx-auto cursor-pointer"
                   >
                     <Camera className="h-5 w-5 text-slate-400" />
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Snap Arrival Photo</span>
