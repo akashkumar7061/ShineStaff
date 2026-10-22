@@ -27,10 +27,6 @@ if (!isMock) {
 export const saveLocally = (data: string | Buffer, folder: string): string => {
   const filename = `${folder}_${Date.now()}_${Math.round(Math.random() * 1E9)}.jpg`;
   const uploadDir = path.join(__dirname, '../../uploads');
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-  const filePath = path.join(uploadDir, filename);
 
   let buffer: Buffer;
   if (Buffer.isBuffer(data)) {
@@ -45,9 +41,23 @@ export const saveLocally = (data: string | Buffer, folder: string): string => {
     buffer = Buffer.from('');
   }
 
-  fs.writeFileSync(filePath, buffer);
-  const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/+$/, '') : '';
-  return baseUrl ? `${baseUrl}/uploads/${filename}` : `/uploads/${filename}`;
+  try {
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const filePath = path.join(uploadDir, filename);
+    fs.writeFileSync(filePath, buffer);
+    const baseUrl = process.env.BACKEND_URL 
+      ? process.env.BACKEND_URL.replace(/\/+$/, '') 
+      : (process.env.NODE_ENV === 'production' ? 'https://shinestaff-backend.onrender.com' : '');
+    return baseUrl ? `${baseUrl}/uploads/${filename}` : `/uploads/${filename}`;
+  } catch (fsErr) {
+    console.error('[saveLocally] Filesystem write error, falling back to dataUrl:', fsErr);
+    if (typeof data === 'string' && data.startsWith('data:')) {
+      return data;
+    }
+    return '';
+  }
 };
 
 export const uploadToCloudinary = async (fileBufferOrDataUrl: string | Buffer, folder: string): Promise<string> => {

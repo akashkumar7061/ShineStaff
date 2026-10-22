@@ -511,23 +511,37 @@ export const startJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    if (!job.workerId || job.workerId.toString() !== req.user.id) {
+    const assignedWorkerId = (job.workerId as any)?._id 
+      ? (job.workerId as any)._id.toString() 
+      : job.workerId?.toString();
+    if (!assignedWorkerId || assignedWorkerId !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
 
     const worker = await User.findById(req.user.id);
     const workerName = worker ? worker.name : 'Worker';
 
-    if (job.status !== 'pending' && job.status !== 'accepted' && job.status !== 'started') {
-      return res.status(400).json({ message: 'Job has already been processed or completed' });
+    if (job.status === 'completed' || job.status === 'cancelled' || job.status === 'rejected') {
+      return res.status(400).json({ message: `Job has already been ${job.status}` });
     }
 
     if (!beforePhotoDataUrl) {
       return res.status(400).json({ message: 'Live Before Photo is mandatory to start a job' });
     }
 
-    // Upload before photo
-    const beforePhotoUrl = await uploadToCloudinary(beforePhotoDataUrl, 'job_before_photos');
+    // Auto-accept if was pending
+    if (job.status === 'pending') {
+      job.acceptedAt = new Date();
+    }
+
+    // Upload before photo with fail-safe fallback
+    let beforePhotoUrl = '';
+    try {
+      beforePhotoUrl = await uploadToCloudinary(beforePhotoDataUrl, 'job_before_photos');
+    } catch (uploadErr) {
+      console.warn('[startJob] Cloudinary upload failed, falling back to local file storage:', uploadErr);
+      beforePhotoUrl = saveLocally(beforePhotoDataUrl, 'job_before_photos');
+    }
 
     const isAlreadyStarted = job.status === 'started';
     job.status = 'started';
@@ -608,7 +622,10 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     const worker = await User.findById(req.user.id);
     const workerName = worker ? worker.name : 'Worker';
 
-    if (!job.workerId || job.workerId.toString() !== req.user.id) {
+    const assignedWorkerId = (job.workerId as any)?._id 
+      ? (job.workerId as any)._id.toString() 
+      : job.workerId?.toString();
+    if (!assignedWorkerId || assignedWorkerId !== req.user.id) {
       return res.status(403).json({ message: 'This job is not assigned to you' });
     }
 
@@ -620,12 +637,9 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
     }
 
     if (job.status !== 'started') {
-      // Auto-transition if before photo exists
-      if ((job.status === 'pending' || job.status === 'accepted') && job.beforePhoto) {
-        job.status = 'started';
-      } else {
-        return res.status(400).json({ message: 'Job cannot be completed in its current state (Must be Started)' });
-      }
+      // Auto-transition to started so completion succeeds
+      job.status = 'started';
+      if (!job.startedAt) job.startedAt = new Date();
     }
 
     // Support both afterPhotoDataUrls (array) and afterPhotoDataUrl (singular)

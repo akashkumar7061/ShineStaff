@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, RefreshCw, AlertCircle, MapPin, Calendar, Upload, Image as ImageIcon } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, MapPin, Calendar } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (dataUrl: any, location: { lat: number; lng: number }) => void;
@@ -16,7 +16,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -173,7 +172,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     if (!videoRef.current) return;
     const video = videoRef.current;
     if (video.videoWidth === 0 || video.videoHeight === 0) {
-      alert('Camera video is still loading. Please wait 1 second or tap "Device Camera" / "Gallery" below.');
+      alert('Camera video is still loading. Please wait 1 second or tap "Device Camera" below.');
       return;
     }
 
@@ -306,15 +305,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
                   className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
                 >
                   <Camera className="h-4 w-4" />
-                  <span>Device Camera</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="rounded-full bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <ImageIcon className="h-4 w-4" />
-                  <span>Choose Photo</span>
+                  <span>Device Camera (फ़ोन कैमरा)</span>
                 </button>
                 <button
                   type="button"
@@ -346,19 +337,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Hidden Inputs for Direct Native Camera and Gallery fallback */}
+          {/* Hidden Input for Direct Native Live Camera */}
           <input
             ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
-            className="hidden"
-            onChange={handleNativeFileInput}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
             className="hidden"
             onChange={handleNativeFileInput}
           />
@@ -407,15 +391,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
               <Camera className="h-3 w-3" />
               <span>Device Camera</span>
             </button>
-            <span className="text-slate-600">|</span>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-[10px] text-secondary hover:underline font-bold flex items-center space-x-1 cursor-pointer"
-            >
-              <Upload className="h-3 w-3" />
-              <span>Gallery</span>
-            </button>
           </div>
         </div>
 
@@ -451,16 +426,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           >
             <Camera className="h-5 w-5 text-emerald-400" />
             <span className="text-[10px] font-semibold">Native Cam</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
-            title="Upload from Device Gallery"
-          >
-            <ImageIcon className="h-5 w-5 text-blue-400" />
-            <span className="text-[10px] font-semibold">Gallery</span>
           </button>
         </div>
       </div>

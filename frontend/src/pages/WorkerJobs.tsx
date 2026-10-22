@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CameraCapture from '../components/CameraCapture';
 import GPSAddress from '../components/GPSAddress';
 import { Link } from 'react-router-dom';
 import { getJobMapUrl, openJobLocationInMaps } from '../utils/mapUtils';
+import { compressAndWatermarkImage, getCurrentCoords } from '../utils/imageUtils';
 import {
   Camera,
   CheckCircle,
@@ -31,7 +32,8 @@ import {
   Sparkles,
   Edit3,
   Plus,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 
 const getTodayString = () => {
@@ -113,6 +115,16 @@ const WorkerJobs: React.FC = () => {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [filterDate, setFilterDate] = useState(getTodayString());
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Camera & sequential step state
+  const [cameraPickerModal, setCameraPickerModal] = useState<'before' | 'after' | null>(null);
+  const [isUploadingBefore, setIsUploadingBefore] = useState(false);
+  const [isUploadingAfter, setIsUploadingAfter] = useState(false);
+  const [showAfterPhotoPrompt, setShowAfterPhotoPrompt] = useState(false);
+
+  // Hidden native camera input refs (Live camera capture only, strictly NO gallery)
+  const beforeCameraInputRef = useRef<HTMLInputElement>(null);
+  const afterCameraInputRef = useRef<HTMLInputElement>(null);
 
   // Cancellation / Rejection modal state for Worker
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -318,6 +330,10 @@ const WorkerJobs: React.FC = () => {
   const openWorkSheet = (job: any) => {
     setSelectedJob(job);
     setTempBeforePhoto(job.beforePhoto || null);
+    setShowAfterPhotoPrompt(false);
+    setCameraPickerModal(null);
+    setIsUploadingBefore(false);
+    setIsUploadingAfter(false);
     if (job.afterPhotos && job.afterPhotos.length > 0) {
       setTempAfterPhotos(job.afterPhotos);
     } else if (job.afterPhoto) {
@@ -336,6 +352,66 @@ const WorkerJobs: React.FC = () => {
     setTempPaymentMode(job.paymentMode || 'not_selected');
   };
 
+  const openCameraPicker = (type: 'before' | 'after', idx: number = 0) => {
+    setActiveAfterPhotoIndex(idx);
+    setCameraType(type);
+    setCameraPickerModal(type);
+  };
+
+  const handleFileSelected = async (file: File, type: 'before' | 'after', index: number = 0) => {
+    if (!file || !selectedJob) return;
+    setCameraPickerModal(null);
+
+    try {
+      if (type === 'before') {
+        setIsUploadingBefore(true);
+      } else {
+        setIsUploadingAfter(true);
+      }
+
+      // 1. Get current GPS coordinates
+      const coords = await getCurrentCoords();
+
+      // 2. Compress image and draw official verified watermark
+      const dataUrl = await compressAndWatermarkImage(file, coords);
+
+      // 3. Process capture
+      if (type === 'before') {
+        const prevPhoto = tempBeforePhoto;
+        setTempBeforePhoto(dataUrl);
+
+        const res = await api.put(`/jobs/${selectedJob._id}/start`, {
+          beforePhotoDataUrl: dataUrl,
+          location: coords
+        });
+
+        setSelectedJob({
+          ...selectedJob,
+          status: 'started',
+          beforePhoto: res.data?.job?.beforePhoto || dataUrl,
+          beforePhotoGPS: coords
+        });
+        fetchJobs();
+        setShowAfterPhotoPrompt(true);
+      } else {
+        const targetIdx = index;
+        const newPhotos = [...tempAfterPhotos];
+        newPhotos[targetIdx] = dataUrl;
+        setTempAfterPhotos(newPhotos);
+
+        const newGPS = [...tempAfterPhotosGPS];
+        newGPS[targetIdx] = coords;
+        setTempAfterPhotosGPS(newGPS);
+      }
+    } catch (err: any) {
+      console.error('Photo processing/upload error:', err);
+      alert(err.response?.data?.message || 'Photo upload failed. Please try again.');
+    } finally {
+      setIsUploadingBefore(false);
+      setIsUploadingAfter(false);
+    }
+  };
+
   const handleCameraCapture = (dataUrl: string, coords: { lat: number; lng: number }) => {
     setCameraActive(false);
     if (!selectedJob) return;
@@ -343,12 +419,13 @@ const WorkerJobs: React.FC = () => {
     if (cameraType === 'before') {
       const prevPhoto = tempBeforePhoto;
       setTempBeforePhoto(dataUrl);
+      setIsUploadingBefore(true);
+
       // Automatically send "Start Job" PUT if they just snapped the before photo
       api.put(`/jobs/${selectedJob._id}/start`, {
         beforePhotoDataUrl: dataUrl,
         location: coords
       }).then((res) => {
-        alert(selectedJob.status === 'started' ? 'Before Photo updated successfully!' : 'Before Photo uploaded! Job started.');
         // Refresh local details
         setSelectedJob({
           ...selectedJob,
@@ -357,29 +434,29 @@ const WorkerJobs: React.FC = () => {
           beforePhotoGPS: coords
         });
         fetchJobs();
+        setShowAfterPhotoPrompt(true);
       }).catch((err) => {
         alert(err.response?.data?.message || 'Failed to start job / upload before photo');
         setTempBeforePhoto(prevPhoto);
+      }).finally(() => {
+        setIsUploadingBefore(false);
       });
     } else {
-      if (activeAfterPhotoIndex !== null) {
-        const newPhotos = [...tempAfterPhotos];
-        newPhotos[activeAfterPhotoIndex] = dataUrl;
-        setTempAfterPhotos(newPhotos);
+      const targetIdx = activeAfterPhotoIndex !== null ? activeAfterPhotoIndex : 0;
+      const newPhotos = [...tempAfterPhotos];
+      newPhotos[targetIdx] = dataUrl;
+      setTempAfterPhotos(newPhotos);
 
-        const newGPS = [...tempAfterPhotosGPS];
-        newGPS[activeAfterPhotoIndex] = coords;
-        setTempAfterPhotosGPS(newGPS);
+      const newGPS = [...tempAfterPhotosGPS];
+      newGPS[targetIdx] = coords;
+      setTempAfterPhotosGPS(newGPS);
 
-        setActiveAfterPhotoIndex(null);
-      }
+      setActiveAfterPhotoIndex(null);
     }
   };
 
   const triggerAfterPhotoIndexCapture = (idx: number) => {
-    setActiveAfterPhotoIndex(idx);
-    setCameraType('after');
-    setCameraActive(true);
+    openCameraPicker('after', idx);
   };
 
   const handleCompleteWorkSheetSubmit = async (e: React.FormEvent) => {
@@ -489,15 +566,13 @@ const WorkerJobs: React.FC = () => {
   };
 
   const triggerBeforeCapture = () => {
-    setCameraType('before');
-    setCameraActive(true);
+    openCameraPicker('before');
   };
 
   const triggerAfterCapture = () => {
     const emptyIndex = tempAfterPhotos.findIndex(p => !p || p.trim().length === 0);
-    setActiveAfterPhotoIndex(emptyIndex !== -1 ? emptyIndex : 0);
-    setCameraType('after');
-    setCameraActive(true);
+    const targetIdx = emptyIndex !== -1 ? emptyIndex : 0;
+    openCameraPicker('after', targetIdx);
   };
 
   const filteredJobs = jobs.filter((job) => {
@@ -1214,42 +1289,49 @@ const WorkerJobs: React.FC = () => {
 
                 {/* Before Photo Box */}
               <div className="space-y-2">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Before Cleaning Photo</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">
+                    Step 1: Before Cleaning Photo (आगमन फोटो) *
+                  </span>
+                  {tempBeforePhoto && (
+                    <span className="text-[10px] text-emerald-500 font-bold flex items-center space-x-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Uploaded</span>
+                    </span>
+                  )}
+                </div>
+
                 {selectedJob.status === 'pending' ? (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-3.5 text-center max-w-sm mx-auto shadow-inner">
-                    <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">🧹 Pending Assignment Alert</span>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">Please Accept or Reject this cleanup task to unlock the work worksheet checklist.</p>
-                    <div className="flex gap-2.5 justify-center">
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-3 text-center max-w-sm mx-auto shadow-inner">
+                    <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">🧹 Naya Job Assigned Hai</span>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Kaam shuru karne ke liye niche se Before Photo lein ya Accept karein:
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => openCameraPicker('before')}
+                        className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white rounded-xl text-xs font-black shadow flex items-center space-x-1.5 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                        <span>📸 Take Before Photo & Start</span>
+                      </button>
                       <button
                         type="button"
                         onClick={async () => {
                           try {
                             await api.put(`/jobs/${selectedJob._id}/accept`);
                             setSelectedJob({ ...selectedJob, status: 'accepted' });
-                            // Trigger local socket update event
                             window.dispatchEvent(new CustomEvent('socket-update', { detail: { type: 'JOB_ACCEPTED', jobId: selectedJob._id } }));
-                            alert('Job accepted! You can now snap the arrival photo to start work.');
+                            fetchJobs();
+                            alert('Job accepted! You can now take the arrival photo to start work.');
                           } catch (err) {
                             console.error('Accept job error:', err);
                           }
                         }}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95"
+                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
                       >
-                        ✓ Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCancelTargetJob(selectedJob);
-                          setCancelActionType('reject');
-                          setCancelRemarks('');
-                          setCancelError('');
-                          setSelectedJob(null);
-                          setCancelModalOpen(true);
-                        }}
-                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-extrabold shadow transition-all active:scale-95 cursor-pointer"
-                      >
-                        ✕ Reject
+                        ✓ Accept Only
                       </button>
                     </div>
                   </div>
@@ -1264,7 +1346,7 @@ const WorkerJobs: React.FC = () => {
                     {selectedJob.status === 'started' && (
                       <button
                         type="button"
-                        onClick={triggerBeforeCapture}
+                        onClick={() => openCameraPicker('before')}
                         className="absolute top-2 right-2 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 backdrop-blur shadow flex items-center space-x-1 cursor-pointer transition-transform active:scale-95"
                         title="Retake Arrival Photo"
                       >
@@ -1276,18 +1358,74 @@ const WorkerJobs: React.FC = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={triggerBeforeCapture}
-                    className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 max-w-sm mx-auto cursor-pointer"
+                    disabled={isUploadingBefore}
+                    onClick={() => openCameraPicker('before')}
+                    className="w-full aspect-video rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 dark:bg-emerald-950/20 flex flex-col items-center justify-center space-y-2 max-w-sm mx-auto cursor-pointer transition-all active:scale-98 shadow-sm group"
                   >
-                    <Camera className="h-5 w-5 text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Snap Arrival Photo</span>
+                    {isUploadingBefore ? (
+                      <div className="flex flex-col items-center space-y-2">
+                        <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          Before Photo Upload Ho Rahi Hai...
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="h-12 w-12 rounded-full bg-emerald-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Camera className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                            📸 Before Photo Click Karein
+                          </span>
+                          <span className="block text-[10px] text-slate-400 mt-0.5">
+                            Camera open karke arrival photo lein
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </button>
+                )}
+
+                {/* Sequential Step Guide: Prompt worker right after Before Photo is captured */}
+                {tempBeforePhoto && selectedJob.status !== 'completed' && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-indigo-500/15 border-2 border-emerald-500/30 text-left space-y-2.5 max-w-sm mx-auto shadow-sm">
+                    <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      <span className="text-xs font-extrabold">Before Photo Saved! Job Started</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                      Kaam khatam karne ke baad Step 2 me <strong className="text-violet-600 dark:text-violet-400">After Cleaning Photo</strong> click karein:
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openCameraPicker('after', 0)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md shadow-violet-500/20 flex items-center justify-center space-x-2 transition-transform active:scale-95 cursor-pointer"
+                    >
+                      <Camera className="h-4 w-4" />
+                      <span>📸 Step 2: Click After Photo (After Photo लें)</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
               {/* After Photos (5 Distinct Slots) */}
               <div className="space-y-3 pt-2">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">After Cleaning Photos (At least 1 required)</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">
+                    Step 2: After Cleaning Photos (At least 1 required) *
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!tempBeforePhoto || isUploadingAfter || selectedJob.status === 'completed'}
+                    onClick={() => openCameraPicker('after', 0)}
+                    className="text-[10px] text-violet-600 dark:text-violet-400 font-bold hover:underline flex items-center space-x-1 cursor-pointer disabled:opacity-40"
+                  >
+                    <Camera className="h-3 w-3" />
+                    <span>+ Take Photo</span>
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[0, 1, 2, 3, 4].map((idx) => {
                     const photoUrl = tempAfterPhotos[idx];
@@ -1305,8 +1443,9 @@ const WorkerJobs: React.FC = () => {
                             {selectedJob.status === 'started' && (
                               <button
                                 type="button"
-                                onClick={() => triggerAfterPhotoIndexCapture(idx)}
-                                className="absolute bottom-1.5 right-1.5 rounded-full bg-violet-600 text-white p-1 shadow hover:bg-violet-700 transition-colors"
+                                onClick={() => openCameraPicker('after', idx)}
+                                className="absolute bottom-1.5 right-1.5 rounded-full bg-violet-600 text-white p-1 shadow hover:bg-violet-700 transition-colors cursor-pointer"
+                                title="Retake After Photo"
                               >
                                 <Camera className="h-2.5 w-2.5" />
                               </button>
@@ -1315,12 +1454,14 @@ const WorkerJobs: React.FC = () => {
                         ) : (
                           <button
                             type="button"
-                            disabled={!tempBeforePhoto || selectedJob.status === 'completed'}
-                            onClick={() => triggerAfterPhotoIndexCapture(idx)}
-                            className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={!tempBeforePhoto || selectedJob.status === 'completed' || isUploadingAfter}
+                            onClick={() => openCameraPicker('after', idx)}
+                            className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-205 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-950 flex flex-col items-center justify-center space-y-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
                           >
                             <Camera className="h-4 w-4 text-slate-400" />
-                            <span className="text-[8px] font-bold text-slate-400 uppercase">Photo {idx + 1}</span>
+                            <span className="text-[8px] font-bold text-slate-400 uppercase">
+                              {idx === 0 ? '📸 Photo 1 (Main)' : `Photo ${idx + 1}`}
+                            </span>
                           </button>
                         )}
                       </div>
@@ -1435,10 +1576,20 @@ const WorkerJobs: React.FC = () => {
                   {/* Submission */}
                   <button
                     type="submit"
-                    disabled={!tempBeforePhoto || !tempAfterPhotos.some(p => !!p && p.trim().length > 50) || submittingReport}
-                    className="w-full bg-gradient-to-r from-success to-emerald-600 text-white rounded-custom py-3.5 text-xs font-bold shadow transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    disabled={!tempBeforePhoto || !tempAfterPhotos.some(p => !!p && p.trim().length > 20) || submittingReport}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-custom py-3.5 text-xs font-bold shadow-lg shadow-emerald-600/20 transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center space-x-2"
                   >
-                    {submittingReport ? 'Submitting Work...' : 'Submit Completed Cleanup'}
+                    {submittingReport ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Submitting Work & Photos...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Submit Completed Cleanup (काम पूरा सबमिट करें)</span>
+                      </>
+                    )}
                   </button>
 
                   {/* Worker Option to Cancel Job with Mandatory Reason */}
@@ -1518,6 +1669,116 @@ const WorkerJobs: React.FC = () => {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Hidden File Inputs for Direct Native Live Phone Camera (Strictly live capture only, NO gallery) */}
+      <input
+        ref={beforeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileSelected(file, 'before');
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={afterCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileSelected(file, 'after', activeAfterPhotoIndex !== null ? activeAfterPhotoIndex : 0);
+          e.target.value = '';
+        }}
+      />
+
+      {/* Live Camera Option Chooser Modal (Strictly Live Camera Only - No Gallery) */}
+      {cameraPickerModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 max-w-sm w-full shadow-2xl space-y-4 animate-scale-up text-left">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-8 rounded-xl bg-secondary/15 flex items-center justify-center text-secondary">
+                  <Camera className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white">
+                    {cameraPickerModal === 'before' ? '📸 Live Before Photo Lein' : '📸 Live After Photo Lein'}
+                  </h3>
+                  <span className="text-[10px] text-slate-400">Live Camera se photo click karein</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCameraPickerModal(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1.5 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {/* Option 1: Native Phone Camera (Direct live camera app via capture="environment") */}
+              <button
+                type="button"
+                onClick={() => {
+                  const type = cameraPickerModal;
+                  setCameraPickerModal(null);
+                  if (type === 'before') {
+                    beforeCameraInputRef.current?.click();
+                  } else {
+                    afterCameraInputRef.current?.click();
+                  }
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-between active:scale-95 transition-all cursor-pointer"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Camera className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block font-bold text-sm">फ़ोन कैमरा (Device Camera)</span>
+                    <span className="block text-[10px] text-white/80">Direct mobile camera khol kar photo lein</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-white/80" />
+              </button>
+
+              {/* Option 2: Live In-App Camera */}
+              <button
+                type="button"
+                onClick={() => {
+                  const type = cameraPickerModal;
+                  setCameraPickerModal(null);
+                  if (type === 'before') {
+                    setCameraType('before');
+                    setCameraActive(true);
+                  } else {
+                    setCameraType('after');
+                    setCameraActive(true);
+                  }
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-between active:scale-95 transition-all cursor-pointer"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="h-9 w-9 rounded-xl bg-violet-500/15 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-violet-500" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block font-bold text-sm">Live In-App Camera</span>
+                    <span className="block text-[10px] text-slate-400">Live preview & watermark ke sath</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-400" />
+              </button>
+            </div>
           </div>
         </div>
       )}
