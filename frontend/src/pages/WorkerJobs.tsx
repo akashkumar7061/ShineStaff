@@ -185,7 +185,7 @@ const WorkerJobs: React.FC = () => {
       .filter(it => it.itemName !== '');
 
     if (validItems.length === 0) {
-      alert('Kripya kam se kam ek material select karein ya likhein.');
+      alert('Please select or specify at least one material.');
       return;
     }
 
@@ -198,7 +198,7 @@ const WorkerJobs: React.FC = () => {
         reason: materialReason.trim()
       });
 
-      alert('Material request Admin ko bhej di gayi hai!');
+      alert('Material request submitted to Admin successfully!');
       setMaterialModalOpen(false);
       setQuickMaterialItems([{ selectedCatalog: '', customName: '', quantity: '1 Unit' }]);
       setMaterialNeededByDate(getTodayString());
@@ -206,7 +206,7 @@ const WorkerJobs: React.FC = () => {
       setMaterialReason('');
 
       if (res.data?.directWaUrl) {
-        if (window.confirm('Request submit ho gayi! Kya aap Admin ko instant WhatsApp message bhi bhejna chahte hain?')) {
+        if (window.confirm('Request submitted! Would you also like to send a direct WhatsApp update to Admin?')) {
           window.open(res.data.directWaUrl, '_blank');
         }
       }
@@ -742,10 +742,10 @@ const WorkerJobs: React.FC = () => {
                     <span className="text-[9px] font-bold text-slate-400">Chemicals & Tools</span>
                   </div>
                   <h3 className="font-extrabold text-xs sm:text-sm text-slate-850 dark:text-white mt-0.5">
-                    Chemical ya Cleaning Saman ki Jarurat Hai?
+                    Need Cleaning Supplies or Materials?
                   </h3>
                   <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-tight">
-                    Shampoo, cloths, brush, or gloves khatam ho rahe hain? Yaha se direct request karein.
+                    Running low on shampoo, microfiber cloths, brushes, or gloves? Request materials directly.
                   </p>
                 </div>
               </div>
@@ -1101,7 +1101,7 @@ const WorkerJobs: React.FC = () => {
                 <h3 className="font-extrabold text-xs uppercase tracking-wider">Need Materials?</h3>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Shampoo, microfiber cloths, brush ya gloves kam pad rahe hain? Direct request karein.
+                Running low on shampoo, microfiber cloths, brushes, or gloves? Request materials directly.
               </p>
               <button
                 type="button"
@@ -1263,7 +1263,7 @@ const WorkerJobs: React.FC = () => {
                     title="Open directly in Google Maps application"
                   >
                     <Navigation className="h-4 w-4 fill-white text-white" />
-                    <span>Open in Google Maps (Google Maps me Rasta Dekhein)</span>
+                    <span>Open in Google Maps</span>
                   </a>
                 </div>
                 <div>
@@ -1282,7 +1282,7 @@ const WorkerJobs: React.FC = () => {
 
                 {/* Quick Material Request reminder inside job */}
                 <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400 font-semibold">Chemical ya saman kam pad raha hai?</span>
+                  <span className="text-[10px] text-slate-400 font-semibold">Running low on supplies or chemicals?</span>
                   <button
                     type="button"
                     onClick={() => setMaterialModalOpen(true)}
@@ -1298,7 +1298,7 @@ const WorkerJobs: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">
-                    Step 1: Before Cleaning Photo (आगमन फोटो) *
+                    Step 1: Before Cleaning Photo (Arrival Photo) *
                   </span>
                   {tempBeforePhoto && (
                     <span className="text-[10px] text-emerald-500 font-bold flex items-center space-x-1">
@@ -1310,9 +1310,9 @@ const WorkerJobs: React.FC = () => {
 
                 {selectedJob.status === 'pending' ? (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-3 text-center max-w-sm mx-auto shadow-inner">
-                    <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">🧹 Naya Job Assigned Hai</span>
+                    <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">🧹 New Job Assigned</span>
                     <p className="text-[10px] text-slate-400 leading-relaxed">
-                      Kaam shuru karne ke liye niche se Before Photo lein ya Accept karein:
+                      Take Arrival/Before Photo or accept the job to start work:
                     </p>
                     <div className="flex gap-2 justify-center">
                       <button
@@ -1373,7 +1373,7 @@ const WorkerJobs: React.FC = () => {
                       <div className="flex flex-col items-center space-y-2">
                         <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          Before Photo Upload Ho Rahi Hai...
+                          Uploading Before Photo...
                         </span>
                       </div>
                     ) : (
@@ -1383,10 +1383,10 @@ const WorkerJobs: React.FC = () => {
                         </div>
                         <div className="text-center">
                           <span className="block text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                            📸 Before Photo Click Karein
+                            📸 Click Before Photo
                           </span>
                           <span className="block text-[10px] text-slate-400 mt-0.5">
-                            Camera khol kar live photo lein (Worksheet hat jayegi)
+                            Open camera to capture live arrival photo
                           </span>
                         </div>
                       </>
@@ -1407,7 +1407,7 @@ const WorkerJobs: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
-                      Before Photo सुरक्षित हो गई है। अब सफाई पूरी करके <strong className="text-violet-600 dark:text-violet-400">After Photo</strong> लें:
+                      Before Photo saved. Once cleaning is completed, capture the <strong className="text-violet-600 dark:text-violet-400">After Photo</strong>:
                     </p>
                     <button
                       type="button"
@@ -1415,7 +1415,7 @@ const WorkerJobs: React.FC = () => {
                       className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-700 hover:from-violet-700 hover:to-indigo-800 text-white font-black text-xs sm:text-sm shadow-lg shadow-violet-500/30 flex items-center justify-center space-x-2 transition-transform active:scale-95 cursor-pointer ring-2 ring-violet-400/50"
                     >
                       <Camera className="h-4.5 w-4.5" />
-                      <span>📸 Step 2: Click After Photo (After Photo लें)</span>
+                      <span>📸 Step 2: Click After Photo</span>
                     </button>
                   </div>
                 )}
@@ -1486,10 +1486,10 @@ const WorkerJobs: React.FC = () => {
                   <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-600/15 via-teal-600/10 to-emerald-600/15 border-2 border-emerald-500 text-center space-y-3 max-w-sm mx-auto shadow-xl animate-scale-up">
                     <div className="flex items-center justify-center space-x-2 text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="h-5 w-5" />
-                      <span className="text-xs font-black uppercase tracking-wider">दोनों फोटो तैयार! (Ready to Submit)</span>
+                      <span className="text-xs font-black uppercase tracking-wider">Both Photos Ready! (Ready to Submit)</span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold">
-                      Before और After फोटो कैप्चर हो चुकी हैं। भुगतान माध्यम चेक करके काम सबमिट करें:
+                      Before and After photos captured. Verify payment method and submit cleanup:
                     </p>
 
                     {/* Quick Payment mode toggle */}
@@ -1527,12 +1527,12 @@ const WorkerJobs: React.FC = () => {
                       {submittingReport ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>काम सबमिट हो रहा है...</span>
+                          <span>Submitting Completed Work...</span>
                         </>
                       ) : (
                         <>
                           <CheckCircle2 className="h-4.5 w-4.5" />
-                          <span>✓ Submit Completed Job (काम पूरा सबमिट करें)</span>
+                          <span>✓ Submit Completed Job</span>
                         </>
                       )}
                     </button>
@@ -1548,7 +1548,7 @@ const WorkerJobs: React.FC = () => {
                   {/* Payment Details Section (Same as Admin) */}
                   <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-left">
                     <div className="flex justify-between items-center">
-                      <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method (माध्यम) *</span>
+                      <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method *</span>
                       {getPaymentBadge(
                         (tempPaymentMode === 'cash' || tempPaymentMode === 'upi_online') ? 'received' : 'pending',
                         tempPaymentMode
@@ -1657,7 +1657,7 @@ const WorkerJobs: React.FC = () => {
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
-                        <span>Submit Completed Cleanup (काम पूरा सबमिट करें)</span>
+                        <span>Submit Completed Cleanup</span>
                       </>
                     )}
                   </button>
@@ -2018,7 +2018,7 @@ const WorkerJobs: React.FC = () => {
                             {c.name} {c.category ? `(${c.category})` : ''}
                           </option>
                         ))}
-                        <option value="__CUSTOM__">✍️ Other / Naya Saman (Dropdown me nahi hai toh yaha likhein)</option>
+                        <option value="__CUSTOM__">✍️ Other / Custom Material (Not listed in dropdown)</option>
                       </select>
                     </div>
 
@@ -2027,7 +2027,7 @@ const WorkerJobs: React.FC = () => {
                       <div className="space-y-1 animate-fade-in">
                         <label className="block text-[9.5px] font-bold text-amber-600 dark:text-amber-400 uppercase flex items-center space-x-1">
                           <Edit3 className="h-3 w-3" />
-                          <span>Custom Material Name Likhein:</span>
+                          <span>Custom Material Name:</span>
                         </label>
                         <input
                           type="text"
@@ -2043,7 +2043,7 @@ const WorkerJobs: React.FC = () => {
                     {/* Quantity Row */}
                     <div className="space-y-1">
                       <label className="block text-[9.5px] font-bold text-slate-450 uppercase">
-                        Quantity (Apne Anusaar Likhein):
+                        Quantity:
                       </label>
                       
                       {/* Quantity Preset Chips */}
@@ -2082,7 +2082,7 @@ const WorkerJobs: React.FC = () => {
                   className="w-full py-2 px-3 border border-dashed border-amber-500/40 hover:border-amber-500 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-extrabold flex items-center justify-center space-x-1 transition-all active:scale-95 cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>+ Ek Aur Material Add Karein</span>
+                  <span>+ Add Another Material</span>
                 </button>
               </div>
 

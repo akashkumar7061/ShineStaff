@@ -94,7 +94,7 @@ export const getClientWhatsAppFeedbackUrl = (job: any): string => {
   if (!job || !job.clientPhone) return '#';
   const phone = cleanPhoneNumber(job.clientPhone);
 
-  const message = `Aapko hamari cleaning service aur staff ka kaam kaisa laga? Kripya apna feedback share karein. Agar koi bhi sujhaav, review ya complaint ho toh hume zaroor batayein.`;
+  const message = `How was our cleaning service and staff today? Please share your valuable feedback. If you have any suggestions, reviews, or complaints, please let us know.`;
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 };

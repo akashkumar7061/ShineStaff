@@ -310,7 +310,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
                   className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
                 >
                   <Camera className="h-4 w-4" />
-                  <span>Device Camera (फ़ोन कैमरा)</span>
+                  <span>Device Camera</span>
                 </button>
                 <button
                   type="button"

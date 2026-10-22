@@ -145,7 +145,7 @@ const WorkerMaterials: React.FC = () => {
       .filter((it) => it.itemName !== '');
 
     if (validItems.length === 0) {
-      alert('Kripya kam se kam ek material ya chemical select karein ya likhein.');
+      alert('Please select or specify at least one material.');
       return;
     }
 
@@ -159,7 +159,7 @@ const WorkerMaterials: React.FC = () => {
       });
 
       setLastSubmission(res.data);
-      alert('Material request Admin ko bhej di gayi hai!');
+      alert('Material request submitted to Admin successfully!');
       setItems([{ selectedCatalog: '', customName: '', quantity: '1 Unit' }]);
       setUrgency('Normal');
       setNeededByDate(getTodayString());
@@ -168,7 +168,7 @@ const WorkerMaterials: React.FC = () => {
 
       // Automatically offer to open WhatsApp
       if (res.data?.directWaUrl) {
-        if (window.confirm('Request submit ho gayi! Kya aap Admin ko instant WhatsApp message bhi bhejna chahte hain?')) {
+        if (window.confirm('Request submitted! Would you also like to send a direct WhatsApp message to Admin?')) {
           window.open(res.data.directWaUrl, '_blank');
         }
       }
@@ -222,7 +222,7 @@ const WorkerMaterials: React.FC = () => {
               <span>Material & Chemical Requisition</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Chemicals, cloths, gloves ya cleaning tools request karein — live status aur instant WhatsApp update
+              Request chemicals, cloths, gloves, or cleaning tools — with live status and instant WhatsApp updates
             </p>
           </div>
         </div>
@@ -381,7 +381,7 @@ const WorkerMaterials: React.FC = () => {
                             {c.name} {c.category ? `(${c.category})` : ''}
                           </option>
                         ))}
-                        <option value="__CUSTOM__">✍️ Other / Naya Saman (Dropdown me nahi hai toh yaha likhein)</option>
+                        <option value="__CUSTOM__">✍️ Other / Custom Material (Not listed in dropdown)</option>
                       </select>
                     </div>
 
@@ -390,7 +390,7 @@ const WorkerMaterials: React.FC = () => {
                       <div className="space-y-1 animate-fade-in">
                         <label className="block text-[9.5px] font-bold text-amber-600 dark:text-amber-400 uppercase flex items-center space-x-1">
                           <Edit3 className="h-3 w-3" />
-                          <span>Custom Material Name Likhein:</span>
+                          <span>Custom Material Name:</span>
                         </label>
                         <input
                           type="text"
@@ -406,7 +406,7 @@ const WorkerMaterials: React.FC = () => {
                     {/* Quantity Row */}
                     <div className="space-y-1">
                       <label className="block text-[9.5px] font-bold text-slate-450 uppercase">
-                        Quantity (Apne Anusaar Likhein):
+                        Quantity:
                       </label>
                       
                       {/* Quantity Preset Chips */}
@@ -445,7 +445,7 @@ const WorkerMaterials: React.FC = () => {
                   className="w-full py-2 px-3 border border-dashed border-amber-500/40 hover:border-amber-500 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-extrabold flex items-center justify-center space-x-1 transition-all active:scale-95 cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>+ Ek Aur Material Add Karein</span>
+                  <span>+ Add Another Material</span>
                 </button>
               </div>
 

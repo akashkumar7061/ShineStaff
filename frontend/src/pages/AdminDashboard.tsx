@@ -479,7 +479,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ companyFilter, initialT
               🔒 Admin Settings & Security Hub
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold leading-relaxed">
-              Main Dashboard, Financial Analytics, 💳 QR Payments aur Admin Credentials password se protected hain. Check karne ke liye Security Password enter karein.
+              Main Dashboard, Financial Analytics, 💳 QR Payments, and Admin Credentials are password protected. Please enter the Security Password to access.
             </p>
           </div>
 

@@ -121,7 +121,7 @@ const PendingMaterialAlertModal: React.FC<PendingMaterialAlertModalProps> = ({
                 Pending Material Requests!
               </h2>
               <p className="text-[11px] sm:text-xs text-white/90 font-medium mt-0.5 leading-snug">
-                Workers ne chemicals & equipment ki demand daali hai. Kripya material provide karein taaki ground clean work na ruke.
+                Workers have requested chemicals & equipment. Please review and provide supplies promptly so ground operations continue smoothly.
               </p>
             </div>
           </div>

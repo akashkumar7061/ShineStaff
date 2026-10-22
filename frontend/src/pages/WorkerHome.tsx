@@ -167,12 +167,12 @@ const WorkerHome: React.FC = () => {
         let lateReason = '';
 
         if (hour > 9 || (hour === 9 && minute > 15)) {
-          const reasonInput = prompt('Aap late hain. Kripya late aane ka karan (Reason) batayein:');
+          const reasonInput = prompt('You are checking in late. Please enter the reason for late arrival:');
           if (reasonInput === null) {
             return; // Worker cancelled
           }
           if (!reasonInput.trim()) {
-            alert('Late aane ka reason dena anivaryah hai.');
+            alert('Providing a reason for late check-in is mandatory.');
             return;
           }
           lateReason = reasonInput.trim();
