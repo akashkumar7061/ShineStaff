@@ -269,7 +269,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md p-4 text-white animate-fade-in">
+    <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md p-4 text-white animate-fade-in">
       <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/50">
@@ -278,8 +278,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
             <span className="font-bold text-sm text-slate-100">Live Camera Verification</span>
           </div>
           <button
-            onClick={onClose}
-            className="rounded-full bg-slate-800 p-2 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+            onClick={() => {
+              if (stream) {
+                stream.getTracks().forEach((track) => track.stop());
+              }
+              onClose();
+            }}
+            className="rounded-full bg-slate-800 p-2 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
           >
             ✕
           </button>
