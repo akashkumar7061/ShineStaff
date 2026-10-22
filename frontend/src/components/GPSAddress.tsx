@@ -20,8 +20,8 @@ const GPSAddress: React.FC<GPSAddressProps> = ({ lat, lng, className }) => {
     setAddress('Resolving location...');
     setIsResolved(false);
     
-    // Call OpenStreetMap Nominatim reverse geocoder API
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    // Call OpenStreetMap Nominatim reverse geocoder API (strictly English language)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`)
       .then((res) => res.json())
       .then((data) => {
         const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;

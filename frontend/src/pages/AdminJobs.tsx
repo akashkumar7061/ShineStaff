@@ -1937,7 +1937,7 @@ const AdminJobs: React.FC<AdminJobsProps> = ({ companyFilter }) => {
         const handleMarkerPositionChange = async (newLat: number, newLng: number) => {
           setMapCoords({ lat: newLat, lng: newLng });
           try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&accept-language=en`);
             const data = await res.json();
             if (data && data.display_name) {
               setMapSelectedAddress(data.display_name);
