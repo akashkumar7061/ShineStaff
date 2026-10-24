@@ -30,8 +30,35 @@ import {
   UserCheck,
   FileSpreadsheet,
   Edit2,
-  Trash2
+  Trash2,
+  MessageCircle,
+  ExternalLink,
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
+
+const MARKETING_PRESETS = [
+  {
+    name: '🎉 Festive 20% OFF',
+    tag: '20% OFF',
+    template: "Hi {{customer_name}}! 🎉\n\nCelebrate the festive season with spotless, freshly sanitized furniture!\n\nBook your {{service_name}} today and enjoy Flat 20% OFF.\n\nUse Promo Code: FESTIVE20\n\nReply here on WhatsApp to reserve your preferred time slot!"
+  },
+  {
+    name: '✨ 1-Month Repeat 15% OFF',
+    tag: '15% OFF',
+    template: "Hello {{customer_name}}! 👋\n\nIt has been about 1 month since your last {{service_name}}. Keep your furniture looking like new with our repeat customer discount!\n\nBook again this week and get 15% OFF.\n\nUse Code: REPEAT15\n\nReply to this message to book!"
+  },
+  {
+    name: '🛋️ Weekend Flat ₹300 OFF',
+    tag: '₹300 OFF',
+    template: "Special Weekend Offer for {{customer_name}}! 🛋️✨\n\nTreat your sofa & carpets to our premium deep shampoo cleaning this weekend.\n\nGet Flat ₹300 OFF on orders above ₹1,200.\n\nUse Code: WEEKEND300\n\nLimited slots available - reply now to reserve!"
+  },
+  {
+    name: '🌧️ Monsoon Fresh 25% OFF',
+    tag: '25% OFF',
+    template: "Dear {{customer_name}}, protect your home against dust mites, odors & humidity! 🛡️✨\n\nBook a certified antibacterial deep clean for your sofa or mattress and get 25% OFF.\n\nUse Code: FRESH25\n\nReply here to schedule!"
+  }
+];
 
 const AdminWhatsAppEngagement: React.FC = () => {
   const { user } = useAuth();
@@ -76,6 +103,16 @@ const AdminWhatsAppEngagement: React.FC = () => {
   const [selectedReminderIds, setSelectedReminderIds] = useState<string[]>([]);
   const [targetFilterMode, setTargetFilterMode] = useState<'individual' | 'smart-filters'>('individual');
   const [offerText, setOfferText] = useState('15% OFF');
+
+  // 1-Month Service Reminder UI States
+  const [reminderLanguage, setReminderLanguage] = useState<'english' | 'hinglish'>('english');
+  const [reminderSubTab, setReminderSubTab] = useState<'due_today' | 'overdue' | 'upcoming' | 'all' | 'sent'>('due_today');
+  const [reminderSearch, setReminderSearch] = useState('');
+
+  // 1-Click WhatsApp Direct Queue for Marketing
+  const [showDirectQueueModal, setShowDirectQueueModal] = useState(false);
+  const [directQueueIndex, setDirectQueueIndex] = useState(0);
+  const [directQueueSentIds, setDirectQueueSentIds] = useState<string[]>([]);
 
   // Interactive drawer/popup for customer profile details
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
@@ -178,7 +215,7 @@ const AdminWhatsAppEngagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'contacts' || activeTab === 'marketing') {
+    if (activeTab === 'contacts' || activeTab === 'marketing' || activeTab === 'reminders') {
       fetchCustomers();
     }
     if (activeTab === 'history') {
@@ -307,18 +344,85 @@ const AdminWhatsAppEngagement: React.FC = () => {
     }
   };
 
-  // Trigger manual startup sync backfill
+  // Generate WhatsApp Direct chat wa.me link
+  const generateWhatsAppUrl = (phone: string, text: string) => {
+    let cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  };
+
+  // Build Personalized 1-Month Reminder Message Text
+  const getPersonalizedReminderMessage = (customer: any, serviceName?: string) => {
+    const name = customer?.name || 'Valued Customer';
+    const sName = serviceName || customer?.serviceTaken || 'Cleaning Service';
+    const lastDate = customer?.lastServiceDate ? new Date(customer.lastServiceDate).toLocaleDateString() : '1 month ago';
+    const company = customer?.company === 'All' ? 'ShineStaff' : (customer?.company || 'ShineStaff');
+
+    if (reminderLanguage === 'hinglish') {
+      return `Namaste ${name} ji! 🙏\n\nAapne lagbhag 1 mahine pehle (${lastDate}) ko ${sName} karwaya tha.\n\nRegular maintenance aur behtar freshness ke liye aapki agli service ka samay ho gaya hai. 🛋️✨\n\nKya hum aapki agli service schedule karein? Yahan WhatsApp par reply karein ya call karein. Dhanyawaad! - ${company}`;
+    }
+
+    return `Hello ${name}! 👋\n\nIt has been about 1 month since your last ${sName} service on ${lastDate}.\n\nIt is time for your regular maintenance and deep refresh cleaning! 🛋️✨\n\nWould you like to schedule your next service? Reply here on WhatsApp or call us to reserve your slot. - ${company}`;
+  };
+
+  // Instant 1-Click WhatsApp Direct Reminder dispatch
+  const handleDirectWhatsAppReminder = async (reminder: any) => {
+    const customer = reminder.customerId;
+    if (!customer?.phone) {
+      alert('Customer WhatsApp phone number is not available.');
+      return;
+    }
+
+    const message = getPersonalizedReminderMessage(customer, reminder.serviceName);
+    const url = generateWhatsAppUrl(customer.phone, message);
+    window.open(url, '_blank');
+
+    try {
+      await api.post(`/whatsapp/reminders/${reminder._id}/mark-sent`, { messageText: message });
+      const remindersRes = await api.get('/whatsapp/reminders');
+      setReminders(remindersRes.data);
+      const analyticsRes = await api.get('/whatsapp/analytics');
+      setAnalytics(analyticsRes.data);
+    } catch (err) {
+      console.error('Error marking reminder as sent:', err);
+    }
+  };
+
+  // Instant 1-Click WhatsApp Direct Customer dispatch
+  const handleDirectWhatsAppCustomer = async (customer: any) => {
+    if (!customer?.phone) {
+      alert('Customer WhatsApp phone number is not available.');
+      return;
+    }
+
+    const message = getPersonalizedReminderMessage(customer, customer.serviceTaken);
+    const url = generateWhatsAppUrl(customer.phone, message);
+    window.open(url, '_blank');
+  };
+
+  // Trigger manual startup sync backfill of all completed jobs
   const handleTriggerBackfill = async () => {
     setActionLoading('backfill');
     try {
-      await api.post('/whatsapp/settings/trigger-backfill');
+      const res = await api.post('/whatsapp/settings/trigger-backfill');
+      alert(res.data.message || 'All completed jobs synced and 1-month service reminders scheduled successfully!');
       fetchData();
-      if (activeTab === 'contacts') fetchCustomers();
+      fetchCustomers();
     } catch (error) {
       console.error('Error trigger backfill:', error);
+      alert('Failed to sync completed jobs.');
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Apply Pre-made Marketing Campaign Template
+  const handleApplyMarketingPreset = (preset: typeof MARKETING_PRESETS[0]) => {
+    setCampaignName(preset.name.replace(/[^a-zA-Z0-9 ]/g, '').trim() + ' Campaign');
+    setOfferText(preset.tag);
+    setCampaignMessage(preset.template);
   };
 
   // Select / Unselect Customers
@@ -354,6 +458,33 @@ const AdminWhatsAppEngagement: React.FC = () => {
       .replace(/{{company_name}}/g, sampleCustomer.company)
       .replace(/{{offer}}/g, offerText);
   }, [campaignMessage, offerText]);
+
+  const activeReminderList = useMemo(() => {
+    let list: any[] = [];
+    if (reminderSubTab === 'due_today') list = reminders.today || [];
+    else if (reminderSubTab === 'overdue') list = reminders.overdue || [];
+    else if (reminderSubTab === 'upcoming') list = reminders.upcoming || [];
+    else if (reminderSubTab === 'sent') list = reminders.sent || [];
+    else if (reminderSubTab === 'all') {
+      list = [...(reminders.today || []), ...(reminders.overdue || []), ...(reminders.upcoming || [])];
+    }
+
+    if (reminderSearch.trim() !== '') {
+      const q = reminderSearch.toLowerCase().trim();
+      list = list.filter((r: any) => {
+        const name = (r.customerId?.name || '').toLowerCase();
+        const phone = (r.customerId?.phone || '').toLowerCase();
+        const service = (r.serviceName || '').toLowerCase();
+        return name.includes(q) || phone.includes(q) || service.includes(q);
+      });
+    }
+
+    return list;
+  }, [reminders, reminderSubTab, reminderSearch]);
+
+  const selectedCustomersData = useMemo(() => {
+    return customers.filter(c => selectedCustomerIds.includes(c._id));
+  }, [customers, selectedCustomerIds]);
 
   const [historySearch, setHistorySearch] = useState('');
   const [editingLog, setEditingLog] = useState<any | null>(null);
@@ -756,43 +887,175 @@ const AdminWhatsAppEngagement: React.FC = () => {
       ) : (
         <div className="space-y-6">
           
-          {/* TAB 1: SERVICE REMINDERS */}
+          {/* TAB 1: SERVICE REMINDERS (1-MONTH AUTO & 1-CLICK DIRECT) */}
           {activeTab === 'reminders' && (
             <div className="space-y-6">
-              {useMockApi && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-[10px] font-bold">
-                  ⚠️ API Simulation Mock Mode is currently ON in settings. Service reminders will be simulated in the history log but will NOT be sent to real phones. Go to "Module Settings" to disable Mock Mode and enter your Meta Phone ID & Access Tokens for real delivery.
+              {/* Top Banner with 1-Month Auto explanation & quick controls */}
+              <div className="glass-card p-5 border-l-4 border-emerald-500 bg-gradient-to-r from-emerald-500/5 via-transparent to-transparent flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                      Auto 1-Month Service Reminders
+                    </h3>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                      30-Day Rule Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    When any job is marked completed, a reminder is automatically scheduled for 30 days (1 month) later. Send free 1-click reminders directly via WhatsApp or automated dispatch.
+                  </p>
                 </div>
-              )}
-              
-              {/* BULK ACTION BAR */}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Language switch */}
+                  <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 text-[11px] font-bold">
+                    <span className="text-slate-400 px-1 text-[10px] uppercase font-black">Template:</span>
+                    <button
+                      type="button"
+                      onClick={() => setReminderLanguage('english')}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${reminderLanguage === 'english' ? 'bg-white dark:bg-slate-800 text-secondary shadow-sm font-black' : 'text-slate-500'}`}
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReminderLanguage('hinglish')}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${reminderLanguage === 'hinglish' ? 'bg-white dark:bg-slate-800 text-secondary shadow-sm font-black' : 'text-slate-500'}`}
+                    >
+                      Hinglish
+                    </button>
+                  </div>
+
+                  {/* Sync Historical Jobs */}
+                  <button
+                    onClick={handleTriggerBackfill}
+                    disabled={actionLoading === 'backfill'}
+                    className="px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-black shadow-sm transition-all inline-flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${actionLoading === 'backfill' ? 'animate-spin' : ''}`} />
+                    <span>Sync Completed Jobs</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Metric Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div 
+                  onClick={() => setReminderSubTab('due_today')}
+                  className={`glass-card p-4 border-l-4 border-amber-500 cursor-pointer transition-all ${reminderSubTab === 'due_today' ? 'ring-2 ring-amber-500/50 bg-amber-50/20 dark:bg-amber-950/20' : 'bg-amber-50/10 dark:bg-amber-950/5'}`}
+                >
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold block">Due Today (1 Month)</span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-black text-amber-500">{reminders.today?.length || 0}</span>
+                    <span className="text-[10px] font-bold text-slate-400">Needs action</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setReminderSubTab('overdue')}
+                  className={`glass-card p-4 border-l-4 border-rose-500 cursor-pointer transition-all ${reminderSubTab === 'overdue' ? 'ring-2 ring-rose-500/50 bg-rose-50/20 dark:bg-rose-950/20' : 'bg-rose-50/10 dark:bg-rose-950/5'}`}
+                >
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold block">Overdue Reminders</span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-black text-rose-500">{reminders.overdue?.length || 0}</span>
+                    <span className="text-[10px] font-bold text-slate-400">&gt; 30 Days</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setReminderSubTab('upcoming')}
+                  className={`glass-card p-4 border-l-4 border-emerald-500 cursor-pointer transition-all ${reminderSubTab === 'upcoming' ? 'ring-2 ring-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/20' : 'bg-emerald-50/10 dark:bg-emerald-950/5'}`}
+                >
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold block">Upcoming Reminders</span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-black text-emerald-500">{reminders.upcoming?.length || 0}</span>
+                    <span className="text-[10px] font-bold text-slate-400">Next 30 Days</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setReminderSubTab('all')}
+                  className={`glass-card p-4 border-l-4 border-blue-500 cursor-pointer transition-all ${reminderSubTab === 'all' ? 'ring-2 ring-blue-500/50 bg-blue-50/20 dark:bg-blue-950/20' : 'bg-blue-50/10 dark:bg-blue-950/5'}`}
+                >
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold block">All Customer Contacts</span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-black text-blue-500">{totalCustomers || customers.length}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleExportCSV('reminders'); }}
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800"
+                      title="Export CSV"
+                    >
+                      <Download className="h-4 w-4 text-blue-500" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sub-Tabs Selector & Search Bar */}
+              <div className="glass-card p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none w-full md:w-auto">
+                  {[
+                    { id: 'due_today', label: `Due Today (${reminders.today?.length || 0})`, icon: AlertTriangle },
+                    { id: 'overdue', label: `Overdue (${reminders.overdue?.length || 0})`, icon: Clock },
+                    { id: 'upcoming', label: `Upcoming (${reminders.upcoming?.length || 0})`, icon: Calendar },
+                    { id: 'all', label: `All Customers Directory (${totalCustomers || customers.length})`, icon: Users },
+                    { id: 'sent', label: `Sent History (${reminders.sent?.length || 0})`, icon: CheckCircle2 }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setReminderSubTab(tab.id as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer flex items-center space-x-1.5 ${
+                        reminderSubTab === tab.id
+                          ? 'bg-secondary text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative w-full md:w-64">
+                  <input
+                    type="text"
+                    placeholder="Search customer name or phone..."
+                    value={reminderSearch}
+                    onChange={(e) => setReminderSearch(e.target.value)}
+                    className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 pl-8 pr-3 py-2 outline-none focus:border-secondary dark:text-white"
+                  />
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                </div>
+              </div>
+
+              {/* Bulk Action Bar for Reminders */}
               {selectedReminderIds.length > 0 && (
-                <div className="flex items-center justify-between p-3.5 bg-emerald-505 dark:bg-emerald-600 text-white rounded-2xl shadow-lg animate-scale-up">
+                <div className="flex items-center justify-between p-3.5 bg-emerald-600 text-white rounded-2xl shadow-lg animate-scale-up">
                   <div className="text-xs font-bold flex items-center space-x-2">
                     <span className="h-2 w-2 bg-white rounded-full animate-ping" />
-                    <span>Selected <span className="underline font-black">{selectedReminderIds.length}</span> reminders for manual dispatch.</span>
+                    <span>Selected <span className="underline font-black">{selectedReminderIds.length}</span> reminders.</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setSelectedReminderIds([])}
-                      className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-black transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-black transition-all cursor-pointer"
                     >
-                      Clear Selection
+                      Clear
                     </button>
                     <button
                       onClick={handleBulkSendReminders}
                       disabled={actionLoading === 'bulk-reminders'}
-                      className="px-4 py-2 rounded-xl bg-white text-emerald-600 dark:text-emerald-700 hover:bg-slate-50 text-xs font-black transition-all shadow-md flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+                      className="px-4 py-1.5 rounded-xl bg-white text-emerald-700 hover:bg-slate-50 text-xs font-black transition-all shadow-md flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
                     >
                       {actionLoading === 'bulk-reminders' ? (
                         <>
-                          <div className="h-3.5 w-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="h-3 w-3 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
                           <span>Sending...</span>
                         </>
                       ) : (
                         <>
                           <Send className="h-3.5 w-3.5" />
-                          <span>Send Reminders Now</span>
+                          <span>Bulk API Send</span>
                         </>
                       )}
                     </button>
@@ -800,551 +1063,574 @@ const AdminWhatsAppEngagement: React.FC = () => {
                 </div>
               )}
 
-              {/* Reminders Dashboard summary cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="glass-card p-4 border-l-4 border-rose-500 bg-rose-50/10 dark:bg-rose-950/5">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Overdue Reminders</span>
-                  <span className="text-xl font-black text-rose-500 block mt-1">{reminders.overdue.length}</span>
-                </div>
-                <div className="glass-card p-4 border-l-4 border-amber-500 bg-amber-50/10 dark:bg-amber-950/5">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Due Today</span>
-                  <span className="text-xl font-black text-amber-500 block mt-1">{reminders.today.length}</span>
-                </div>
-                <div className="glass-card p-4 border-l-4 border-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/5">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Upcoming Reminders</span>
-                  <span className="text-xl font-black text-emerald-500 block mt-1">{reminders.upcoming.length}</span>
-                </div>
-                <div className="glass-card p-4 border-l-4 border-blue-500 bg-blue-50/10 dark:bg-blue-950/5 flex justify-between items-center">
-                  <div>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">This Week / Month</span>
-                    <span className="text-sm font-black text-slate-700 dark:text-slate-205 mt-1 block">
-                      Week: {reminders.dueThisWeekCount} | Month: {reminders.dueThisMonthCount}
-                    </span>
+              {/* Main List Display (Reminders OR All Customers Directory) */}
+              {reminderSubTab === 'all' ? (
+                /* All Customer Contacts Directory with 1-Month Next Due Date */
+                <div className="glass-card p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                    <div>
+                      <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <span>All Customers Service Reminder Directory</span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Every client with contact number, last cleanup date, and their auto-scheduled 1-month reminder date.
+                      </p>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleExportCSV('reminders')}
-                    className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shadow-sm"
-                    title="Export Reminders to CSV"
-                  >
-                    <Download className="h-4.5 w-4.5 text-blue-500" />
-                  </button>
-                </div>
-              </div>
 
-              {/* Upcoming Reminders on top */}
-              <div className="glass-card p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
-                  <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
-                    <Clock className="h-4 w-4 text-emerald-500" />
-                    <span>📅 Upcoming Reminders</span>
-                  </h3>
-                  <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-bold">
-                    {reminders.upcoming.length} upcoming
-                  </span>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-bold text-slate-600 dark:text-slate-300 min-w-[800px]">
+                      <thead className="bg-slate-100 dark:bg-slate-900/60 uppercase tracking-wider text-[9px] text-slate-400">
+                        <tr>
+                          <th className="px-4 py-3">Customer Name</th>
+                          <th className="px-4 py-3">WhatsApp Number</th>
+                          <th className="px-4 py-3">Last Service Taken</th>
+                          <th className="px-4 py-3">Service Completed Date</th>
+                          <th className="px-4 py-3">1-Month Due Date</th>
+                          <th className="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {customers
+                          .filter((c) => {
+                            if (!reminderSearch.trim()) return true;
+                            const q = reminderSearch.toLowerCase().trim();
+                            return (c.name || '').toLowerCase().includes(q) || (c.phone || '').includes(q) || (c.serviceTaken || '').toLowerCase().includes(q);
+                          })
+                          .map((c) => (
+                            <tr key={c._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                              <td className="px-4 py-3.5">
+                                <span className="block text-slate-900 dark:text-white font-black cursor-pointer hover:underline" onClick={() => fetchCustomerProfile(c._id)}>
+                                  {c.name}
+                                </span>
+                                <span className="text-[10px] text-slate-400">{c.company}</span>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <span className="inline-flex items-center space-x-1.5 font-black text-emerald-600 dark:text-emerald-400">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{c.phone}</span>
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300">
+                                {c.serviceTaken || 'General Cleaning'}
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-500">
+                                {c.lastServiceDate ? new Date(c.lastServiceDate).toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {c.nextReminderDate ? (
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                                    {new Date(c.nextReminderDate).toLocaleDateString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-[10px]">30 Days After Service</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-right space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDirectWhatsAppCustomer(c)}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-sm transition-all inline-flex items-center space-x-1.5 cursor-pointer"
+                                  title="Send 1-Month Reminder via WhatsApp"
+                                >
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                  <span>Chat on WhatsApp</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        {customers.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center py-8 text-slate-400">
+                              No customer contact records found. Click "Sync Completed Jobs" above to import.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+              ) : (
+                /* Reminders View: Due Today / Overdue / Upcoming / Sent */
+                <div className="glass-card p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">
+                        {reminderSubTab === 'due_today' && "🔔 Customers Due for 1-Month Service Reminder Today"}
+                        {reminderSubTab === 'overdue' && "⚠️ Overdue 1-Month Service Reminders"}
+                        {reminderSubTab === 'upcoming' && "📅 Upcoming 1-Month Service Reminders"}
+                        {reminderSubTab === 'sent' && "✅ Successfully Contacted Customers (History)"}
+                      </span>
+                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">
+                        {activeReminderList.length} total
+                      </span>
+                    </div>
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
-                  {reminders.upcoming.map((r: any) => (
-                    <div key={r._id} className="py-3.5 flex justify-between items-center gap-4">
-                      <div className="min-w-0 flex-1">
-                        <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                          {r.customerId?.name || 'Unknown Client'}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                          {r.serviceName} | WhatsApp: {r.customerId?.phone || 'N/A'}
-                        </span>
-                        <div className="flex items-center space-x-3.5 mt-1 text-[10px]">
-                          <span className="font-bold text-slate-500">Due: {new Date(r.reminderDate).toLocaleDateString()}</span>
-                          <span className="font-bold text-blue-500 uppercase tracking-wider">
-                            In {Math.round((new Date(r.reminderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} Days
-                          </span>
+                    {activeReminderList.length > 0 && reminderSubTab !== 'sent' && (
+                      <label className="text-[10px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={activeReminderList.length > 0 && activeReminderList.every((r: any) => selectedReminderIds.includes(r._id))}
+                          onChange={(e) => {
+                            const listIds = activeReminderList.map((r: any) => r._id);
+                            if (e.target.checked) {
+                              setSelectedReminderIds(prev => Array.from(new Set([...prev, ...listIds])));
+                            } else {
+                              setSelectedReminderIds(prev => prev.filter(id => !listIds.includes(id)));
+                            }
+                          }}
+                          className="rounded border-slate-205 h-3.5 w-3.5 text-secondary outline-none focus:ring-0 cursor-pointer"
+                        />
+                        <span>Select All in View</span>
+                      </label>
+                    )}
+                  </div>
+
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[600px] overflow-y-auto pr-1">
+                    {activeReminderList.map((r: any) => {
+                      const isChecked = selectedReminderIds.includes(r._id);
+                      const customer = r.customerId || {};
+                      const daysDiff = Math.round((new Date(r.reminderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      const isOverdue = daysDiff < 0;
+                      const isToday = daysDiff === 0;
+
+                      return (
+                        <div key={r._id} className="py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 p-2 rounded-xl transition-all">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            {reminderSubTab !== 'sent' && (
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedReminderIds([...selectedReminderIds, r._id]);
+                                  } else {
+                                    setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
+                                  }
+                                }}
+                                className="rounded border-slate-205 text-secondary outline-none focus:ring-0 h-4 w-4 cursor-pointer"
+                              />
+                            )}
+                            
+                            <div className="min-w-0">
+                              <div className="flex items-center space-x-2">
+                                <span 
+                                  className="text-xs font-black text-slate-900 dark:text-white hover:underline cursor-pointer"
+                                  onClick={() => fetchCustomerProfile(customer._id)}
+                                >
+                                  {customer.name || 'Valued Customer'}
+                                </span>
+                                <span className="inline-flex items-center space-x-1 font-bold text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{customer.phone || 'No Phone'}</span>
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-500">
+                                <span className="font-bold text-slate-700 dark:text-slate-300">
+                                  Service: {r.serviceName}
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  Completed: {customer.lastServiceDate ? new Date(customer.lastServiceDate).toLocaleDateString() : '30 days ago'}
+                                </span>
+                                <span>•</span>
+                                <span className="font-extrabold text-blue-600 dark:text-blue-400">
+                                  Reminder Due: {new Date(r.reminderDate).toLocaleDateString()}
+                                </span>
+                              </div>
+
+                              {/* Overdue / Due Timeline Badge */}
+                              <div className="mt-1">
+                                {isToday && (
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/30">
+                                    🔔 Exactly 1 Month (30 Days) Completed — Due Today!
+                                  </span>
+                                )}
+                                {isOverdue && (
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 border border-rose-500/30">
+                                    ⚠️ Overdue by {Math.abs(daysDiff)} Days
+                                  </span>
+                                )}
+                                {!isToday && !isOverdue && (
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                                    📅 Due in {daysDiff} Days
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center space-x-2 self-end md:self-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDirectWhatsAppReminder(r)}
+                              className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-sm transition-all inline-flex items-center space-x-1.5 cursor-pointer"
+                              title="Opens WhatsApp Web/App directly with pre-filled message & marks reminder as sent"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              <span>Chat on WhatsApp</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSendReminder(r._id)}
+                              disabled={actionLoading === r._id}
+                              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all inline-flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                              title="Send automated message via Meta Cloud API"
+                            >
+                              <Send className="h-3 w-3" />
+                              <span>{actionLoading === r._id ? 'Sending...' : 'API Send'}</span>
+                            </button>
+                          </div>
                         </div>
+                      );
+                    })}
+
+                    {activeReminderList.length === 0 && (
+                      <div className="text-center py-12 text-slate-400 space-y-2">
+                        <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
+                        <p className="text-xs font-bold">No reminders found in this category.</p>
+                        <p className="text-[11px] text-slate-400">All customer services are up to date!</p>
                       </div>
-                      <button
-                        onClick={() => handleSendReminder(r._id)}
-                        disabled={actionLoading === r._id}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1 disabled:opacity-50"
-                      >
-                        <Send className="h-3 w-3" />
-                        <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
-                      </button>
-                    </div>
-                  ))}
-                  {reminders.upcoming.length === 0 && (
-                    <p className="text-center py-6 text-xs text-slate-400">No upcoming reminders scheduled.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Reminders Lists (Split: Today vs Overdue) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Today's Reminders Card */}
-                <div className="glass-card p-6 space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
-                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
-                      <span>🔔 Today's Service Reminders</span>
-                    </h3>
-                    <div className="flex items-center space-x-3">
-                      {reminders.today.length > 0 && (
-                        <label className="text-[9px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={reminders.today.every((r: any) => selectedReminderIds.includes(r._id))}
-                            onChange={(e) => {
-                              const todayIds = reminders.today.map((r: any) => r._id);
-                              if (e.target.checked) {
-                                setSelectedReminderIds(prev => Array.from(new Set([...prev, ...todayIds])));
-                              } else {
-                                setSelectedReminderIds(prev => prev.filter(id => !todayIds.includes(id)));
-                              }
-                            }}
-                            className="rounded border-slate-255 h-3.5 w-3.5 cursor-pointer text-emerald-500 outline-none focus:ring-0"
-                          />
-                          <span>Select All</span>
-                        </label>
-                      )}
-                      <span className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold">
-                        {reminders.today.length} pending
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
-                    {reminders.today.map((r: any) => {
-                      const isChecked = selectedReminderIds.includes(r._id);
-                      return (
-                        <div key={r._id} className="py-3 flex justify-between items-center gap-4">
-                          <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedReminderIds([...selectedReminderIds, r._id]);
-                                } else {
-                                  setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
-                                }
-                              }}
-                              className="rounded border-slate-255 text-emerald-555 outline-none focus:ring-0 h-4 w-4 cursor-pointer"
-                            />
-                            <div className="min-w-0">
-                              <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                                {r.customerId?.name || 'Unknown Client'}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block mt-0.5">
-                                {r.serviceName} | Last Cleaned: {r.customerId?.lastServiceDate ? new Date(r.customerId.lastServiceDate).toLocaleDateString() : 'N/A'}
-                              </span>
-                              <span className="text-[10px] font-bold text-emerald-500 block mt-0.5">
-                                WhatsApp: {r.customerId?.phone}
-                              </span>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleSendReminder(r._id)}
-                            disabled={actionLoading === r._id}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5 disabled:opacity-50"
-                          >
-                            <Send className="h-3 w-3" />
-                            <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {reminders.today.length === 0 && (
-                      <p className="text-center py-6 text-xs text-slate-400">No service reminders scheduled for today.</p>
                     )}
                   </div>
                 </div>
-
-                {/* Overdue Reminders Card */}
-                <div className="glass-card p-6 space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-3">
-                    <h3 className="text-xs font-black text-rose-500 uppercase tracking-widest flex items-center space-x-1.5">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span>⚠️ Overdue Reminders</span>
-                    </h3>
-                    <div className="flex items-center space-x-3">
-                      {reminders.overdue.length > 0 && (
-                        <label className="text-[9px] text-slate-400 font-extrabold flex items-center space-x-1.5 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={reminders.overdue.every((r: any) => selectedReminderIds.includes(r._id))}
-                            onChange={(e) => {
-                              const overdueIds = reminders.overdue.map((r: any) => r._id);
-                              if (e.target.checked) {
-                                setSelectedReminderIds(prev => Array.from(new Set([...prev, ...overdueIds])));
-                              } else {
-                                setSelectedReminderIds(prev => prev.filter(id => !overdueIds.includes(id)));
-                              }
-                            }}
-                            className="rounded border-slate-255 h-3.5 w-3.5 cursor-pointer text-rose-500 outline-none focus:ring-0"
-                          />
-                          <span>Select All</span>
-                        </label>
-                      )}
-                      <span className="text-[9px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold">
-                        {reminders.overdue.length} overdue
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[300px] overflow-y-auto pr-1">
-                    {reminders.overdue.map((r: any) => {
-                      const isChecked = selectedReminderIds.includes(r._id);
-                      return (
-                        <div key={r._id} className="py-3 flex justify-between items-center gap-4">
-                          <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedReminderIds([...selectedReminderIds, r._id]);
-                                } else {
-                                  setSelectedReminderIds(selectedReminderIds.filter(id => id !== r._id));
-                                }
-                              }}
-                              className="rounded border-slate-255 text-rose-555 outline-none focus:ring-0 h-4 w-4 cursor-pointer"
-                            />
-                            <div className="min-w-0">
-                              <span className="block text-xs font-extrabold text-slate-800 dark:text-white hover:underline cursor-pointer" onClick={() => fetchCustomerProfile(r.customerId?._id)}>
-                                {r.customerId?.name || 'Unknown Client'}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block mt-0.5">
-                                {r.serviceName} | Scheduled Date: {new Date(r.reminderDate).toLocaleDateString()}
-                              </span>
-                              <span className="text-[10px] font-bold text-rose-500 block mt-0.5">
-                                Overdue by: {Math.round((Date.now() - new Date(r.reminderDate).getTime()) / (1000 * 60 * 60 * 24))} Days
-                              </span>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleSendReminder(r._id)}
-                            disabled={actionLoading === r._id}
-                            className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-extrabold shadow-sm transition-all cursor-pointer inline-flex items-center space-x-1.5 disabled:opacity-50"
-                          >
-                            <Send className="h-3 w-3" />
-                            <span>{actionLoading === r._id ? 'Sending...' : 'Send WhatsApp'}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {reminders.overdue.length === 0 && (
-                      <p className="text-center py-6 text-xs text-slate-400">Great! No overdue reminders currently.</p>
-                    )}
-                  </div>
-                </div>
-
-              </div>
+              )}
 
             </div>
           )}
 
-          {/* TAB 2: WHATSAPP MARKETING */}
+          {/* TAB 2: WHATSAPP MARKETING & BROADCASTS */}
           {activeTab === 'marketing' && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              
-              {/* Campaign builder form (2 cols) */}
-              <div className="xl:col-span-2 space-y-6">
-                <div className="glass-card p-6">
-                  <div className="border-b border-slate-150/40 dark:border-slate-800 pb-3 mb-5">
-                    <h3 className="text-xs font-black text-slate-455 uppercase tracking-widest flex items-center space-x-1.5">
-                      <Send className="h-4 w-4 text-emerald-500" />
-                      <span>📢 Launch New Marketing Campaign</span>
+            <div className="space-y-6">
+              {/* Marketing Header & Pre-made Offer Presets */}
+              <div className="glass-card p-5 border-l-4 border-secondary bg-gradient-to-r from-secondary/5 via-transparent to-transparent space-y-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center space-x-2">
+                      <Send className="h-4 w-4 text-secondary" />
+                      <span>WhatsApp Marketing & Offer Broadcasting</span>
                     </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Select past customer numbers, choose or compose an offer discount, and broadcast via 1-Click WhatsApp Direct or Bulk API dispatch.
+                    </p>
                   </div>
 
-                  <form onSubmit={handleCreateCampaign} className="space-y-4">
-                    {useMockApi && (
-                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-[10px] font-bold">
-                        ⚠️ API Simulation Mock Mode is currently ON in settings. Sending this campaign will log it in the database history but will NOT send real WhatsApp messages to the recipients. Go to "Module Settings" to disable Mock Mode and enter your Meta Phone ID & Access Tokens for real delivery.
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+                      Selected: {selectedCustomerIds.length} Customers
+                    </span>
+                  </div>
+                </div>
+
+                {/* 1-Click Offer Presets */}
+                <div>
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-2">
+                    ⚡ Quick 1-Click Offer Presets (Click to Load):
+                  </span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                    {MARKETING_PRESETS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleApplyMarketingPreset(preset)}
+                        className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 hover:border-secondary hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-all cursor-pointer group shadow-sm"
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-black text-slate-800 dark:text-white group-hover:text-secondary transition-colors">
+                            {preset.name}
+                          </span>
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-secondary/10 text-secondary">
+                            {preset.tag}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">
+                          {preset.template.split('\n')[0]}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-Column Responsive Workspace */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* Column 1: Customer Selection & Filter Directory (7 Cols) */}
+                <div className="lg:col-span-7 glass-card p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-emerald-500" />
+                        <span>Select Customer Numbers ({customers.length})</span>
+                      </h4>
+                      <p className="text-[10px] text-slate-400">
+                        Check the boxes of customers you want to receive this offer.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllCustomers}
+                        className="px-3 py-1.5 rounded-xl bg-secondary/10 text-secondary hover:bg-secondary hover:text-white text-[11px] font-black uppercase transition-all cursor-pointer"
+                      >
+                        {selectedCustomerIds.length === customers.length && customers.length > 0 ? 'Deselect All' : 'Select All'}
+                      </button>
+                      {selectedCustomerIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomerIds([])}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 text-[11px] font-black uppercase transition-all cursor-pointer"
+                        >
+                          Clear ({selectedCustomerIds.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search and Filters */}
+                  <div className="space-y-2.5">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search by customer name or phone number..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 pl-8 pr-3 py-2 outline-none focus:border-secondary dark:text-white"
+                      />
+                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                    </div>
+
+                    {/* Quick Filter Pills */}
+                    <div className="flex flex-wrap gap-2 text-[10px] font-extrabold">
+                      <button
+                        type="button"
+                        onClick={() => { setFilterInactiveDays(''); setFilterMinSpent(''); }}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${!filterInactiveDays && !filterMinSpent ? 'bg-secondary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterInactiveDays('30')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${filterInactiveDays === '30' ? 'bg-secondary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
+                      >
+                        Inactive 30+ Days
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterInactiveDays('60')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${filterInactiveDays === '60' ? 'bg-secondary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
+                      >
+                        Inactive 60+ Days
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterMinSpent('1500')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${filterMinSpent === '1500' ? 'bg-secondary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
+                      >
+                        Spent &gt; ₹1,500
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Customer Table List */}
+                  <div className="max-h-[460px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
+                    {customers.map((c) => {
+                      const isSelected = selectedCustomerIds.includes(c._id);
+                      return (
+                        <div
+                          key={c._id}
+                          onClick={() => !c.marketingOptOut && handleSelectCustomer(c._id)}
+                          className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'bg-secondary/5 dark:bg-secondary/10'
+                              : 'hover:bg-slate-50/60 dark:hover:bg-slate-900/30'
+                          } ${c.marketingOptOut ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={c.marketingOptOut}
+                              onChange={() => {}} // handled by parent onClick
+                              className="rounded border-slate-205 text-secondary outline-none focus:ring-0 h-4 w-4 cursor-pointer"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                  {c.name}
+                                </span>
+                                {c.marketingOptOut && (
+                                  <span className="text-[8px] bg-rose-500/10 text-rose-500 px-1.5 py-0.2 rounded font-black uppercase">
+                                    Opted Out
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2 mt-0.5">
+                                <span className="font-extrabold text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
+                                  <Phone className="h-2.5 w-2.5" />
+                                  <span>{c.phone}</span>
+                                </span>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-[10px] text-slate-400 truncate">
+                                  {c.serviceTaken || 'General Clean'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right text-[10px] text-slate-400">
+                            <span className="block font-bold text-slate-700 dark:text-slate-300">
+                              ₹{c.totalAmountSpent?.toLocaleString() || 0}
+                            </span>
+                            <span>{c.lastServiceDate ? new Date(c.lastServiceDate).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {customers.length === 0 && (
+                      <div className="text-center py-10 text-slate-400 text-xs font-bold">
+                        No customer contacts found matching active filters.
                       </div>
                     )}
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Column 2: Offer Composer & Dispatcher (5 Cols) */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div className="glass-card p-6 space-y-4">
+                    <div className="border-b border-slate-150/40 dark:border-slate-800 pb-3">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white flex items-center space-x-2">
+                        <Sparkles className="h-4 w-4 text-secondary" />
+                        <span>Compose Offer & Broadcast</span>
+                      </h4>
+                    </div>
+
+                    <form onSubmit={handleCreateCampaign} className="space-y-4">
                       <div>
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Name:</label>
+                        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">
+                          Campaign / Offer Name:
+                        </label>
                         <input
                           type="text"
                           required
-                          placeholder="e.g. SofaShine Festival Offer 2026"
+                          placeholder="e.g. Diwali Dhamaka 20% OFF"
                           value={campaignName}
                           onChange={(e) => setCampaignName(e.target.value)}
                           className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Campaign Image (Optional):</label>
-                        <div className="flex items-center space-x-3">
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">
+                            Offer Value / Code:
+                          </label>
                           <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setCampaignImageUrl(reader.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 outline-none focus:border-secondary dark:text-white"
+                            type="text"
+                            placeholder="e.g. 20% OFF"
+                            value={offerText}
+                            onChange={(e) => setOfferText(e.target.value)}
+                            className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
                           />
-                          {campaignImageUrl && (
-                            <button
-                              type="button"
-                              onClick={() => setCampaignImageUrl('')}
-                              className="px-2.5 py-2.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-black uppercase cursor-pointer transition-all"
-                            >
-                              Clear
-                            </button>
-                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">
+                            Schedule Later:
+                          </label>
+                          <div className="flex items-center space-x-2 pt-1.5">
+                            <input
+                              type="checkbox"
+                              checked={scheduleCampaign}
+                              onChange={(e) => setScheduleCampaign(e.target.checked)}
+                              className="rounded border-slate-205 text-secondary"
+                            />
+                            <span className="text-xs text-slate-500 font-bold">Schedule</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1.5">Offer Value (for {"{{offer}}"} tag):</label>
+                      {scheduleCampaign && (
                         <input
-                          type="text"
-                          placeholder="e.g. 20% OFF"
-                          value={offerText}
-                          onChange={(e) => setOfferText(e.target.value)}
-                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white"
+                          type="datetime-local"
+                          required
+                          value={scheduleTime}
+                          onChange={(e) => setScheduleTime(e.target.value)}
+                          className="w-full text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 outline-none focus:border-secondary dark:text-white"
                         />
-                      </div>
-
-                      <div className="flex items-center space-x-6 pt-4">
-                        <label className="flex items-center space-x-2 text-xs font-bold text-slate-500 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={scheduleCampaign}
-                            onChange={(e) => setScheduleCampaign(e.target.checked)}
-                            className="rounded border-slate-205 text-secondary outline-none focus:ring-1 focus:ring-secondary"
-                          />
-                          <span>Schedule for Later</span>
-                        </label>
-
-                        {scheduleCampaign && (
-                          <input
-                            type="datetime-local"
-                            required
-                            value={scheduleTime}
-                            onChange={(e) => setScheduleTime(e.target.value)}
-                            className="text-xs font-bold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:color-scheme-dark dark:text-white"
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-1.5">
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Campaign Message Text:</label>
-                        <span className="text-[9px] text-slate-400 font-bold">Variables: {"{{customer_name}}"}, {"{{service_name}}"}, {"{{last_service_date}}"}, {"{{company_name}}"}, {"{{offer}}"}</span>
-                      </div>
-                      <textarea
-                        rows={5}
-                        required
-                        placeholder="Compose your message here..."
-                        value={campaignMessage}
-                        onChange={(e) => setCampaignMessage(e.target.value)}
-                        className="w-full text-xs font-semibold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white leading-relaxed font-mono"
-                      />
-                    </div>
-
-                    {/* Customer Selection block */}
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold">Target Recipients Selection Mode:</label>
-                        <div className="flex space-x-2">
-                          <button
-                            type="button"
-                            onClick={() => setTargetFilterMode('individual')}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer ${targetFilterMode === 'individual' ? 'bg-secondary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
-                          >
-                            Select Manually
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTargetFilterMode('smart-filters')}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer ${targetFilterMode === 'smart-filters' ? 'bg-secondary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
-                          >
-                            Use Smart Filters
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Manual Checklist Selection */}
-                      {targetFilterMode === 'individual' ? (
-                        <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 bg-slate-50/50 dark:bg-slate-950/20">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-black text-slate-400 uppercase">Selected Customers ({selectedCustomerIds.length})</span>
-                            <button
-                              type="button"
-                              onClick={handleSelectAllCustomers}
-                              className="text-[10px] text-secondary font-black uppercase hover:underline cursor-pointer"
-                            >
-                              {selectedCustomerIds.length === customers.length ? 'Deselect All' : 'Select All on Page'}
-                            </button>
-                          </div>
-
-                          <div className="max-h-[220px] overflow-y-auto divide-y divide-slate-150/40 dark:divide-slate-800 pr-1 text-xs">
-                            {customers.map((c) => {
-                              const isSelected = selectedCustomerIds.includes(c._id);
-                              return (
-                                <label key={c._id} className="flex items-center space-x-3 py-2 cursor-pointer hover:bg-slate-100/40 dark:hover:bg-slate-800/10 px-1 rounded-lg">
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => handleSelectCustomer(c._id)}
-                                    disabled={c.marketingOptOut}
-                                    className="rounded border-slate-205 text-secondary focus:ring-1 focus:ring-secondary disabled:opacity-50"
-                                  />
-                                  <span className="flex-1 font-bold text-slate-700 dark:text-slate-300">{c.name} ({c.phone})</span>
-                                  <span className="text-[9px] text-slate-450 uppercase">{c.serviceTaken}</span>
-                                  {c.marketingOptOut && (
-                                    <span className="text-[8px] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded font-black uppercase">Opted Out</span>
-                                  )}
-                                </label>
-                              );
-                            })}
-                            {customers.length === 0 && (
-                              <p className="text-center py-6 text-slate-400">No customers found. Run query filters or search above.</p>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        // Smart filters targeting preview description
-                        <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-4 text-xs font-bold text-slate-600 dark:text-slate-300 space-y-2">
-                          <span className="text-[9px] font-black text-emerald-500 uppercase block tracking-wider">Targeting Criteria Info</span>
-                          <p className="leading-relaxed">
-                            Campaign will be broadcast to all previous customers matching the active panel filters listed in the sidebar (excluding opted-out contacts).
-                          </p>
-                          <div className="flex flex-wrap gap-2 text-[10px] font-extrabold mt-1">
-                            {filterService && <span className="bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded">Service: {filterService}</span>}
-                            {filterCompany !== 'All' && <span className="bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded">Company: {filterCompany}</span>}
-                            {filterLocation && <span className="bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded">Location: {filterLocation}</span>}
-                            {filterMinSpent && <span className="bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded">Min Spent: ₹{filterMinSpent}</span>}
-                            {filterInactiveDays && <span className="bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded">Inactivity: {filterInactiveDays}+ days</span>}
-                          </div>
-                        </div>
                       )}
-                    </div>
 
-                    <div className="flex justify-end pt-3">
-                      <button
-                        type="submit"
-                        disabled={actionLoading === 'campaign' || (targetFilterMode === 'individual' && selectedCustomerIds.length === 0)}
-                        className="px-6 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-black shadow-sm tracking-wider uppercase transition-all cursor-pointer inline-flex items-center space-x-2 disabled:opacity-50"
-                      >
-                        <Send className="h-4 w-4" />
-                        <span>{scheduleCampaign ? 'Schedule Campaign' : 'Send WhatsApp Campaign'}</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-extrabold">
+                            Offer Message Text:
+                          </label>
+                          <span className="text-[9px] text-slate-400 font-bold">Tags: {"{{customer_name}}"}, {"{{offer}}"}</span>
+                        </div>
+                        <textarea
+                          rows={5}
+                          required
+                          value={campaignMessage}
+                          onChange={(e) => setCampaignMessage(e.target.value)}
+                          className="w-full text-xs font-semibold rounded-xl border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:border-secondary dark:text-white leading-relaxed font-mono"
+                        />
+                      </div>
 
-              {/* Sidebar filter options and Live message preview */}
-              <div className="space-y-6">
-                
-                {/* Live Message Preview Card */}
-                <div className="glass-card p-6 bg-emerald-500/[0.02] border-emerald-500/10 space-y-4">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Live Preview (Demo Customer)</span>
-                  
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-white dark:bg-slate-950/70 shadow-sm relative leading-relaxed text-xs space-y-3">
-                    {/* Simulated WhatsApp chat message layout */}
-                    <div className="absolute top-2 left-2 text-[8px] uppercase tracking-wider font-extrabold text-emerald-500">WhatsApp message</div>
-                    {campaignImageUrl && (
-                      <div className="pt-4 max-h-[200px] overflow-hidden rounded-lg border border-slate-100 dark:border-slate-800">
-                        <img
-                          src={campaignImageUrl}
-                          alt="Campaign attachment"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
+                      {/* Live WhatsApp Mockup Preview */}
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold block mb-1.5">
+                          Live WhatsApp Message Preview:
+                        </span>
+                        <div className="border border-emerald-500/20 rounded-2xl p-3.5 bg-emerald-500/[0.03] space-y-2">
+                          <div className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-600 flex items-center space-x-1">
+                            <MessageCircle className="h-3 w-3" />
+                            <span>Preview for Rahul Sharma (+91 98765 43210)</span>
+                          </div>
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm text-xs font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-100 dark:border-slate-800">
+                            {campaignPreviewMessage}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dual Action Buttons */}
+                      <div className="pt-2 space-y-2">
+                        {/* 1-Click WhatsApp Direct Queue */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedCustomerIds.length === 0) {
+                              alert('Please select at least 1 customer number from the left table first.');
+                              return;
+                            }
+                            setDirectQueueIndex(0);
+                            setDirectQueueSentIds([]);
+                            setShowDirectQueueModal(true);
                           }}
-                        />
-                      </div>
-                    )}
-                    <div className={`${campaignImageUrl ? '' : 'pt-4'} font-sans font-medium whitespace-pre-wrap text-slate-700 dark:text-slate-200`}>
-                      {campaignPreviewMessage}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Smart filters target controller */}
-                <div className="glass-card p-6 space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-150/40 dark:border-slate-800 pb-2">
-                    <span className="text-xs font-black text-slate-455 uppercase tracking-widest">Smart Filters Controller</span>
-                    <Filter className="h-4 w-4 text-secondary" />
-                  </div>
-
-                  <div className="space-y-3.5 text-xs font-bold text-slate-500">
-                    <div>
-                      <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Target Service Category:</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Sofa Cleaning"
-                        value={filterService}
-                        onChange={(e) => setFilterService(e.target.value)}
-                        className="w-full text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Company:</label>
-                      <select
-                        value={filterCompany}
-                        onChange={(e) => setFilterCompany(e.target.value)}
-                        className="w-full text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
-                      >
-                        <option value="All">All Companies</option>
-                        <option value="SofaShine">SofaShine</option>
-                        <option value="CleanCruisers">CleanCruisers</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Location / City:</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Delhi"
-                        value={filterLocation}
-                        onChange={(e) => setFilterLocation(e.target.value)}
-                        className="w-full text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Min Spent (₹):</label>
-                        <input
-                          type="number"
-                          placeholder="e.g. 5000"
-                          value={filterMinSpent}
-                          onChange={(e) => setFilterMinSpent(e.target.value)}
-                          className="w-full text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-extrabold mb-1">Inactivity (Days):</label>
-                        <select
-                          value={filterInactiveDays}
-                          onChange={(e) => setFilterInactiveDays(e.target.value)}
-                          className="w-full text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 outline-none focus:border-secondary dark:text-white"
+                          disabled={selectedCustomerIds.length === 0}
+                          className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-sm tracking-wider uppercase transition-all cursor-pointer inline-flex items-center justify-center space-x-2 disabled:opacity-50"
                         >
-                          <option value="">Any Inactivity</option>
-                          <option value="30">30+ Days</option>
-                          <option value="60">60+ Days</option>
-                          <option value="90">90+ Days</option>
-                        </select>
+                          <MessageCircle className="h-4 w-4" />
+                          <span>1-Click Direct WhatsApp Queue ({selectedCustomerIds.length})</span>
+                        </button>
+
+                        {/* Bulk Send via API */}
+                        <button
+                          type="submit"
+                          disabled={actionLoading === 'campaign' || selectedCustomerIds.length === 0}
+                          className="w-full py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-black shadow-sm tracking-wider uppercase transition-all cursor-pointer inline-flex items-center justify-center space-x-2 disabled:opacity-50"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          <span>{scheduleCampaign ? 'Schedule Campaign via API' : `Bulk Send via API (${selectedCustomerIds.length})`}</span>
+                        </button>
                       </div>
-                    </div>
+                    </form>
                   </div>
                 </div>
 
@@ -2139,6 +2425,148 @@ const AdminWhatsAppEngagement: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DIRECT WHATSAPP MARKETING QUEUE MODAL */}
+      {showDirectQueueModal && selectedCustomersData.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-scale-up">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <span className="h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                  Direct WhatsApp Sender Queue
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDirectQueueModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Queue Counter & Progress bar */}
+            <div>
+              <div className="flex justify-between text-xs font-bold text-slate-500 mb-1.5">
+                <span>Contact {Math.min(directQueueIndex + 1, selectedCustomersData.length)} of {selectedCustomersData.length}</span>
+                <span className="text-emerald-500 font-black">
+                  {directQueueSentIds.length} Sent ({Math.round((directQueueSentIds.length / selectedCustomersData.length) * 100)}%)
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-300"
+                  style={{ width: `${(directQueueSentIds.length / selectedCustomersData.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Current Recipient Info */}
+            {selectedCustomersData[directQueueIndex] ? (
+              <div className="space-y-4">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 dark:text-white block">
+                      {selectedCustomersData[directQueueIndex]?.name}
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center space-x-1 mt-0.5">
+                      <Phone className="h-3 w-3" />
+                      <span>{selectedCustomersData[directQueueIndex]?.phone}</span>
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {selectedCustomersData[directQueueIndex]?.serviceTaken || 'General'}
+                  </span>
+                </div>
+
+                {/* Message preview for this recipient */}
+                <div className="p-3 bg-emerald-500/[0.04] border border-emerald-500/20 rounded-2xl space-y-1.5">
+                  <span className="text-[9px] uppercase font-black tracking-wider text-emerald-600">Personalized Message:</span>
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
+                    {campaignMessage
+                      .replace(/{{customer_name}}/g, selectedCustomersData[directQueueIndex]?.name || 'Valued Customer')
+                      .replace(/{{service_name}}/g, selectedCustomersData[directQueueIndex]?.serviceTaken || 'our service')
+                      .replace(/{{offer}}/g, offerText)
+                      .replace(/{{company_name}}/g, selectedCustomersData[directQueueIndex]?.company || 'ShineStaff')}
+                  </p>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    disabled={directQueueIndex === 0}
+                    onClick={() => setDirectQueueIndex(prev => Math.max(0, prev - 1))}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white disabled:opacity-30 cursor-pointer"
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (directQueueIndex < selectedCustomersData.length - 1) {
+                          setDirectQueueIndex(prev => prev + 1);
+                        } else {
+                          setShowDirectQueueModal(false);
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      Skip
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentCust = selectedCustomersData[directQueueIndex];
+                        if (currentCust?.phone) {
+                          const msg = campaignMessage
+                            .replace(/{{customer_name}}/g, currentCust.name || 'Valued Customer')
+                            .replace(/{{service_name}}/g, currentCust.serviceTaken || 'our service')
+                            .replace(/{{offer}}/g, offerText)
+                            .replace(/{{company_name}}/g, currentCust.company || 'ShineStaff');
+                          const url = generateWhatsAppUrl(currentCust.phone, msg);
+                          window.open(url, '_blank');
+
+                          if (!directQueueSentIds.includes(currentCust._id)) {
+                            setDirectQueueSentIds(prev => [...prev, currentCust._id]);
+                          }
+
+                          if (directQueueIndex < selectedCustomersData.length - 1) {
+                            setDirectQueueIndex(prev => prev + 1);
+                          } else {
+                            alert('All selected customers have been queued!');
+                            setShowDirectQueueModal(false);
+                          }
+                        }
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md transition-all inline-flex items-center space-x-2 cursor-pointer"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span>Chat on WhatsApp & Next &rarr;</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white">All selected customers sent!</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowDirectQueueModal(false)}
+                  className="mt-4 px-4 py-2 bg-secondary text-white text-xs font-bold rounded-xl"
+                >
+                  Done
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -637,8 +637,59 @@ export const updateWhatsAppSettings = async (req: AuthRequest, res: Response) =>
  */
 export const triggerManualBackfill = async (req: AuthRequest, res: Response) => {
   try {
-    await backfillCustomerContacts();
-    res.status(200).json({ message: 'Customer contact backfill process finished.' });
+    const result = await backfillCustomerContacts(true);
+    res.status(200).json({ message: 'Customer contacts and 1-month service reminders synced successfully.', ...result });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * Marks a service reminder as sent (used by 1-Click WhatsApp Direct Chat button)
+ * and logs it in message history.
+ */
+export const markReminderSent = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const reminder = await ServiceReminder.findById(id).populate('customerId');
+    if (!reminder) {
+      return res.status(404).json({ message: 'Reminder record not found' });
+    }
+
+    reminder.status = 'sent';
+    reminder.sentDate = new Date();
+    if (req.body.messageText) {
+      reminder.messageText = req.body.messageText;
+    }
+    await reminder.save();
+
+    const contact = reminder.customerId as any;
+    if (contact) {
+      contact.reminderStatus = 'sent';
+      await contact.save();
+
+      // Log in WhatsAppMessage so history reflects it
+      const msg = new WhatsAppMessage({
+        customerId: contact._id,
+        reminderId: reminder._id,
+        recipientName: contact.name,
+        phoneNumber: contact.phone,
+        messageType: 'reminder',
+        messageText: req.body.messageText || `1-Month Service Reminder sent via WhatsApp Direct`,
+        status: 'sent',
+        sentTime: new Date()
+      });
+      await msg.save();
+    }
+
+    logAudit(req, {
+      action: 'sent_reminder_direct',
+      entityType: 'ServiceReminder',
+      entityId: reminder._id.toString(),
+      summary: `Sent 1-month service reminder to "${contact?.name || 'Customer'}" via WhatsApp Direct`
+    });
+
+    res.status(200).json({ message: 'Reminder marked as sent successfully', reminder });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

@@ -347,17 +347,18 @@ export const sendWhatsAppMessage = async (
 };
 
 /**
- * Startup task: Iterates over all historic jobs and builds the CustomerContact database.
+ * Iterates over all historic jobs and builds/updates the CustomerContact database.
+ * If force is true, will process regardless of existing contacts.
  */
-export const backfillCustomerContacts = async () => {
+export const backfillCustomerContacts = async (force: boolean = false) => {
   try {
     const totalContacts = await CustomerContact.countDocuments();
-    if (totalContacts > 0) {
+    if (totalContacts > 0 && !force) {
       console.log(`[WhatsApp Helper] Customer contacts database already has ${totalContacts} records. Skipping startup backfill.`);
-      return;
+      return { skipped: true, totalContacts };
     }
 
-    console.log('[WhatsApp Helper] Starting startup backfill of customer contacts from all historical jobs...');
+    console.log('[WhatsApp Helper] Starting backfill of customer contacts from all historical jobs...');
     const allJobs = await Job.find({}).sort({ createdAt: 1 });
     console.log(`[WhatsApp Helper] Found ${allJobs.length} total jobs to process.`);
 
@@ -368,8 +369,10 @@ export const backfillCustomerContacts = async () => {
         count++;
       }
     }
-    console.log(`[WhatsApp Helper] Completed startup backfill. Sync-completed for ${count} jobs successfully.`);
+    console.log(`[WhatsApp Helper] Completed backfill. Sync-completed for ${count} jobs successfully.`);
+    return { skipped: false, count, totalJobs: allJobs.length };
   } catch (error) {
     console.error('[WhatsApp Helper] Error during customer contacts backfill:', error);
+    throw error;
   }
 };
